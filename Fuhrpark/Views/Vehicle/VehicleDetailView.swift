@@ -14,6 +14,8 @@ struct VehicleDetailView: View {
             VStack(alignment: .leading, spacing: 20) {
                 header
 
+                statistics
+
                 sectionHeader(
                     title: "Betankungen",
                     systemImage: "fuelpump.fill",
@@ -108,6 +110,41 @@ struct VehicleDetailView: View {
                 Spacer()
             }
         }
+    }
+
+    private var statistics: some View {
+        GlassCard(title: "Statistik") {
+            HStack(alignment: .top, spacing: 16) {
+                statItem(
+                    title: "Gesamtkosten",
+                    value: DisplayFormatter.currencyString(vehicle.totalCost),
+                    systemImage: "sum"
+                )
+                Divider()
+                statItem(
+                    title: "Kosten / km",
+                    value: vehicle.costPerKilometer.map { DisplayFormatter.currencyString($0) } ?? "–",
+                    systemImage: "gauge.with.dots.needle.bottom.50percent",
+                    subtitle: vehicle.drivenKilometers.map { "\($0) km gefahren" } ?? "keine Fahrleistung erfasst"
+                )
+            }
+        }
+    }
+
+    private func statItem(title: String, value: String, systemImage: String, subtitle: String? = nil) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(title, systemImage: systemImage)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.title3.bold())
+            if let subtitle {
+                Text(subtitle)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func sectionHeader(title: String, systemImage: String, action: @escaping () -> Void, actionLabel: String) -> some View {
