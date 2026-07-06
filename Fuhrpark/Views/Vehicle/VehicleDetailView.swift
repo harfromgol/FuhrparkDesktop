@@ -35,9 +35,15 @@ struct VehicleDetailView: View {
                     }
                 }
 
-                Text("\(vehicle.sortedFuelEntries.count) Betankung(en) erfasst.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if vehicle.sortedFuelEntries.isEmpty {
+                    Text("Noch keine Betankungen erfasst.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    fuelStatistics
+                    priceStatistics
+                    consumptionStatistics
+                }
 
                 sectionHeader(title: "Sonstige Ausgaben", systemImage: "eurosign.circle.fill") {
                     Button("Neue Ausgabe", systemImage: "plus") {
@@ -119,6 +125,94 @@ struct VehicleDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var fuelStatistics: some View {
+        GlassCard(title: "Betankungen – Statistik") {
+            HStack(alignment: .top, spacing: 16) {
+                statItem(
+                    title: "Anzahl",
+                    value: "\(vehicle.fuelEntryCount)",
+                    systemImage: "number"
+                )
+                Divider()
+                statItem(
+                    title: "Letzte Tankung",
+                    value: vehicle.lastFuelDate.map { FieldValidator.string(from: $0) } ?? "–",
+                    systemImage: "calendar"
+                )
+                Divider()
+                statItem(
+                    title: "Getankt gesamt",
+                    value: "\(DisplayFormatter.string(from: vehicle.totalLiters, formatter: DisplayFormatter.decimal2)) l",
+                    systemImage: "drop.fill"
+                )
+                Divider()
+                statItem(
+                    title: "Spritkosten",
+                    value: DisplayFormatter.currencyString(vehicle.totalFuelCost),
+                    systemImage: "eurosign"
+                )
+            }
+        }
+    }
+
+    private var priceStatistics: some View {
+        GlassCard(title: "Spritpreis") {
+            HStack(alignment: .top, spacing: 16) {
+                statItem(
+                    title: "Niedrigster",
+                    value: pricePerLiterString(vehicle.minPricePerLiter),
+                    systemImage: "arrow.down"
+                )
+                Divider()
+                statItem(
+                    title: "Höchster",
+                    value: pricePerLiterString(vehicle.maxPricePerLiter),
+                    systemImage: "arrow.up"
+                )
+                Divider()
+                statItem(
+                    title: "Durchschnitt",
+                    value: pricePerLiterString(vehicle.averagePricePerLiter),
+                    systemImage: "chart.bar"
+                )
+            }
+        }
+    }
+
+    private var consumptionStatistics: some View {
+        GlassCard(title: "Verbrauch") {
+            HStack(alignment: .top, spacing: 16) {
+                statItem(
+                    title: "Niedrigster",
+                    value: consumptionString(vehicle.minConsumption),
+                    systemImage: "arrow.down"
+                )
+                Divider()
+                statItem(
+                    title: "Größter",
+                    value: consumptionString(vehicle.maxConsumption),
+                    systemImage: "arrow.up"
+                )
+                Divider()
+                statItem(
+                    title: "Durchschnitt",
+                    value: consumptionString(vehicle.averageConsumption),
+                    systemImage: "chart.bar"
+                )
+            }
+        }
+    }
+
+    private func pricePerLiterString(_ value: Decimal?) -> String {
+        guard let value else { return "–" }
+        return "\(DisplayFormatter.pricePerLiterString(value))/l"
+    }
+
+    private func consumptionString(_ value: Double?) -> String {
+        guard let value else { return "–" }
+        return "\(DisplayFormatter.string(from: Decimal(value), formatter: DisplayFormatter.consumption)) l/100km"
     }
 
     private func sectionHeader<Buttons: View>(

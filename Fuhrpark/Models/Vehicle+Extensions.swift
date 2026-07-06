@@ -69,4 +69,63 @@ extension Vehicle {
         guard let km = drivenKilometers, km > 0 else { return nil }
         return totalCost / Decimal(km)
     }
+
+    // MARK: - Betankungs-Statistik
+
+    /// Anzahl der erfassten Betankungen.
+    var fuelEntryCount: Int {
+        sortedFuelEntries.count
+    }
+
+    /// Datum der letzten (jüngsten) Betankung.
+    var lastFuelDate: Date? {
+        sortedFuelEntries.compactMap(\.date).max()
+    }
+
+    /// Summe aller getankten Liter.
+    var totalLiters: Decimal {
+        sortedFuelEntries.reduce(Decimal.zero) { $0 + ($1.liters?.decimalValue ?? 0) }
+    }
+
+    // MARK: - Spritpreis
+
+    private var pricesPerLiter: [Decimal] {
+        sortedFuelEntries.compactMap { $0.pricePerLiter?.decimalValue }
+    }
+
+    var minPricePerLiter: Decimal? { pricesPerLiter.min() }
+    var maxPricePerLiter: Decimal? { pricesPerLiter.max() }
+    var averagePricePerLiter: Decimal? {
+        let prices = pricesPerLiter
+        guard !prices.isEmpty else { return nil }
+        return prices.reduce(0, +) / Decimal(prices.count)
+    }
+
+    // MARK: - Verbrauch
+
+    /// Effektiver Verbrauch einer Betankung: gespeicherter Wert, sonst live berechnet.
+    func effectiveConsumption(for entry: FuelEntry) -> Double? {
+        if let stored = entry.consumption?.doubleValue {
+            return stored
+        }
+        return FuelConsumptionCalculator.automaticConsumption(
+            currentOdometer: entry.odometer,
+            currentLiters: entry.liters?.decimalValue ?? 0,
+            previousEntryExists: entry.previousEntryExists,
+            currentFullTank: entry.fullTank,
+            previousEntry: previousFuelEntry(before: entry)
+        )
+    }
+
+    private var consumptions: [Double] {
+        sortedFuelEntries.compactMap { effectiveConsumption(for: $0) }
+    }
+
+    var minConsumption: Double? { consumptions.min() }
+    var maxConsumption: Double? { consumptions.max() }
+    var averageConsumption: Double? {
+        let values = consumptions
+        guard !values.isEmpty else { return nil }
+        return values.reduce(0, +) / Double(values.count)
+    }
 }

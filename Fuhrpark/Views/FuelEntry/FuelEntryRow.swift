@@ -6,17 +6,7 @@ struct FuelEntryRow: View {
 
     /// Verbrauch (l/100km): vorrangig der gespeicherte Wert, sonst live berechnet.
     private var consumptionValue: Double? {
-        if let stored = entry.consumption?.doubleValue {
-            return stored
-        }
-        guard let vehicle = entry.vehicle else { return nil }
-        return FuelConsumptionCalculator.automaticConsumption(
-            currentOdometer: entry.odometer,
-            currentLiters: entry.liters?.decimalValue ?? 0,
-            previousEntryExists: entry.previousEntryExists,
-            currentFullTank: entry.fullTank,
-            previousEntry: vehicle.previousFuelEntry(before: entry)
-        )
+        entry.vehicle?.effectiveConsumption(for: entry)
     }
 
     private var consumptionText: String {
