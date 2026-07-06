@@ -13,6 +13,7 @@ struct GlassCard<Content: View>: View {
             }
             content
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16))
     }

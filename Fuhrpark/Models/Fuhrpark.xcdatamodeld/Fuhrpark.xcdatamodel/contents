@@ -25,6 +25,11 @@
         <attribute name="station" optional="NO" attributeType="String"/>
         <relationship name="vehicle" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Vehicle" inverseName="fuelEntries" inverseEntity="Vehicle"/>
     </entity>
+    <entity name="Category" representedClassName="Category" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" optional="NO" attributeType="String"/>
+    </entity>
     <entity name="Expense" representedClassName="Expense" syncable="YES" codeGenerationType="class">
         <attribute name="amount" optional="NO" attributeType="Decimal" defaultValueString="0.0" usesScalarValueType="NO"/>
         <attribute name="categoryRaw" optional="NO" attributeType="String" defaultValueString=""/>

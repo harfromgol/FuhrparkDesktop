@@ -6,11 +6,18 @@ struct ExpenseFormView: View {
 
     let vehicle: Vehicle
 
+    @FetchRequest(
+        sortDescriptors: [NSSortDescriptor(keyPath: \Category.name, ascending: true)],
+        animation: .default
+    )
+    private var categories: FetchedResults<Category>
+
     @State private var dateText = FieldValidator.string(from: Date())
     @State private var amountText = ""
     @State private var recipient = ""
     @State private var purpose = ""
-    @State private var category: ExpenseCategory = .other
+    @State private var selectedCategory: Category?
+    @State private var newCategoryName = ""
 
     @State private var dateValid = false
     @State private var amountValid = false
@@ -54,11 +61,7 @@ struct ExpenseFormView: View {
                             isValidBinding: $purposeValid
                         )
 
-                        Picker("Kategorie", selection: $category) {
-                            ForEach(ExpenseCategory.allCases) { category in
-                                Text(category.rawValue).tag(category)
-                            }
-                        }
+                        categorySection
                     }
                 }
                 .padding(20)
@@ -75,7 +78,61 @@ struct ExpenseFormView: View {
             }
             .padding(16)
         }
-        .frame(width: 440, height: 560)
+        .frame(width: 440, height: 700)
+    }
+
+    private var categorySection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Kategorie")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if categories.isEmpty {
+                Text("Noch keine Kategorien – lege unten eine an.")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            } else {
+                Picker("Kategorie", selection: $selectedCategory) {
+                    Text("Keine").tag(Category?.none)
+                    ForEach(categories) { category in
+                        Text(category.name ?? "").tag(Category?.some(category))
+                    }
+                }
+                .labelsHidden()
+            }
+
+            HStack {
+                TextField("Neue Kategorie", text: $newCategoryName)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit { addCategory() }
+                Button("Hinzufügen", systemImage: "plus") { addCategory() }
+                    .buttonStyle(.glass)
+                    .disabled(newCategoryName.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
+    }
+
+    private func addCategory() {
+        let name = newCategoryName.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty else { return }
+
+        // Bereits vorhanden? Dann nur auswählen.
+        if let existing = categories.first(where: {
+            $0.name?.caseInsensitiveCompare(name) == .orderedSame
+        }) {
+            selectedCategory = existing
+            newCategoryName = ""
+            return
+        }
+
+        let category = Category(context: viewContext)
+        category.id = UUID()
+        category.name = name
+        category.createdAt = Date()
+        PersistenceController.shared.save(context: viewContext)
+
+        selectedCategory = category
+        newCategoryName = ""
     }
 
     private func save() {
@@ -85,7 +142,7 @@ struct ExpenseFormView: View {
         expense.amount = NSDecimalNumber(decimal: FieldValidator.decimalValue(amountText) ?? 0)
         expense.recipient = recipient
         expense.purpose = purpose
-        expense.category = category
+        expense.categoryRaw = selectedCategory?.name ?? ""
         expense.vehicle = vehicle
 
         PersistenceController.shared.save(context: viewContext)

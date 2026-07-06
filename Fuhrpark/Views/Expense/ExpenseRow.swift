@@ -21,7 +21,7 @@ struct ExpenseRow: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(DisplayFormatter.currencyString(expense.amount?.decimalValue ?? 0))
                         .font(.subheadline.bold())
-                    Text(expense.category.rawValue)
+                    Text(expense.categoryName.isEmpty ? "–" : expense.categoryName)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
