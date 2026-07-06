@@ -25,12 +25,14 @@ struct VehicleDetailView: View {
                         isPresentingNewFuelEntry = true
                     }
                     .buttonStyle(.glass)
-                    Button("Liste anzeigen", systemImage: "list.bullet") {
-                        if let vehicleRef {
-                            openWindow(id: "fuel-list", value: vehicleRef)
+                    if !vehicle.sortedFuelEntries.isEmpty {
+                        Button("Liste anzeigen", systemImage: "list.bullet") {
+                            if let vehicleRef {
+                                openWindow(id: "fuel-list", value: vehicleRef)
+                            }
                         }
+                        .buttonStyle(.glass)
                     }
-                    .buttonStyle(.glass)
                 }
 
                 Text("\(vehicle.sortedFuelEntries.count) Betankung(en) erfasst.")
@@ -42,12 +44,14 @@ struct VehicleDetailView: View {
                         isPresentingNewExpense = true
                     }
                     .buttonStyle(.glass)
-                    Button("Liste anzeigen", systemImage: "list.bullet") {
-                        if let vehicleRef {
-                            openWindow(id: "expense-list", value: vehicleRef)
+                    if !vehicle.sortedExpenses.isEmpty {
+                        Button("Liste anzeigen", systemImage: "list.bullet") {
+                            if let vehicleRef {
+                                openWindow(id: "expense-list", value: vehicleRef)
+                            }
                         }
+                        .buttonStyle(.glass)
                     }
-                    .buttonStyle(.glass)
                 }
 
                 Text("\(vehicle.sortedExpenses.count) Ausgabe(n) erfasst.")
