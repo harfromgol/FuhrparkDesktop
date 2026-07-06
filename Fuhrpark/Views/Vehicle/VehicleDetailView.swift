@@ -2,12 +2,16 @@ import SwiftUI
 
 struct VehicleDetailView: View {
     @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.openWindow) private var openWindow
     @ObservedObject var vehicle: Vehicle
 
     @State private var isPresentingNewFuelEntry = false
     @State private var isPresentingNewExpense = false
-    @State private var fuelEntryPendingDeletion: FuelEntry?
-    @State private var expensePendingDeletion: Expense?
+
+    private var vehicleRef: VehicleRef? {
+        guard let id = vehicle.id else { return nil }
+        return VehicleRef(id: id, licensePlate: vehicle.licensePlate ?? "")
+    }
 
     var body: some View {
         ScrollView {
@@ -16,45 +20,39 @@ struct VehicleDetailView: View {
 
                 statistics
 
-                sectionHeader(
-                    title: "Betankungen",
-                    systemImage: "fuelpump.fill",
-                    action: { isPresentingNewFuelEntry = true },
-                    actionLabel: "Neue Betankung"
-                )
-
-                if vehicle.sortedFuelEntries.isEmpty {
-                    emptyRow("Noch keine Betankungen erfasst.")
-                } else {
-                    ForEach(vehicle.sortedFuelEntries.reversed()) { entry in
-                        FuelEntryRow(entry: entry)
-                            .contextMenu {
-                                Button("Löschen", role: .destructive) {
-                                    fuelEntryPendingDeletion = entry
-                                }
-                            }
+                sectionHeader(title: "Betankungen", systemImage: "fuelpump.fill") {
+                    Button("Neue Betankung", systemImage: "plus") {
+                        isPresentingNewFuelEntry = true
                     }
+                    .buttonStyle(.glass)
+                    Button("Liste anzeigen", systemImage: "list.bullet") {
+                        if let vehicleRef {
+                            openWindow(id: "fuel-list", value: vehicleRef)
+                        }
+                    }
+                    .buttonStyle(.glass)
                 }
 
-                sectionHeader(
-                    title: "Sonstige Ausgaben",
-                    systemImage: "eurosign.circle.fill",
-                    action: { isPresentingNewExpense = true },
-                    actionLabel: "Neue Ausgabe"
-                )
+                Text("\(vehicle.sortedFuelEntries.count) Betankung(en) erfasst.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
 
-                if vehicle.sortedExpenses.isEmpty {
-                    emptyRow("Noch keine Ausgaben erfasst.")
-                } else {
-                    ForEach(vehicle.sortedExpenses) { expense in
-                        ExpenseRow(expense: expense)
-                            .contextMenu {
-                                Button("Löschen", role: .destructive) {
-                                    expensePendingDeletion = expense
-                                }
-                            }
+                sectionHeader(title: "Sonstige Ausgaben", systemImage: "eurosign.circle.fill") {
+                    Button("Neue Ausgabe", systemImage: "plus") {
+                        isPresentingNewExpense = true
                     }
+                    .buttonStyle(.glass)
+                    Button("Liste anzeigen", systemImage: "list.bullet") {
+                        if let vehicleRef {
+                            openWindow(id: "expense-list", value: vehicleRef)
+                        }
+                    }
+                    .buttonStyle(.glass)
                 }
+
+                Text("\(vehicle.sortedExpenses.count) Ausgabe(n) erfasst.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             .padding(20)
         }
@@ -64,34 +62,6 @@ struct VehicleDetailView: View {
         }
         .sheet(isPresented: $isPresentingNewExpense) {
             ExpenseFormView(vehicle: vehicle)
-        }
-        .confirmationDialog(
-            "Betankung löschen?",
-            isPresented: Binding(
-                get: { fuelEntryPendingDeletion != nil },
-                set: { if !$0 { fuelEntryPendingDeletion = nil } }
-            ),
-            presenting: fuelEntryPendingDeletion
-        ) { entry in
-            Button("Löschen", role: .destructive) {
-                viewContext.delete(entry)
-                PersistenceController.shared.save(context: viewContext)
-            }
-            Button("Abbrechen", role: .cancel) { }
-        }
-        .confirmationDialog(
-            "Ausgabe löschen?",
-            isPresented: Binding(
-                get: { expensePendingDeletion != nil },
-                set: { if !$0 { expensePendingDeletion = nil } }
-            ),
-            presenting: expensePendingDeletion
-        ) { expense in
-            Button("Löschen", role: .destructive) {
-                viewContext.delete(expense)
-                PersistenceController.shared.save(context: viewContext)
-            }
-            Button("Abbrechen", role: .cancel) { }
         }
     }
 
@@ -147,79 +117,16 @@ struct VehicleDetailView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func sectionHeader(title: String, systemImage: String, action: @escaping () -> Void, actionLabel: String) -> some View {
+    private func sectionHeader<Buttons: View>(
+        title: String,
+        systemImage: String,
+        @ViewBuilder buttons: () -> Buttons
+    ) -> some View {
         HStack {
             Label(title, systemImage: systemImage)
                 .font(.headline)
             Spacer()
-            Button(actionLabel, systemImage: "plus", action: action)
-                .buttonStyle(.glass)
-        }
-    }
-
-    private func emptyRow(_ text: String) -> some View {
-        Text(text)
-            .foregroundStyle(.secondary)
-            .padding(.vertical, 8)
-    }
-}
-
-private struct FuelEntryRow: View {
-    @ObservedObject var entry: FuelEntry
-
-    var body: some View {
-        GlassCard {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(FieldValidator.string(from: entry.date ?? Date()))
-                        .font(.subheadline.bold())
-                    Text("\(entry.station ?? "") · \(entry.odometer) km")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text("\(DisplayFormatter.string(from: entry.liters?.decimalValue ?? 0, formatter: DisplayFormatter.decimal2)) l à \(DisplayFormatter.currencyString(entry.pricePerLiter?.decimalValue ?? 0))/l")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text(DisplayFormatter.currencyString(entry.amount?.decimalValue ?? 0))
-                        .font(.subheadline.bold())
-                    if let consumption = entry.consumption?.doubleValue {
-                        Text("\(DisplayFormatter.string(from: Decimal(consumption), formatter: DisplayFormatter.consumption)) l/100km")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-        }
-    }
-}
-
-private struct ExpenseRow: View {
-    @ObservedObject var expense: Expense
-
-    var body: some View {
-        GlassCard {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(FieldValidator.string(from: expense.date ?? Date()))
-                        .font(.subheadline.bold())
-                    Text(expense.recipient ?? "")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(expense.purpose ?? "")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text(DisplayFormatter.currencyString(expense.amount?.decimalValue ?? 0))
-                        .font(.subheadline.bold())
-                    Text(expense.category.rawValue)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
+            buttons()
         }
     }
 }
