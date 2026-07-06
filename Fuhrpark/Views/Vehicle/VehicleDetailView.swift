@@ -60,9 +60,13 @@ struct VehicleDetailView: View {
                     }
                 }
 
-                Text("\(vehicle.sortedExpenses.count) Ausgabe(n) erfasst.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if vehicle.sortedExpenses.isEmpty {
+                    Text("Noch keine Ausgaben erfasst.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    expenseCategoryStatistics
+                }
             }
             .padding(20)
         }
@@ -213,6 +217,22 @@ struct VehicleDetailView: View {
     private func consumptionString(_ value: Double?) -> String {
         guard let value else { return "–" }
         return "\(DisplayFormatter.string(from: Decimal(value), formatter: DisplayFormatter.consumption)) l/100km"
+    }
+
+    private var expenseCategoryStatistics: some View {
+        GlassCard(title: "Gesamtkosten pro Kategorie") {
+            VStack(spacing: 8) {
+                ForEach(vehicle.expenseCostByCategory, id: \.category) { item in
+                    HStack {
+                        Text(item.category)
+                        Spacer()
+                        Text(DisplayFormatter.currencyString(item.total))
+                            .bold()
+                    }
+                    .font(.subheadline)
+                }
+            }
+        }
     }
 
     private func sectionHeader<Buttons: View>(
