@@ -27,6 +27,15 @@ enum DisplayFormatter {
         return formatter
     }()
 
+    /// Ganzzahliger Kilometerstand mit Tausendertrennung, z. B. „42.000".
+    static let odometer: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = Locale(identifier: "de_DE")
+        formatter.maximumFractionDigits = 0
+        return formatter
+    }()
+
     /// Währung mit 3 Nachkommastellen, z. B. für den Preis pro Liter.
     static let pricePerLiter: NumberFormatter = {
         let formatter = NumberFormatter()
@@ -48,5 +57,9 @@ enum DisplayFormatter {
 
     static func pricePerLiterString(_ decimal: Decimal) -> String {
         string(from: decimal, formatter: pricePerLiter)
+    }
+
+    static func odometerString(_ value: Int32) -> String {
+        odometer.string(from: NSNumber(value: value)) ?? "\(value)"
     }
 }

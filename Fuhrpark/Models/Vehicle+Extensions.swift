@@ -73,6 +73,12 @@ extension Vehicle {
         totalFuelCost + totalExpenseCost
     }
 
+    /// Höchster bekannter Kilometerstand: der Anlagestand oder – falls höher –
+    /// der höchste Kilometerstand aus den erfassten Betankungen.
+    var highestOdometer: Int32 {
+        max(odometer, sortedFuelEntries.map(\.odometer).max() ?? odometer)
+    }
+
     /// Gefahrene Kilometer seit Anlage des Fahrzeugs (höchster Betankungs-Kilometerstand
     /// minus anfänglicher Tachostand). Nil, wenn nicht ermittelbar.
     var drivenKilometers: Int32? {

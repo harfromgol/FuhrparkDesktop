@@ -105,6 +105,12 @@ private struct VehicleRow: View {
                 Text("\(vehicle.manufacturer ?? "") \(vehicle.model ?? "")")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                Text("Anfangsstand: \(DisplayFormatter.odometerString(vehicle.odometer)) km")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                Text("Höchststand: \(DisplayFormatter.odometerString(vehicle.highestOdometer)) km")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
             }
             Spacer()
         }
