@@ -31,7 +31,7 @@ struct ExpenseFormView: View {
     }
 
     private var isFormValid: Bool {
-        dateValid && amountValid && recipientValid && purposeValid
+        dateValid && amountValid && recipientValid && purposeValid && selectedCategory != nil
     }
 
     var body: some View {
@@ -99,7 +99,7 @@ struct ExpenseFormView: View {
                     .foregroundStyle(.tertiary)
             } else {
                 Picker("Kategorie", selection: $selectedCategory) {
-                    Text("Keine").tag(Category?.none)
+                    Text("Bitte wählen").tag(Category?.none)
                     ForEach(categories) { category in
                         Text(category.name ?? "").tag(Category?.some(category))
                     }
