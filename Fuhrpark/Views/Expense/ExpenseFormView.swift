@@ -6,11 +6,8 @@ struct ExpenseFormView: View {
 
     let vehicle: Vehicle
 
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Category.name, ascending: true)],
-        animation: .default
-    )
-    private var categories: FetchedResults<Category>
+    /// Nur die Kategorien dieses Fahrzeugs (siehe `init`).
+    @FetchRequest private var categories: FetchedResults<Category>
 
     @State private var dateText = FieldValidator.string(from: Date())
     @State private var amountText = ""
@@ -23,6 +20,15 @@ struct ExpenseFormView: View {
     @State private var amountValid = false
     @State private var recipientValid = false
     @State private var purposeValid = false
+
+    init(vehicle: Vehicle) {
+        self.vehicle = vehicle
+        _categories = FetchRequest(
+            sortDescriptors: [NSSortDescriptor(keyPath: \Category.name, ascending: true)],
+            predicate: NSPredicate(format: "vehicle == %@", vehicle),
+            animation: .default
+        )
+    }
 
     private var isFormValid: Bool {
         dateValid && amountValid && recipientValid && purposeValid
@@ -129,6 +135,7 @@ struct ExpenseFormView: View {
         category.id = UUID()
         category.name = name
         category.createdAt = Date()
+        category.vehicle = vehicle
         PersistenceController.shared.save(context: viewContext)
 
         selectedCategory = category
