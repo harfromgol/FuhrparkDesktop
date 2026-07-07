@@ -74,7 +74,7 @@ struct VehicleFormView: View {
             }
             .padding(16)
         }
-        .frame(width: 420, height: 520)
+        .frame(width: 420, height: 620)
     }
 
     private func save() {
