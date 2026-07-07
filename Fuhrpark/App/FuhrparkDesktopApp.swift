@@ -65,16 +65,16 @@ struct AppMenuCommands: Commands {
         }
 
         CommandMenu("Tools") {
-            Button("Daten exportieren…") {
+            Button("Daten exportieren", systemImage: "square.and.arrow.up") {
                 appCommands.showExportDialog = true
             }
-            Button("Daten importieren…") {
+            Button("Daten importieren", systemImage: "square.and.arrow.down") {
                 appCommands.showImportDialog = true
             }
 
             Divider()
 
-            Button("Alle Daten löschen…") {
+            Button("Alle Daten löschen", systemImage: "trash") {
                 appCommands.showDeleteAllDataConfirmation = true
             }
         }
