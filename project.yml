@@ -4,6 +4,7 @@ options:
   deploymentTarget:
     macOS: "26.0"
   createIntermediateGroups: true
+  developmentLanguage: de
 
 settings:
   base:
@@ -34,6 +35,10 @@ targets:
         NSPrincipalClass: NSApplication
         NSMainStoryboardFile: ""
         LSApplicationCategoryType: public.app-category.utilities
+        CFBundleDevelopmentRegion: de
+        CFBundleLocalizations:
+          - de
+          - en
     entitlements:
       path: FuhrparkDesktop/FuhrparkDesktop.entitlements
       properties:
