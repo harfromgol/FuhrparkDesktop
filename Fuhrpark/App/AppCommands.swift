@@ -11,4 +11,9 @@ import Observation
 final class AppCommands {
     /// Löst im `ContentView` die Sicherheitsabfrage zum Löschen aller Daten aus.
     var showDeleteAllDataConfirmation = false
+
+    /// Ob das Hauptfenster gerade geöffnet ist. Steuert die Aktivierung der
+    /// Menüpunkte „Neues Fenster“ / „Fenster schließen“. Wird von `ContentView`
+    /// über `onAppear`/`onDisappear` gepflegt.
+    var isMainWindowOpen = false
 }
