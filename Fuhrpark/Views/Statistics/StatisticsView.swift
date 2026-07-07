@@ -13,6 +13,39 @@ struct StatisticsView: View {
     private var totalFuelCost: Decimal { vehicles.reduce(.zero) { $0 + $1.totalFuelCost } }
     private var totalExpenseCost: Decimal { vehicles.reduce(.zero) { $0 + $1.totalExpenseCost } }
 
+    /// Aggregierte Kosten pro Kalenderjahr über alle Fahrzeuge, neuestes Jahr zuerst.
+    private var costsByYear: [YearlyCost] {
+        let calendar = Calendar.current
+        var fuelByYear: [Int: Decimal] = [:]
+        var expenseByYear: [Int: Decimal] = [:]
+
+        for vehicle in vehicles {
+            for entry in vehicle.sortedFuelEntries {
+                guard let date = entry.date else { continue }
+                let year = calendar.component(.year, from: date)
+                fuelByYear[year, default: 0] += entry.amount?.decimalValue ?? 0
+            }
+            for expense in vehicle.sortedExpenses {
+                guard let date = expense.date else { continue }
+                let year = calendar.component(.year, from: date)
+                expenseByYear[year, default: 0] += expense.amount?.decimalValue ?? 0
+            }
+        }
+
+        let years = Set(fuelByYear.keys).union(expenseByYear.keys)
+        return years
+            .map { YearlyCost(year: $0, fuel: fuelByYear[$0, default: 0], expense: expenseByYear[$0, default: 0]) }
+            .sorted { $0.year > $1.year }
+    }
+
+    private struct YearlyCost: Identifiable {
+        let year: Int
+        let fuel: Decimal
+        let expense: Decimal
+        var total: Decimal { fuel + expense }
+        var id: Int { year }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -73,6 +106,32 @@ struct StatisticsView: View {
                                 Text(DisplayFormatter.currencyString(totalCost))
                             }
                             .font(.subheadline.bold())
+                        }
+                    }
+
+                    GlassCard(title: "Kosten pro Jahr") {
+                        Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
+                            GridRow {
+                                Text("Jahr")
+                                Text("Betankungen").gridColumnAlignment(.trailing)
+                                Text("Sonstige").gridColumnAlignment(.trailing)
+                                Text("Gesamt").gridColumnAlignment(.trailing)
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                            Divider()
+
+                            ForEach(costsByYear) { item in
+                                GridRow {
+                                    Text(String(item.year))
+                                    Text(DisplayFormatter.currencyString(item.fuel))
+                                    Text(DisplayFormatter.currencyString(item.expense))
+                                    Text(DisplayFormatter.currencyString(item.total))
+                                        .bold()
+                                }
+                                .font(.subheadline)
+                            }
                         }
                     }
                 }
