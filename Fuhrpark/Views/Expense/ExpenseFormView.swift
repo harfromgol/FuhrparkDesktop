@@ -152,6 +152,7 @@ struct ExpenseFormView: View {
         expense.categoryRaw = selectedCategory?.name ?? ""
         expense.vehicle = vehicle
 
+        vehicle.touch()
         PersistenceController.shared.save(context: viewContext)
         dismiss()
     }

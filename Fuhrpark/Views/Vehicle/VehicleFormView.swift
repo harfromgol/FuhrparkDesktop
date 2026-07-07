@@ -85,7 +85,9 @@ struct VehicleFormView: View {
         vehicle.model = model
         vehicle.odometer = FieldValidator.intValue(odometerText) ?? 0
         vehicle.engineType = engineType
-        vehicle.createdAt = Date()
+        let now = Date()
+        vehicle.createdAt = now
+        vehicle.lastChangedDts = now
 
         PersistenceController.shared.save(context: viewContext)
         dismiss()

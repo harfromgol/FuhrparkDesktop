@@ -21,6 +21,12 @@ extension Vehicle {
         set { engineTypeRaw = newValue.rawValue }
     }
 
+    /// Setzt den Zeitstempel der letzten Änderung auf jetzt. Wird beim Hinzufügen
+    /// einer Betankung oder sonstigen Ausgabe aufgerufen.
+    func touch() {
+        lastChangedDts = Date()
+    }
+
     var sortedFuelEntries: [FuelEntry] {
         let entries = (fuelEntries as? Set<FuelEntry>) ?? []
         return entries.sorted { $0.odometer < $1.odometer }

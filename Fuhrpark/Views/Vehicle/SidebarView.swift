@@ -6,7 +6,10 @@ struct SidebarView: View {
     @Binding var selection: SidebarSelection
 
     @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Vehicle.licensePlate, ascending: true)],
+        sortDescriptors: [
+            NSSortDescriptor(keyPath: \Vehicle.lastChangedDts, ascending: false),
+            NSSortDescriptor(keyPath: \Vehicle.licensePlate, ascending: true)
+        ],
         animation: .default
     )
     private var vehicles: FetchedResults<Vehicle>

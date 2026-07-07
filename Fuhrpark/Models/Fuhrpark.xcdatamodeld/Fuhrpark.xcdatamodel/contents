@@ -4,6 +4,7 @@
         <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="engineTypeRaw" optional="NO" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="lastChangedDts" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="licensePlate" optional="NO" attributeType="String"/>
         <attribute name="manufacturer" optional="NO" attributeType="String"/>
         <attribute name="model" optional="NO" attributeType="String"/>

@@ -20,6 +20,24 @@ struct PersistenceController {
 
         container.viewContext.automaticallyMergesChangesFromParent = true
         container.viewContext.mergePolicy = NSMergePolicy.mergeByPropertyObjectTrump
+
+        if !inMemory {
+            backfillVehicleTimestamps()
+        }
+    }
+
+    /// Setzt für Fahrzeuge aus älteren Datenbeständen (vor Einführung von
+    /// `lastChangedDts`) den Zeitstempel auf ihr Anlagedatum, damit die
+    /// Sortierung nach letzter Änderung sofort sinnvoll startet.
+    private func backfillVehicleTimestamps() {
+        let context = container.viewContext
+        let request = NSFetchRequest<Vehicle>(entityName: "Vehicle")
+        request.predicate = NSPredicate(format: "lastChangedDts == nil")
+        guard let vehicles = try? context.fetch(request), !vehicles.isEmpty else { return }
+        for vehicle in vehicles {
+            vehicle.lastChangedDts = vehicle.createdAt ?? Date()
+        }
+        save(context: context)
     }
 
     static let preview: PersistenceController = {
@@ -34,6 +52,7 @@ struct PersistenceController {
         vehicle.odometer = 42000
         vehicle.engineType = .combustion
         vehicle.createdAt = Date()
+        vehicle.lastChangedDts = Date()
 
         let fuelEntry = FuelEntry(context: context)
         fuelEntry.id = UUID()

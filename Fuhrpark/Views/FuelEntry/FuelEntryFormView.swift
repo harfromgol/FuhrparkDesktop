@@ -191,6 +191,7 @@ struct FuelEntryFormView: View {
             entry.consumption = NSNumber(value: computedConsumption)
         }
 
+        vehicle.touch()
         PersistenceController.shared.save(context: viewContext)
         dismiss()
     }
