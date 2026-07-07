@@ -1,22 +1,25 @@
 import SwiftUI
 
+/// Auswahl in der Seitenleiste: allgemeine Statistik oder ein Fahrzeug.
+enum SidebarSelection: Hashable {
+    case statistics
+    case vehicle(Vehicle)
+}
+
 struct ContentView: View {
-    @State private var selectedVehicle: Vehicle?
+    @State private var selection: SidebarSelection = .statistics
 
     var body: some View {
         NavigationSplitView {
-            VehicleListView(selectedVehicle: $selectedVehicle)
+            SidebarView(selection: $selection)
                 .navigationSplitViewColumnWidth(min: 220, ideal: 260)
         } detail: {
-            if let selectedVehicle {
-                VehicleDetailView(vehicle: selectedVehicle)
-                    .id(selectedVehicle.objectID)
-            } else {
-                ContentUnavailableView(
-                    "Kein Fahrzeug ausgewählt",
-                    systemImage: "car.2",
-                    description: Text("Wähle links ein Fahrzeug aus oder lege ein neues an.")
-                )
+            switch selection {
+            case .statistics:
+                StatisticsView()
+            case .vehicle(let vehicle):
+                VehicleDetailView(vehicle: vehicle)
+                    .id(vehicle.objectID)
             }
         }
     }

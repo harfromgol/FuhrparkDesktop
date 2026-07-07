@@ -1,9 +1,9 @@
 import SwiftUI
 import CoreData
 
-struct VehicleListView: View {
+struct SidebarView: View {
     @Environment(\.managedObjectContext) private var viewContext
-    @Binding var selectedVehicle: Vehicle?
+    @Binding var selection: SidebarSelection
 
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Vehicle.licensePlate, ascending: true)],
@@ -16,25 +16,35 @@ struct VehicleListView: View {
 
     var body: some View {
         List {
-            ForEach(vehicles) { vehicle in
+            Section("Allgemein") {
                 Button {
-                    selectedVehicle = vehicle
+                    selection = .statistics
                 } label: {
-                    VehicleRow(vehicle: vehicle, isSelected: selectedVehicle == vehicle)
+                    Label("Statistik", systemImage: "chart.bar.xaxis")
                 }
                 .buttonStyle(.plain)
-                .listRowBackground(
-                    selectedVehicle == vehicle ? Color.accentColor.opacity(0.2) : Color.clear
-                )
-                .contextMenu {
-                    Button("Fahrzeug löschen", role: .destructive) {
-                        vehiclePendingDeletion = vehicle
+                .listRowBackground(rowBackground(for: .statistics))
+            }
+
+            Section("Fahrzeuge") {
+                ForEach(vehicles) { vehicle in
+                    Button {
+                        selection = .vehicle(vehicle)
+                    } label: {
+                        VehicleRow(vehicle: vehicle)
+                    }
+                    .buttonStyle(.plain)
+                    .listRowBackground(rowBackground(for: .vehicle(vehicle)))
+                    .contextMenu {
+                        Button("Fahrzeug löschen", role: .destructive) {
+                            vehiclePendingDeletion = vehicle
+                        }
                     }
                 }
-            }
-            .onDelete { offsets in
-                for index in offsets {
-                    vehiclePendingDeletion = vehicles[index]
+                .onDelete { offsets in
+                    for index in offsets {
+                        vehiclePendingDeletion = vehicles[index]
+                    }
                 }
             }
         }
@@ -68,9 +78,13 @@ struct VehicleListView: View {
         }
     }
 
+    private func rowBackground(for item: SidebarSelection) -> Color {
+        selection == item ? Color.accentColor.opacity(0.2) : Color.clear
+    }
+
     private func delete(_ vehicle: Vehicle) {
-        if selectedVehicle == vehicle {
-            selectedVehicle = nil
+        if selection == .vehicle(vehicle) {
+            selection = .statistics
         }
         viewContext.delete(vehicle)
         PersistenceController.shared.save(context: viewContext)
@@ -79,7 +93,6 @@ struct VehicleListView: View {
 
 private struct VehicleRow: View {
     @ObservedObject var vehicle: Vehicle
-    var isSelected: Bool
 
     var body: some View {
         HStack {
@@ -95,9 +108,4 @@ private struct VehicleRow: View {
         .padding(.vertical, 2)
         .contentShape(Rectangle())
     }
-}
-
-#Preview {
-    VehicleListView(selectedVehicle: .constant(nil))
-        .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
 }

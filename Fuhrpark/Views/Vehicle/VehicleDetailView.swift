@@ -99,13 +99,13 @@ struct VehicleDetailView: View {
     private var statistics: some View {
         GlassCard(title: "Statistik") {
             HStack(alignment: .top, spacing: 16) {
-                statItem(
+                StatTile(
                     title: "Gesamtkosten",
                     value: DisplayFormatter.currencyString(vehicle.totalCost),
                     systemImage: "sum"
                 )
                 Divider()
-                statItem(
+                StatTile(
                     title: "Kosten / km",
                     value: vehicle.costPerKilometer.map { DisplayFormatter.currencyString($0) } ?? "–",
                     systemImage: "gauge.with.dots.needle.bottom.50percent",
@@ -115,44 +115,28 @@ struct VehicleDetailView: View {
         }
     }
 
-    private func statItem(title: String, value: String, systemImage: String, subtitle: String? = nil) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Label(title, systemImage: systemImage)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.title3.bold())
-            if let subtitle {
-                Text(subtitle)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
     private var fuelStatistics: some View {
         GlassCard(title: "Betankungen – Statistik") {
             HStack(alignment: .top, spacing: 16) {
-                statItem(
+                StatTile(
                     title: "Anzahl",
                     value: "\(vehicle.fuelEntryCount)",
                     systemImage: "number"
                 )
                 Divider()
-                statItem(
+                StatTile(
                     title: "Letzte Tankung",
                     value: vehicle.lastFuelDate.map { FieldValidator.string(from: $0) } ?? "–",
                     systemImage: "calendar"
                 )
                 Divider()
-                statItem(
+                StatTile(
                     title: "Getankt gesamt",
                     value: "\(DisplayFormatter.string(from: vehicle.totalLiters, formatter: DisplayFormatter.decimal2)) l",
                     systemImage: "drop.fill"
                 )
                 Divider()
-                statItem(
+                StatTile(
                     title: "Spritkosten",
                     value: DisplayFormatter.currencyString(vehicle.totalFuelCost),
                     systemImage: "eurosign"
@@ -164,19 +148,19 @@ struct VehicleDetailView: View {
     private var priceStatistics: some View {
         GlassCard(title: "Spritpreis") {
             HStack(alignment: .top, spacing: 16) {
-                statItem(
+                StatTile(
                     title: "Niedrigster",
                     value: pricePerLiterString(vehicle.minPricePerLiter),
                     systemImage: "arrow.down"
                 )
                 Divider()
-                statItem(
+                StatTile(
                     title: "Höchster",
                     value: pricePerLiterString(vehicle.maxPricePerLiter),
                     systemImage: "arrow.up"
                 )
                 Divider()
-                statItem(
+                StatTile(
                     title: "Durchschnitt",
                     value: pricePerLiterString(vehicle.averagePricePerLiter),
                     systemImage: "chart.bar"
@@ -188,19 +172,19 @@ struct VehicleDetailView: View {
     private var consumptionStatistics: some View {
         GlassCard(title: "Verbrauch") {
             HStack(alignment: .top, spacing: 16) {
-                statItem(
+                StatTile(
                     title: "Niedrigster",
                     value: consumptionString(vehicle.minConsumption),
                     systemImage: "arrow.down"
                 )
                 Divider()
-                statItem(
+                StatTile(
                     title: "Größter",
                     value: consumptionString(vehicle.maxConsumption),
                     systemImage: "arrow.up"
                 )
                 Divider()
-                statItem(
+                StatTile(
                     title: "Durchschnitt",
                     value: consumptionString(vehicle.averageConsumption),
                     systemImage: "chart.bar"
