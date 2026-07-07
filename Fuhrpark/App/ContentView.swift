@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Auswahl in der Seitenleiste: allgemeine Statistik oder ein Fahrzeug.
 enum SidebarSelection: Hashable {
@@ -36,6 +37,65 @@ struct ContentView: View {
             Button("Abbrechen", role: .cancel) { }
         } message: {
             Text("Alle Fahrzeuge, Betankungen, sonstigen Ausgaben und Kategorien werden unwiderruflich gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden.")
+        }
+        .fileExporter(
+            isPresented: $appCommands.showExportDialog,
+            document: exportDocument,
+            contentType: .json,
+            defaultFilename: exportFilename
+        ) { result in
+            if case .failure(let error) = result {
+                appCommands.transferError = error.localizedDescription
+            }
+        }
+        .fileImporter(
+            isPresented: $appCommands.showImportDialog,
+            allowedContentTypes: [.json]
+        ) { result in
+            switch result {
+            case .success(let url):
+                importData(from: url)
+            case .failure(let error):
+                appCommands.transferError = error.localizedDescription
+            }
+        }
+        .alert(
+            "Datenübertragung fehlgeschlagen",
+            isPresented: Binding(
+                get: { appCommands.transferError != nil },
+                set: { if !$0 { appCommands.transferError = nil } }
+            ),
+            presenting: appCommands.transferError
+        ) { _ in
+            Button("OK", role: .cancel) { }
+        } message: { message in
+            Text(message)
+        }
+    }
+
+    /// Dateiname-Vorschlag ohne Endung; `fileExporter` ergänzt „.json".
+    private var exportFilename: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd"
+        return "FuhrparkDesktop_\(formatter.string(from: Date()))"
+    }
+
+    /// Serialisiert die Daten nur, wenn der Export-Dialog tatsächlich aktiv ist.
+    private var exportDocument: JSONDocument {
+        guard appCommands.showExportDialog else { return JSONDocument(data: Data()) }
+        return JSONDocument(data: (try? DataTransfer.exportData()) ?? Data())
+    }
+
+    private func importData(from url: URL) {
+        let accessed = url.startAccessingSecurityScopedResource()
+        defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+        do {
+            let data = try Data(contentsOf: url)
+            // Auswahl zuerst zurücksetzen, da der Import alle Daten löscht.
+            selection = .statistics
+            try DataTransfer.importData(data)
+        } catch {
+            appCommands.transferError = error.localizedDescription
         }
     }
 

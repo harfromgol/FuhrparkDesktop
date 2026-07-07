@@ -12,6 +12,15 @@ final class AppCommands {
     /// Löst im `ContentView` die Sicherheitsabfrage zum Löschen aller Daten aus.
     var showDeleteAllDataConfirmation = false
 
+    /// Öffnet den Datei-Dialog zum Exportieren aller Daten als JSON.
+    var showExportDialog = false
+
+    /// Öffnet den Datei-Dialog zum Importieren von Daten aus einer JSON-Datei.
+    var showImportDialog = false
+
+    /// Fehlermeldung eines fehlgeschlagenen Export-/Import-Vorgangs (für Alert).
+    var transferError: String?
+
     /// Ob das Hauptfenster gerade geöffnet ist. Steuert die Aktivierung der
     /// Menüpunkte „Neues Fenster“ / „Fenster schließen“. Wird von `ContentView`
     /// über `onAppear`/`onDisappear` gepflegt.
