@@ -61,4 +61,27 @@ struct PersistenceController {
             assertionFailure("Core Data save error: \(error)")
         }
     }
+
+    /// Löscht sämtliche Daten (Fahrzeuge, Betankungen, sonstige Ausgaben,
+    /// Kategorien) aus dem Core-Data-Speicher.
+    ///
+    /// Die Objekte werden einzeln im `viewContext` gelöscht (statt via
+    /// `NSBatchDeleteRequest`), damit alle `@FetchRequest`-Views automatisch
+    /// aktualisiert werden. Das Löschen der Fahrzeuge entfernt zugehörige
+    /// Betankungen und Ausgaben zwar bereits per Cascade-Regel; die übrigen
+    /// Entitäten werden dennoch explizit abgeräumt, um verwaiste Datensätze
+    /// (z. B. eigenständige Kategorien) sicher mitzunehmen.
+    func deleteAllData() {
+        let context = container.viewContext
+        let entityNames = ["Vehicle", "FuelEntry", "Expense", "Category"]
+        for name in entityNames {
+            let request = NSFetchRequest<NSManagedObject>(entityName: name)
+            request.includesPropertyValues = false
+            guard let objects = try? context.fetch(request) else { continue }
+            for object in objects where !object.isDeleted {
+                context.delete(object)
+            }
+        }
+        save(context: context)
+    }
 }

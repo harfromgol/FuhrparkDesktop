@@ -3,15 +3,22 @@ import SwiftUI
 @main
 struct FuhrparkDesktopApp: App {
     let persistenceController = PersistenceController.shared
+    @State private var appCommands = AppCommands()
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .environment(appCommands)
                 .frame(minWidth: 800, idealWidth: 1000, minHeight: 500, idealHeight: 650)
         }
         .commands {
             CommandGroup(replacing: .newItem) { }
+            CommandMenu("Tools") {
+                Button("Alle Daten löschen…") {
+                    appCommands.showDeleteAllDataConfirmation = true
+                }
+            }
         }
 
         WindowGroup("Betankungen", id: "fuel-list", for: VehicleRef.self) { $vehicleRef in
