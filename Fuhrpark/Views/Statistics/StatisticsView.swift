@@ -96,16 +96,6 @@ struct StatisticsView: View {
                                 }
                                 .font(.subheadline)
                             }
-
-                            Divider()
-
-                            GridRow {
-                                Text("Gesamt")
-                                Text(DisplayFormatter.currencyString(totalFuelCost))
-                                Text(DisplayFormatter.currencyString(totalExpenseCost))
-                                Text(DisplayFormatter.currencyString(totalCost))
-                            }
-                            .font(.subheadline.bold())
                         }
                     }
 
