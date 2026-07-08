@@ -115,6 +115,7 @@ private struct VehicleRow: View {
             Spacer()
         }
         .padding(.vertical, 2)
+        .padding(.leading, 5)
         .contentShape(Rectangle())
     }
 }
