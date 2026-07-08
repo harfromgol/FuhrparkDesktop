@@ -146,7 +146,22 @@ struct VehicleDetailView: View {
     }
 
     private var priceStatistics: some View {
-        GlassCard(title: "Spritpreis") {
+        GlassCard {
+            HStack {
+                Text("Spritpreis")
+                    .font(.headline)
+                Spacer()
+                if vehicle.fuelEntryCount >= 2, let vehicleRef {
+                    Button {
+                        openWindow(id: "price-chart", value: vehicleRef)
+                    } label: {
+                        Image(systemName: "chart.xyaxis.line")
+                            .imageScale(.large)
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Spritpreis-Verlauf anzeigen")
+                }
+            }
             HStack(alignment: .top, spacing: 16) {
                 StatTile(
                     title: "Niedrigster",

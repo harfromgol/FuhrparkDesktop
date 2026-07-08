@@ -39,6 +39,14 @@ struct FuhrparkDesktopApp: App {
             }
         }
         .defaultSize(width: 400, height: 520)
+
+        WindowGroup("Spritpreis-Verlauf", id: "price-chart", for: VehicleRef.self) { $vehicleRef in
+            if let vehicleRef {
+                PriceChartWindow(vehicleRef: vehicleRef)
+                    .environment(\.managedObjectContext, persistenceController.container.viewContext)
+            }
+        }
+        .defaultSize(width: 620, height: 420)
     }
 }
 
