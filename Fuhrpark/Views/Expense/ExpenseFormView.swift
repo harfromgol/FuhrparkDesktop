@@ -13,7 +13,7 @@ struct ExpenseFormView: View {
     @State private var amountText = ""
     @State private var recipient = ""
     @State private var purpose = ""
-    @State private var selectedCategory: Category?
+    @State private var selectedCategories: Set<Category> = []
     @State private var newCategoryName = ""
 
     @State private var dateValid = false
@@ -31,7 +31,7 @@ struct ExpenseFormView: View {
     }
 
     private var isFormValid: Bool {
-        dateValid && amountValid && recipientValid && purposeValid && selectedCategory != nil
+        dateValid && amountValid && recipientValid && purposeValid && !selectedCategories.isEmpty
     }
 
     var body: some View {
@@ -89,7 +89,7 @@ struct ExpenseFormView: View {
 
     private var categorySection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Kategorie")
+            Text("Kategorien (mindestens eine)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -98,13 +98,22 @@ struct ExpenseFormView: View {
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             } else {
-                Picker("Kategorie", selection: $selectedCategory) {
-                    Text("Bitte wählen").tag(Category?.none)
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), alignment: .leading),
+                        GridItem(.flexible(), alignment: .leading)
+                    ],
+                    alignment: .leading,
+                    spacing: 4
+                ) {
                     ForEach(categories) { category in
-                        Text(category.name ?? "").tag(Category?.some(category))
+                        Toggle(isOn: binding(for: category)) {
+                            Text(category.name ?? "")
+                                .lineLimit(1)
+                        }
+                        .toggleStyle(.checkbox)
                     }
                 }
-                .labelsHidden()
             }
 
             HStack {
@@ -118,15 +127,29 @@ struct ExpenseFormView: View {
         }
     }
 
+    /// Ein-/Ausschalten einer Kategorie in der Mehrfachauswahl.
+    private func binding(for category: Category) -> Binding<Bool> {
+        Binding(
+            get: { selectedCategories.contains(category) },
+            set: { isOn in
+                if isOn {
+                    selectedCategories.insert(category)
+                } else {
+                    selectedCategories.remove(category)
+                }
+            }
+        )
+    }
+
     private func addCategory() {
         let name = newCategoryName.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return }
 
-        // Bereits vorhanden? Dann nur auswählen.
+        // Bereits vorhanden? Dann nur (zusätzlich) auswählen.
         if let existing = categories.first(where: {
             $0.name?.caseInsensitiveCompare(name) == .orderedSame
         }) {
-            selectedCategory = existing
+            selectedCategories.insert(existing)
             newCategoryName = ""
             return
         }
@@ -138,7 +161,7 @@ struct ExpenseFormView: View {
         category.vehicle = vehicle
         PersistenceController.shared.save(context: viewContext)
 
-        selectedCategory = category
+        selectedCategories.insert(category)
         newCategoryName = ""
     }
 
@@ -149,7 +172,7 @@ struct ExpenseFormView: View {
         expense.amount = NSDecimalNumber(decimal: FieldValidator.decimalValue(amountText) ?? 0)
         expense.recipient = recipient
         expense.purpose = purpose
-        expense.categoryRaw = selectedCategory?.name ?? ""
+        expense.categories = NSSet(array: Array(selectedCategories))
         expense.vehicle = vehicle
 
         vehicle.touch()

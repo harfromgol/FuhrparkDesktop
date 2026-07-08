@@ -56,15 +56,24 @@ extension Vehicle {
         sortedExpenses.reduce(Decimal.zero) { $0 + ($1.amount?.decimalValue ?? 0) }
     }
 
-    /// Gesamtkosten je Kategorie, nach Betrag absteigend sortiert.
+    /// Gesamtkosten je Kategorie, nach Betrag absteigend sortiert. Eine Ausgabe
+    /// mit mehreren Kategorien fließt mit ihrem vollen Betrag in jede davon ein;
+    /// die Summe der Kategorien kann daher über den Ausgaben-Gesamtkosten liegen.
     var expenseCostByCategory: [(category: String, total: Decimal)] {
-        let grouped = Dictionary(grouping: sortedExpenses) { expense in
-            expense.categoryName.isEmpty ? "Ohne Kategorie" : expense.categoryName
-        }
-        return grouped
-            .map { key, expenses in
-                (category: key, total: expenses.reduce(Decimal.zero) { $0 + ($1.amount?.decimalValue ?? 0) })
+        var totals: [String: Decimal] = [:]
+        for expense in sortedExpenses {
+            let amount = expense.amount?.decimalValue ?? 0
+            let names = expense.categoryNames
+            if names.isEmpty {
+                totals["Ohne Kategorie", default: 0] += amount
+            } else {
+                for name in names {
+                    totals[name, default: 0] += amount
+                }
             }
+        }
+        return totals
+            .map { (category: $0.key, total: $0.value) }
             .sorted { $0.total > $1.total }
     }
 

@@ -45,7 +45,7 @@ private struct ExpenseDTO: Codable {
     var amount: Decimal
     var recipient: String
     var purpose: String
-    var categoryRaw: String
+    var categoryIDs: [UUID]
 }
 
 private struct CategoryDTO: Codable {
@@ -97,7 +97,7 @@ private extension ExpenseDTO {
         amount = expense.amount?.decimalValue ?? 0
         recipient = expense.recipient ?? ""
         purpose = expense.purpose ?? ""
-        categoryRaw = expense.categoryRaw ?? ""
+        categoryIDs = expense.sortedCategories.compactMap { $0.id }
     }
 }
 
@@ -160,6 +160,17 @@ enum DataTransfer {
             vehicle.createdAt = dto.createdAt
             vehicle.lastChangedDts = dto.lastChangedDts
 
+            // Kategorien zuerst anlegen, damit die Ausgaben sie referenzieren können.
+            var categoriesByID: [UUID: Category] = [:]
+            for c in dto.categories {
+                let category = Category(context: context)
+                category.id = c.id
+                category.name = c.name
+                category.createdAt = c.createdAt
+                category.vehicle = vehicle
+                categoriesByID[c.id] = category
+            }
+
             for f in dto.fuelEntries {
                 let entry = FuelEntry(context: context)
                 entry.id = f.id
@@ -185,16 +196,8 @@ enum DataTransfer {
                 expense.amount = NSDecimalNumber(decimal: e.amount)
                 expense.recipient = e.recipient
                 expense.purpose = e.purpose
-                expense.categoryRaw = e.categoryRaw
+                expense.categories = NSSet(array: e.categoryIDs.compactMap { categoriesByID[$0] })
                 expense.vehicle = vehicle
-            }
-
-            for c in dto.categories {
-                let category = Category(context: context)
-                category.id = c.id
-                category.name = c.name
-                category.createdAt = c.createdAt
-                category.vehicle = vehicle
             }
         }
 
