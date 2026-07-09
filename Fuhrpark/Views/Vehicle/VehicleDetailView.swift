@@ -43,8 +43,6 @@ struct VehicleDetailView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     fuelStatistics
-                    priceStatistics
-                    consumptionStatistics
                 }
 
                 sectionHeader(title: "Sonstige Ausgaben", systemImage: "eurosign.circle.fill") {
@@ -69,6 +67,17 @@ struct VehicleDetailView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
+                    expenseStatistics
+                }
+
+                sectionHeader(title: "Statistik", systemImage: "chart.bar.xaxis") { }
+
+                if !vehicle.sortedFuelEntries.isEmpty {
+                    priceStatistics
+                    consumptionStatistics
+                }
+
+                if !vehicle.sortedExpenses.isEmpty {
                     expenseCategoryStatistics
                 }
             }
@@ -243,6 +252,30 @@ struct VehicleDetailView: View {
     private func consumptionString(_ value: Double?) -> String {
         guard let value else { return "–" }
         return "\(DisplayFormatter.string(from: Decimal(value), formatter: DisplayFormatter.consumption)) l/100km"
+    }
+
+    private var expenseStatistics: some View {
+        GlassCard(title: "Sonstige Ausgaben – Statistik") {
+            HStack(alignment: .top, spacing: 16) {
+                StatTile(
+                    title: "Anzahl",
+                    value: "\(vehicle.expenseCount)",
+                    systemImage: "number"
+                )
+                Divider()
+                StatTile(
+                    title: "Letzte Buchung",
+                    value: vehicle.lastExpenseDate.map { FieldValidator.string(from: $0) } ?? "–",
+                    systemImage: "calendar"
+                )
+                Divider()
+                StatTile(
+                    title: "Gesamtkosten",
+                    value: DisplayFormatter.currencyString(vehicle.totalExpenseCost),
+                    systemImage: "eurosign"
+                )
+            }
+        }
     }
 
     private var expenseCategoryStatistics: some View {

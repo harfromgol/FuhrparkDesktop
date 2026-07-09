@@ -56,6 +56,16 @@ extension Vehicle {
         sortedExpenses.reduce(Decimal.zero) { $0 + ($1.amount?.decimalValue ?? 0) }
     }
 
+    /// Anzahl der erfassten sonstigen Ausgaben.
+    var expenseCount: Int {
+        sortedExpenses.count
+    }
+
+    /// Datum der letzten (jüngsten) sonstigen Ausgabe.
+    var lastExpenseDate: Date? {
+        sortedExpenses.compactMap(\.date).max()
+    }
+
     /// Gesamtkosten je Kategorie, nach Betrag absteigend sortiert. Eine Ausgabe
     /// mit mehreren Kategorien fließt mit ihrem vollen Betrag in jede davon ein;
     /// die Summe der Kategorien kann daher über den Ausgaben-Gesamtkosten liegen.
