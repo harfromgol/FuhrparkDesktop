@@ -101,12 +101,12 @@ struct VehicleDetailView: View {
     }
 
     private var statistics: some View {
-        GlassCard(title: "Statistik") {
+        GlassCard(title: "Allgemein") {
             HStack(alignment: .top, spacing: 16) {
                 StatTile(
-                    title: "Gesamtkosten",
-                    value: DisplayFormatter.currencyString(vehicle.totalCost),
-                    systemImage: "sum"
+                    title: "km-Stand",
+                    value: "\(DisplayFormatter.odometerString(vehicle.highestOdometer)) km",
+                    systemImage: "speedometer"
                 )
                 Divider()
                 StatTile(
@@ -114,6 +114,12 @@ struct VehicleDetailView: View {
                     value: vehicle.costPerKilometer.map { DisplayFormatter.currencyString($0) } ?? "–",
                     systemImage: "gauge.with.dots.needle.bottom.50percent",
                     subtitle: vehicle.drivenKilometers.map { "\($0) km gefahren" } ?? "keine Fahrleistung erfasst"
+                )
+                Divider()
+                StatTile(
+                    title: "Gesamtkosten",
+                    value: DisplayFormatter.currencyString(vehicle.totalCost),
+                    systemImage: "sum"
                 )
             }
         }
