@@ -15,6 +15,15 @@ enum EngineType: Int16, CaseIterable, Identifiable {
     }
 }
 
+/// Kosten eines Kalenderjahrs, aufgeschlüsselt nach Betankungen und sonstigen Ausgaben.
+struct YearlyCost: Identifiable {
+    let year: Int
+    let fuel: Decimal
+    let expense: Decimal
+    var total: Decimal { fuel + expense }
+    var id: Int { year }
+}
+
 extension Vehicle {
     var engineType: EngineType {
         get { EngineType(rawValue: engineTypeRaw) ?? .combustion }
@@ -90,6 +99,29 @@ extension Vehicle {
     /// Gesamtkosten (Betankungen + sonstige Ausgaben).
     var totalCost: Decimal {
         totalFuelCost + totalExpenseCost
+    }
+
+    /// Kosten pro Kalenderjahr (Betankungen und sonstige Ausgaben), neuestes Jahr zuerst.
+    var costsByYear: [YearlyCost] {
+        let calendar = Calendar.current
+        var fuelByYear: [Int: Decimal] = [:]
+        var expenseByYear: [Int: Decimal] = [:]
+
+        for entry in sortedFuelEntries {
+            guard let date = entry.date else { continue }
+            let year = calendar.component(.year, from: date)
+            fuelByYear[year, default: 0] += entry.amount?.decimalValue ?? 0
+        }
+        for expense in sortedExpenses {
+            guard let date = expense.date else { continue }
+            let year = calendar.component(.year, from: date)
+            expenseByYear[year, default: 0] += expense.amount?.decimalValue ?? 0
+        }
+
+        let years = Set(fuelByYear.keys).union(expenseByYear.keys)
+        return years
+            .map { YearlyCost(year: $0, fuel: fuelByYear[$0, default: 0], expense: expenseByYear[$0, default: 0]) }
+            .sorted { $0.year > $1.year }
     }
 
     /// Höchster bekannter Kilometerstand: der Anlagestand oder – falls höher –

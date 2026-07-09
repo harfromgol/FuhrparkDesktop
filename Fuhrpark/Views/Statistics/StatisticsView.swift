@@ -38,14 +38,6 @@ struct StatisticsView: View {
             .sorted { $0.year > $1.year }
     }
 
-    private struct YearlyCost: Identifiable {
-        let year: Int
-        let fuel: Decimal
-        let expense: Decimal
-        var total: Decimal { fuel + expense }
-        var id: Int { year }
-    }
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {

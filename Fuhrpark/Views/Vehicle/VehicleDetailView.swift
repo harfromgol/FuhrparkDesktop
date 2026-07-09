@@ -80,6 +80,10 @@ struct VehicleDetailView: View {
                 if !vehicle.sortedExpenses.isEmpty {
                     expenseCategoryStatistics
                 }
+
+                if !vehicle.costsByYear.isEmpty {
+                    yearlyCostStatistics
+                }
             }
             .padding(20)
         }
@@ -285,6 +289,34 @@ struct VehicleDetailView: View {
                     HStack {
                         Text(item.category)
                         Spacer()
+                        Text(DisplayFormatter.currencyString(item.total))
+                            .bold()
+                    }
+                    .font(.subheadline)
+                }
+            }
+        }
+    }
+
+    private var yearlyCostStatistics: some View {
+        GlassCard(title: "Kosten pro Jahr") {
+            Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
+                GridRow {
+                    Text("Jahr")
+                    Text("Betankungen").gridColumnAlignment(.trailing)
+                    Text("Sonstige").gridColumnAlignment(.trailing)
+                    Text("Gesamt").gridColumnAlignment(.trailing)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+                Divider()
+
+                ForEach(vehicle.costsByYear) { item in
+                    GridRow {
+                        Text(String(item.year))
+                        Text(DisplayFormatter.currencyString(item.fuel))
+                        Text(DisplayFormatter.currencyString(item.expense))
                         Text(DisplayFormatter.currencyString(item.total))
                             .bold()
                     }
