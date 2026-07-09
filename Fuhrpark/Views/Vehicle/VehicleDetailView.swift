@@ -18,8 +18,6 @@ struct VehicleDetailView: View {
             VStack(alignment: .leading, spacing: 20) {
                 header
 
-                statistics
-
                 sectionHeader(title: "Betankungen", systemImage: "fuelpump.fill") {
                     Button("Neue Betankung", systemImage: "plus") {
                         isPresentingNewFuelEntry = true
@@ -110,11 +108,9 @@ struct VehicleDetailView: View {
                 }
                 Spacer()
             }
-        }
-    }
 
-    private var statistics: some View {
-        GlassCard(title: "Allgemein") {
+            Divider()
+
             HStack(alignment: .top, spacing: 16) {
                 StatTile(
                     title: "km-Stand",
