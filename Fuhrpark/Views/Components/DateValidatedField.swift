@@ -28,6 +28,7 @@ struct DateValidatedField: View {
                     Image(systemName: "calendar")
                 }
                 .buttonStyle(.glass)
+                .pointerStyle(.link)
                 .popover(isPresented: $showPicker) {
                     DatePicker("Datum", selection: pickerDateBinding, displayedComponents: .date)
                         .datePickerStyle(.graphical)

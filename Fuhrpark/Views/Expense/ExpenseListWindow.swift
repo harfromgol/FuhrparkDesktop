@@ -133,5 +133,6 @@ struct ExpenseListWindow: View {
                 )
         }
         .buttonStyle(.plain)
+        .pointerStyle(.link)
     }
 }

@@ -67,10 +67,12 @@ struct VehicleFormView: View {
 
             HStack {
                 Button("Abbrechen", role: .cancel) { dismiss() }
+                    .pointerStyle(.link)
                 Spacer()
                 Button("Speichern") { save() }
                     .buttonStyle(.glassProminent)
                     .disabled(!isFormValid)
+                    .pointerStyle(isFormValid ? .link : nil)
             }
             .padding(16)
         }

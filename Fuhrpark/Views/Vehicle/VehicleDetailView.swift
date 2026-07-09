@@ -25,6 +25,7 @@ struct VehicleDetailView: View {
                         isPresentingNewFuelEntry = true
                     }
                     .buttonStyle(.glass)
+                    .pointerStyle(.link)
                     if !vehicle.sortedFuelEntries.isEmpty {
                         Button("Liste anzeigen", systemImage: "list.bullet") {
                             if let vehicleRef {
@@ -32,6 +33,7 @@ struct VehicleDetailView: View {
                             }
                         }
                         .buttonStyle(.glass)
+                        .pointerStyle(.link)
                     }
                 }
 
@@ -50,6 +52,7 @@ struct VehicleDetailView: View {
                         isPresentingNewExpense = true
                     }
                     .buttonStyle(.glass)
+                    .pointerStyle(.link)
                     if !vehicle.sortedExpenses.isEmpty {
                         Button("Liste anzeigen", systemImage: "list.bullet") {
                             if let vehicleRef {
@@ -57,6 +60,7 @@ struct VehicleDetailView: View {
                             }
                         }
                         .buttonStyle(.glass)
+                        .pointerStyle(.link)
                     }
                 }
 
@@ -159,6 +163,7 @@ struct VehicleDetailView: View {
                             .imageScale(.large)
                     }
                     .buttonStyle(.borderless)
+                    .pointerStyle(.link)
                     .help("Spritpreis-Verlauf anzeigen")
                 }
             }

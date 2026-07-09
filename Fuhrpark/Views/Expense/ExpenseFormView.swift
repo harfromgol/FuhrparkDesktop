@@ -77,10 +77,12 @@ struct ExpenseFormView: View {
 
             HStack {
                 Button("Abbrechen", role: .cancel) { dismiss() }
+                    .pointerStyle(.link)
                 Spacer()
                 Button("Speichern") { save() }
                     .buttonStyle(.glassProminent)
                     .disabled(!isFormValid)
+                    .pointerStyle(isFormValid ? .link : nil)
             }
             .padding(16)
         }
@@ -123,6 +125,7 @@ struct ExpenseFormView: View {
                 Button("Hinzufügen", systemImage: "plus") { addCategory() }
                     .buttonStyle(.glass)
                     .disabled(newCategoryName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .pointerStyle(newCategoryName.trimmingCharacters(in: .whitespaces).isEmpty ? nil : .link)
             }
         }
     }

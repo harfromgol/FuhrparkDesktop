@@ -26,6 +26,7 @@ struct SidebarView: View {
                     Label("Statistik", systemImage: "chart.bar.xaxis")
                 }
                 .buttonStyle(.plain)
+                .pointerStyle(.link)
                 .listRowBackground(rowBackground(for: .statistics))
             }
 
@@ -37,6 +38,7 @@ struct SidebarView: View {
                         VehicleRow(vehicle: vehicle)
                     }
                     .buttonStyle(.plain)
+                    .pointerStyle(.link)
                     .listRowBackground(rowBackground(for: .vehicle(vehicle)))
                     .contextMenu {
                         Button("Fahrzeug löschen", role: .destructive) {
@@ -59,6 +61,7 @@ struct SidebarView: View {
                 } label: {
                     Label("Neues Fahrzeug", systemImage: "plus")
                 }
+                .pointerStyle(.link)
             }
         }
         .sheet(isPresented: $isPresentingNewVehicle) {
