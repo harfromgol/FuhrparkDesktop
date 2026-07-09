@@ -47,6 +47,14 @@ struct FuhrparkDesktopApp: App {
             }
         }
         .defaultSize(width: 620, height: 420)
+
+        WindowGroup("Verbrauch-Verlauf", id: "consumption-chart", for: VehicleRef.self) { $vehicleRef in
+            if let vehicleRef {
+                ConsumptionChartWindow(vehicleRef: vehicleRef)
+                    .environment(\.managedObjectContext, persistenceController.container.viewContext)
+            }
+        }
+        .defaultSize(width: 620, height: 420)
     }
 }
 

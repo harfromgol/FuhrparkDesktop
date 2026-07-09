@@ -196,7 +196,23 @@ struct VehicleDetailView: View {
     }
 
     private var consumptionStatistics: some View {
-        GlassCard(title: "Verbrauch") {
+        GlassCard {
+            HStack {
+                Text("Verbrauch")
+                    .font(.headline)
+                Spacer()
+                if vehicle.consumptionCount >= 2, let vehicleRef {
+                    Button {
+                        openWindow(id: "consumption-chart", value: vehicleRef)
+                    } label: {
+                        Image(systemName: "chart.xyaxis.line")
+                            .imageScale(.large)
+                    }
+                    .buttonStyle(.borderless)
+                    .pointerStyle(.link)
+                    .help("Verbrauch-Verlauf anzeigen")
+                }
+            }
             HStack(alignment: .top, spacing: 16) {
                 StatTile(
                     title: "Niedrigster",

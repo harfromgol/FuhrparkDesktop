@@ -154,6 +154,20 @@ extension Vehicle {
         sortedFuelEntries.compactMap { effectiveConsumption(for: $0) }
     }
 
+    /// Anzahl der Betankungen mit ermitteltem Verbrauch.
+    var consumptionCount: Int { consumptions.count }
+
+    /// Verbrauchsverlauf (Datum und Verbrauch) je Betankung mit ermitteltem Wert,
+    /// nach Datum aufsteigend sortiert.
+    var consumptionHistory: [(date: Date, consumption: Double)] {
+        sortedFuelEntries
+            .compactMap { entry -> (date: Date, consumption: Double)? in
+                guard let date = entry.date, let value = effectiveConsumption(for: entry) else { return nil }
+                return (date, value)
+            }
+            .sorted { $0.date < $1.date }
+    }
+
     var minConsumption: Double? { consumptions.min() }
     var maxConsumption: Double? { consumptions.max() }
     var averageConsumption: Double? {
