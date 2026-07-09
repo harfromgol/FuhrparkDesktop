@@ -70,17 +70,23 @@ struct VehicleDetailView: View {
 
                 sectionHeader(title: "Statistik", systemImage: "chart.bar.xaxis") { }
 
-                if !vehicle.sortedFuelEntries.isEmpty {
-                    priceStatistics
-                    consumptionStatistics
-                }
+                if vehicle.sortedFuelEntries.isEmpty && vehicle.sortedExpenses.isEmpty {
+                    Text("Noch keine Betankungen oder sonstigen Ausgaben erfasst.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    if !vehicle.sortedFuelEntries.isEmpty {
+                        priceStatistics
+                        consumptionStatistics
+                    }
 
-                if !vehicle.sortedExpenses.isEmpty {
-                    expenseCategoryStatistics
-                }
+                    if !vehicle.sortedExpenses.isEmpty {
+                        expenseCategoryStatistics
+                    }
 
-                if !vehicle.costsByYear.isEmpty {
-                    yearlyCostStatistics
+                    if !vehicle.costsByYear.isEmpty {
+                        yearlyCostStatistics
+                    }
                 }
             }
             .padding(20)
