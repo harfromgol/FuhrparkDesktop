@@ -336,10 +336,14 @@ struct VehicleDetailView: View {
         HStack {
             Label(title, systemImage: systemImage)
                 .font(.headline)
+                .foregroundStyle(Self.sectionHeaderColor)
             Spacer()
             buttons()
         }
     }
+
+    /// Akzentfarbe der Abschnitts-Überschriften (Icon + Titel). Licht-/dunkeladaptiv.
+    private static let sectionHeaderColor = Color.orange
 }
 
 #Preview {
