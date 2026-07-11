@@ -24,9 +24,9 @@ struct FuelEntryListWindow: View {
             VStack(alignment: .leading, spacing: 12) {
                 if entries.isEmpty {
                     ContentUnavailableView(
-                        "Keine Betankungen",
+                        "Keine \(vehicleRef.engineType.refuelNounPlural)",
                         systemImage: "fuelpump",
-                        description: Text("Für dieses Fahrzeug sind noch keine Betankungen erfasst.")
+                        description: Text("Für dieses Fahrzeug sind noch keine \(vehicleRef.engineType.refuelNounPlural) erfasst.")
                     )
                     .padding(.top, 60)
                 } else {
@@ -44,9 +44,9 @@ struct FuelEntryListWindow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(minWidth: 340, minHeight: 400)
-        .navigationTitle("Betankungen – \(vehicleRef.licensePlate)")
+        .navigationTitle("\(vehicleRef.engineType.refuelNounPlural) – \(vehicleRef.licensePlate)")
         .confirmationDialog(
-            "Betankung löschen?",
+            "\(vehicleRef.engineType.refuelNoun) löschen?",
             isPresented: Binding(
                 get: { pendingDeletion != nil },
                 set: { if !$0 { pendingDeletion = nil } }

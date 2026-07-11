@@ -1,11 +1,13 @@
 import Foundation
 import CoreData
 
-enum EngineType: Int16, CaseIterable, Identifiable {
+enum EngineType: Int16, CaseIterable, Identifiable, Codable {
     case combustion = 0
     case bev = 1
 
     var id: Int16 { rawValue }
+
+    private var isBEV: Bool { self == .bev }
 
     var displayName: String {
         switch self {
@@ -13,6 +15,41 @@ enum EngineType: Int16, CaseIterable, Identifiable {
         case .bev: return "BEV"
         }
     }
+
+    // MARK: - Einheiten (Verbrenner: Liter/Sprit, BEV: kWh/Strom)
+
+    /// Einheit der getankten bzw. geladenen Menge ("l" / "kWh").
+    var energyUnit: String { isBEV ? "kWh" : "l" }
+    /// Einheit des Verbrauchs ("l/100km" / "kWh/100km").
+    var consumptionUnit: String { isBEV ? "kWh/100km" : "l/100km" }
+    /// Suffix hinter dem €-Betrag beim Einheitspreis ("/l" / "/kWh").
+    var pricePerUnitSuffix: String { isBEV ? "/kWh" : "/l" }
+
+    // MARK: - Begriffe
+
+    /// Vorgang im Singular ("Betankung" / "Ladung").
+    var refuelNoun: String { isBEV ? "Ladung" : "Betankung" }
+    /// Vorgang im Plural ("Betankungen" / "Ladungen").
+    var refuelNounPlural: String { isBEV ? "Ladungen" : "Betankungen" }
+    /// Titel für einen neuen Vorgang ("Neue Betankung" / "Neue Ladung").
+    var newRefuelTitle: String { isBEV ? "Neue Ladung" : "Neue Betankung" }
+    /// Ort des Vorgangs ("Tankstelle" / "Ladestation").
+    var stationLabel: String { isBEV ? "Ladestation" : "Tankstelle" }
+    /// Titel des Preis-Abschnitts ("Spritpreis" / "Strompreis").
+    var priceTitle: String { isBEV ? "Strompreis" : "Spritpreis" }
+    /// Kosten des Energieträgers ("Spritkosten" / "Stromkosten").
+    var energyCostLabel: String { isBEV ? "Stromkosten" : "Spritkosten" }
+    /// Getankte/geladene Gesamtmenge ("Getankt gesamt" / "Geladen gesamt").
+    var totalEnergyLabel: String { isBEV ? "Geladen gesamt" : "Getankt gesamt" }
+    /// Datum des letzten Vorgangs ("Letzte Tankung" / "Letzte Ladung").
+    var lastRefuelLabel: String { isBEV ? "Letzte Ladung" : "Letzte Tankung" }
+    /// Toggle „voll" ("Vollgetankt?" / "Vollgeladen?").
+    var fullLabel: String { isBEV ? "Vollgeladen?" : "Vollgetankt?" }
+
+    /// Feldbeschriftung Menge im Formular ("Menge (Liter)" / "Menge (kWh)").
+    var amountFieldLabel: String { isBEV ? "Menge (kWh)" : "Menge (Liter)" }
+    /// Feldbeschriftung Einheitspreis im Formular ("Preis pro Liter (€)" / "Preis pro kWh (€)").
+    var pricePerUnitFieldLabel: String { isBEV ? "Preis pro kWh (€)" : "Preis pro Liter (€)" }
 }
 
 /// Kosten eines Kalenderjahrs, aufgeschlüsselt nach Betankungen und sonstigen Ausgaben.

@@ -6,6 +6,8 @@ struct FuelEntryFormView: View {
 
     let vehicle: Vehicle
 
+    private var engineType: EngineType { vehicle.engineType }
+
     @State private var dateText = FieldValidator.string(from: Date())
     @State private var odometerText = ""
     @State private var station = ""
@@ -72,7 +74,7 @@ struct FuelEntryFormView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    GlassCard(title: "Betankung") {
+                    GlassCard(title: engineType.refuelNoun) {
                         DateValidatedField(title: "Datum", text: $dateText, isValidBinding: $dateValid)
                         ValidatedField(
                             title: "Kilometerstand",
@@ -86,19 +88,19 @@ struct FuelEntryFormView: View {
                             extraErrorMessage: "Muss größer als \(minimumOdometer) km sein"
                         )
                         ValidatedField(
-                            title: "Tankstelle",
+                            title: engineType.stationLabel,
                             text: $station,
                             kind: .text(min: 1, max: 30),
                             isValidBinding: $stationValid
                         )
                         ValidatedField(
-                            title: "Preis pro Liter (€)",
+                            title: engineType.pricePerUnitFieldLabel,
                             text: $priceText,
                             kind: .decimal(fractionDigits: 3, minLength: 5, maxLength: 6),
                             isValidBinding: $priceValid
                         )
                         ValidatedField(
-                            title: "Menge (Liter)",
+                            title: engineType.amountFieldLabel,
                             text: $litersText,
                             kind: .decimal(fractionDigits: 2, minLength: 4, maxLength: 5),
                             isValidBinding: $litersValid
@@ -124,13 +126,13 @@ struct FuelEntryFormView: View {
                     }
 
                     GlassCard(title: "Optionen") {
-                        Toggle("Vorherige Betankung eingetragen?", isOn: $previousEntryExists)
-                        Toggle("Vollgetankt?", isOn: $fullTank)
+                        Toggle("Vorherige \(engineType.refuelNoun) eingetragen?", isOn: $previousEntryExists)
+                        Toggle(engineType.fullLabel, isOn: $fullTank)
                         Toggle("Verbrauch manuell eintragen?", isOn: $manualConsumption)
 
                         if manualConsumption {
                             ValidatedField(
-                                title: "Verbrauch (l/100km)",
+                                title: "Verbrauch (\(engineType.consumptionUnit))",
                                 text: $manualConsumptionText,
                                 kind: .decimal(fractionDigits: 2, minLength: 4, maxLength: 6),
                                 isValidBinding: $manualConsumptionValid
@@ -141,7 +143,7 @@ struct FuelEntryFormView: View {
                                     .foregroundStyle(.secondary)
                                 Spacer()
                                 if let computedConsumption {
-                                    Text("\(DisplayFormatter.string(from: Decimal(computedConsumption), formatter: DisplayFormatter.consumption)) l/100km")
+                                    Text("\(DisplayFormatter.string(from: Decimal(computedConsumption), formatter: DisplayFormatter.consumption)) \(engineType.consumptionUnit)")
                                         .bold()
                                 } else {
                                     Text("nicht berechenbar")

@@ -4,14 +4,18 @@ import SwiftUI
 struct FuelEntryRow: View {
     @ObservedObject var entry: FuelEntry
 
-    /// Verbrauch (l/100km): vorrangig der gespeicherte Wert, sonst live berechnet.
+    private var engineType: EngineType {
+        entry.vehicle?.engineType ?? .combustion
+    }
+
+    /// Verbrauch: vorrangig der gespeicherte Wert, sonst live berechnet.
     private var consumptionValue: Double? {
         entry.vehicle?.effectiveConsumption(for: entry)
     }
 
     private var consumptionText: String {
         guard let value = consumptionValue else { return "–" }
-        return "\(DisplayFormatter.string(from: Decimal(value), formatter: DisplayFormatter.consumption)) l/100km"
+        return "\(DisplayFormatter.string(from: Decimal(value), formatter: DisplayFormatter.consumption)) \(engineType.consumptionUnit)"
     }
 
     var body: some View {
@@ -23,7 +27,7 @@ struct FuelEntryRow: View {
                     Text("\(entry.station ?? "") · \(entry.odometer) km")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text("\(DisplayFormatter.string(from: entry.liters?.decimalValue ?? 0, formatter: DisplayFormatter.decimal2)) l à \(DisplayFormatter.pricePerLiterString(entry.pricePerLiter?.decimalValue ?? 0))/l")
+                    Text("\(DisplayFormatter.string(from: entry.liters?.decimalValue ?? 0, formatter: DisplayFormatter.decimal2)) \(engineType.energyUnit) à \(DisplayFormatter.pricePerLiterString(entry.pricePerLiter?.decimalValue ?? 0))\(engineType.pricePerUnitSuffix)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

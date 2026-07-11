@@ -5,4 +5,5 @@ import Foundation
 struct VehicleRef: Codable, Hashable, Identifiable {
     let id: UUID
     let licensePlate: String
+    let engineType: EngineType
 }

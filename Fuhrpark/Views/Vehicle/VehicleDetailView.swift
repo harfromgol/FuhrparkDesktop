@@ -10,7 +10,7 @@ struct VehicleDetailView: View {
 
     private var vehicleRef: VehicleRef? {
         guard let id = vehicle.id else { return nil }
-        return VehicleRef(id: id, licensePlate: vehicle.licensePlate ?? "")
+        return VehicleRef(id: id, licensePlate: vehicle.licensePlate ?? "", engineType: vehicle.engineType)
     }
 
     var body: some View {
@@ -18,8 +18,8 @@ struct VehicleDetailView: View {
             VStack(alignment: .leading, spacing: 20) {
                 header
 
-                sectionHeader(title: "Betankungen", systemImage: "fuelpump.fill") {
-                    Button("Neue Betankung", systemImage: "plus") {
+                sectionHeader(title: vehicle.engineType.refuelNounPlural, systemImage: "fuelpump.fill") {
+                    Button(vehicle.engineType.newRefuelTitle, systemImage: "plus") {
                         isPresentingNewFuelEntry = true
                     }
                     .buttonStyle(.glass)
@@ -36,7 +36,7 @@ struct VehicleDetailView: View {
                 }
 
                 if vehicle.sortedFuelEntries.isEmpty {
-                    Text("Noch keine Betankungen erfasst.")
+                    Text("Noch keine \(vehicle.engineType.refuelNounPlural) erfasst.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
@@ -71,7 +71,7 @@ struct VehicleDetailView: View {
                 sectionHeader(title: "Statistik", systemImage: "chart.bar.xaxis") { }
 
                 if vehicle.sortedFuelEntries.isEmpty && vehicle.sortedExpenses.isEmpty {
-                    Text("Noch keine Betankungen oder sonstigen Ausgaben erfasst.")
+                    Text("Noch keine \(vehicle.engineType.refuelNounPlural) oder sonstigen Ausgaben erfasst.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
@@ -141,7 +141,7 @@ struct VehicleDetailView: View {
     }
 
     private var fuelStatistics: some View {
-        GlassCard(title: "Betankungen – Statistik") {
+        GlassCard(title: "\(vehicle.engineType.refuelNounPlural) – Statistik") {
             HStack(alignment: .top, spacing: 16) {
                 StatTile(
                     title: "Anzahl",
@@ -150,19 +150,19 @@ struct VehicleDetailView: View {
                 )
                 Divider()
                 StatTile(
-                    title: "Letzte Tankung",
+                    title: vehicle.engineType.lastRefuelLabel,
                     value: vehicle.lastFuelDate.map { FieldValidator.string(from: $0) } ?? "–",
                     systemImage: "calendar"
                 )
                 Divider()
                 StatTile(
-                    title: "Getankt gesamt",
-                    value: "\(DisplayFormatter.string(from: vehicle.totalLiters, formatter: DisplayFormatter.decimal2)) l",
+                    title: vehicle.engineType.totalEnergyLabel,
+                    value: "\(DisplayFormatter.string(from: vehicle.totalLiters, formatter: DisplayFormatter.decimal2)) \(vehicle.engineType.energyUnit)",
                     systemImage: "drop.fill"
                 )
                 Divider()
                 StatTile(
-                    title: "Spritkosten",
+                    title: vehicle.engineType.energyCostLabel,
                     value: DisplayFormatter.currencyString(vehicle.totalFuelCost),
                     systemImage: "eurosign"
                 )
@@ -173,7 +173,7 @@ struct VehicleDetailView: View {
     private var priceStatistics: some View {
         GlassCard {
             HStack {
-                Text("Spritpreis")
+                Text(vehicle.engineType.priceTitle)
                     .font(.headline)
                 Spacer()
                 if vehicle.fuelEntryCount >= 2, let vehicleRef {
@@ -185,7 +185,7 @@ struct VehicleDetailView: View {
                     }
                     .buttonStyle(.borderless)
                     .pointerStyle(.link)
-                    .help("Spritpreis-Verlauf anzeigen")
+                    .help("\(vehicle.engineType.priceTitle)-Verlauf anzeigen")
                 }
             }
             HStack(alignment: .top, spacing: 16) {
@@ -252,12 +252,12 @@ struct VehicleDetailView: View {
 
     private func pricePerLiterString(_ value: Decimal?) -> String {
         guard let value else { return "–" }
-        return "\(DisplayFormatter.pricePerLiterString(value))/l"
+        return "\(DisplayFormatter.pricePerLiterString(value))\(vehicle.engineType.pricePerUnitSuffix)"
     }
 
     private func consumptionString(_ value: Double?) -> String {
         guard let value else { return "–" }
-        return "\(DisplayFormatter.string(from: Decimal(value), formatter: DisplayFormatter.consumption)) l/100km"
+        return "\(DisplayFormatter.string(from: Decimal(value), formatter: DisplayFormatter.consumption)) \(vehicle.engineType.consumptionUnit)"
     }
 
     private var expenseStatistics: some View {

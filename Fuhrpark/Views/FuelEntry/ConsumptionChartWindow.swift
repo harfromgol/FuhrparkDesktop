@@ -65,7 +65,7 @@ struct ConsumptionChartWindow: View {
                     .foregroundStyle(Color.accentColor)
                 }
                 .chartYScale(domain: yDomain)
-                .chartYAxisLabel("l/100km")
+                .chartYAxisLabel(vehicleRef.engineType.consumptionUnit)
                 .chartYAxis {
                     AxisMarks { value in
                         AxisGridLine()

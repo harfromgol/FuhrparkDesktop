@@ -80,7 +80,7 @@ struct SidebarView: View {
             }
             Button("Abbrechen", role: .cancel) { }
         } message: { vehicle in
-            Text("„\(vehicle.licensePlate ?? "")“ und alle zugehörigen Betankungen und Ausgaben werden unwiderruflich gelöscht.")
+            Text("„\(vehicle.licensePlate ?? "")“ und alle zugehörigen \(vehicle.engineType.refuelNounPlural) und Ausgaben werden unwiderruflich gelöscht.")
         }
     }
 

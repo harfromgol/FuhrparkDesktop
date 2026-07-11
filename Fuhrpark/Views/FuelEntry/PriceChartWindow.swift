@@ -51,7 +51,7 @@ struct PriceChartWindow: View {
                 ContentUnavailableView(
                     "Zu wenige Daten",
                     systemImage: "chart.xyaxis.line",
-                    description: Text("Für eine Verlaufsdarstellung sind mindestens zwei Betankungen nötig.")
+                    description: Text("Für eine Verlaufsdarstellung sind mindestens zwei \(vehicleRef.engineType.refuelNounPlural) nötig.")
                 )
             } else {
                 Chart(points) { point in
@@ -83,10 +83,11 @@ struct PriceChartWindow: View {
         }
         .padding(20)
         .frame(minWidth: 480, minHeight: 340)
-        .navigationTitle("Spritpreis-Verlauf – \(vehicleRef.licensePlate)")
+        .navigationTitle("\(vehicleRef.engineType.priceTitle)-Verlauf – \(vehicleRef.licensePlate)")
     }
 
     private func priceLabel(_ price: Double) -> String {
-        DisplayFormatter.pricePerLiter.string(from: NSNumber(value: price)) ?? "\(price)"
+        let value = DisplayFormatter.pricePerLiter.string(from: NSNumber(value: price)) ?? "\(price)"
+        return value + vehicleRef.engineType.pricePerUnitSuffix
     }
 }
