@@ -95,7 +95,9 @@ struct VehicleDetailView: View {
             }
             .padding(20)
         }
-        .navigationTitle(vehicle.licensePlate ?? "")
+        // Generischer Fenstertitel statt des Kennzeichens: Das Kennzeichen steht
+        // bereits in der Header-Karte, so wird die Dopplung vermieden.
+        .navigationTitle("Fahrzeugdetails")
         .sheet(isPresented: $isPresentingNewFuelEntry) {
             FuelEntryFormView(vehicle: vehicle)
         }
