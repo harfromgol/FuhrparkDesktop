@@ -83,28 +83,16 @@ struct SidebarView: View {
         Button {
             selection = .vehicle(vehicle)
         } label: {
-            VehicleRow(vehicle: vehicle)
+            VehicleRow(
+                vehicle: vehicle,
+                onDecommission: { vehiclePendingDecommission = vehicle },
+                onReactivate: { reactivate(vehicle) },
+                onDelete: { vehiclePendingDeletion = vehicle }
+            )
         }
         .buttonStyle(.plain)
         .pointerStyle(.link)
         .listRowBackground(rowBackground(for: .vehicle(vehicle)))
-        .contextMenu { vehicleContextMenu(for: vehicle) }
-    }
-
-    @ViewBuilder
-    private func vehicleContextMenu(for vehicle: Vehicle) -> some View {
-        if vehicle.decommissioned {
-            Button("Wieder in Betrieb nehmen") {
-                reactivate(vehicle)
-            }
-        } else {
-            Button("Fahrzeug stilllegen") {
-                vehiclePendingDecommission = vehicle
-            }
-        }
-        Button("Fahrzeug löschen", role: .destructive) {
-            vehiclePendingDeletion = vehicle
-        }
     }
 
     private func rowBackground(for item: SidebarSelection) -> Color {
@@ -160,6 +148,9 @@ private struct VehicleConfirmationModifier: ViewModifier {
 
 private struct VehicleRow: View {
     @ObservedObject var vehicle: Vehicle
+    let onDecommission: () -> Void
+    let onReactivate: () -> Void
+    let onDelete: () -> Void
 
     private var dimmed: Double { vehicle.decommissioned ? 0.5 : 1 }
 
@@ -192,6 +183,17 @@ private struct VehicleRow: View {
         .padding(.vertical, 2)
         .padding(.leading, 5)
         .contentShape(Rectangle())
+        // Das Kontextmenü liegt bewusst hier (VehicleRow beobachtet das Fahrzeug
+        // via @ObservedObject), damit es sofort auf Stilllegen/Reaktivieren
+        // reagiert – im Eltern-Scope würde es erst bei Auswahlwechsel neu bauen.
+        .contextMenu {
+            if vehicle.decommissioned {
+                Button("Wieder in Betrieb nehmen", action: onReactivate)
+            } else {
+                Button("Fahrzeug stilllegen", action: onDecommission)
+            }
+            Button("Fahrzeug löschen", role: .destructive, action: onDelete)
+        }
     }
 }
 
