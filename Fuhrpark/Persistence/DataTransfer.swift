@@ -21,6 +21,9 @@ private struct VehicleDTO: Codable {
     var model: String
     var odometer: Int32
     var engineTypeRaw: Int16
+    /// Stillgelegt-Kennzeichen. Optional, damit ältere Exporte (ohne dieses Feld)
+    /// weiterhin lesbar sind – fehlt es, gilt das Fahrzeug als aktiv.
+    var decommissioned: Bool?
     var createdAt: Date
     var lastChangedDts: Date?
     var fuelEntries: [FuelEntryDTO]
@@ -67,6 +70,7 @@ private extension VehicleDTO {
         model = vehicle.model ?? ""
         odometer = vehicle.odometer
         engineTypeRaw = vehicle.engineTypeRaw
+        decommissioned = vehicle.decommissioned
         createdAt = vehicle.createdAt ?? Date()
         lastChangedDts = vehicle.lastChangedDts
         fuelEntries = vehicle.sortedFuelEntries.map(FuelEntryDTO.init(entry:))
@@ -161,6 +165,7 @@ enum DataTransfer {
             vehicle.model = dto.model
             vehicle.odometer = dto.odometer
             vehicle.engineTypeRaw = dto.engineTypeRaw
+            vehicle.decommissioned = dto.decommissioned ?? false
             vehicle.createdAt = dto.createdAt
             vehicle.lastChangedDts = dto.lastChangedDts
 
