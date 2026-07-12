@@ -161,36 +161,58 @@ private struct VehicleConfirmationModifier: ViewModifier {
 private struct VehicleRow: View {
     @ObservedObject var vehicle: Vehicle
 
+    private var dimmed: Double { vehicle.decommissioned ? 0.5 : 1 }
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(vehicle.licensePlate ?? "")
                         .font(.headline)
+                        .opacity(dimmed)
                     if vehicle.decommissioned {
-                        Text("Stillgelegt")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(.secondary.opacity(0.18), in: Capsule())
+                        DecommissionedBadge()
                     }
                 }
-                Text("\(vehicle.manufacturer ?? "") \(vehicle.model ?? "")")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Text("Anfangsstand: \(DisplayFormatter.odometerString(vehicle.odometer)) km")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                Text("Höchststand: \(DisplayFormatter.odometerString(vehicle.highestOdometer)) km")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(vehicle.manufacturer ?? "") \(vehicle.model ?? "")")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text("Anfangsstand: \(DisplayFormatter.odometerString(vehicle.odometer)) km")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                    Text("Höchststand: \(DisplayFormatter.odometerString(vehicle.highestOdometer)) km")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                .opacity(dimmed)
             }
             Spacer()
         }
-        .opacity(vehicle.decommissioned ? 0.6 : 1)
         .padding(.vertical, 2)
         .padding(.leading, 5)
         .contentShape(Rectangle())
+    }
+}
+
+/// Rote „Stillgelegt"-Marke. Adaptives System-Rot (Dark: heller, Light: satter),
+/// daher auf hellem und dunklem Hintergrund gut lesbar.
+struct DecommissionedBadge: View {
+    var showsIcon = false
+
+    var body: some View {
+        Group {
+            if showsIcon {
+                Label("Stillgelegt", systemImage: "xmark.seal.fill")
+            } else {
+                Text("Stillgelegt")
+            }
+        }
+        .font(.caption2.weight(.semibold))
+        .foregroundStyle(.red)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .background(.red.opacity(0.15), in: Capsule())
+        .overlay(Capsule().strokeBorder(.red.opacity(0.4), lineWidth: 0.5))
     }
 }

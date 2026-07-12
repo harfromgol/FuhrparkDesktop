@@ -118,12 +118,7 @@ struct VehicleDetailView: View {
                 }
                 Spacer()
                 if vehicle.decommissioned {
-                    Label("Stillgelegt", systemImage: "xmark.seal.fill")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(.secondary.opacity(0.15), in: Capsule())
+                    DecommissionedBadge(showsIcon: true)
                 }
             }
 
