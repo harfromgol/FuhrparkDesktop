@@ -16,8 +16,43 @@ struct SidebarView: View {
 
     @State private var isPresentingNewVehicle = false
     @State private var vehiclePendingDeletion: Vehicle?
+    @State private var vehiclePendingDecommission: Vehicle?
 
     var body: some View {
+        list
+            .navigationTitle("Fuhrpark")
+            .toolbar {
+                ToolbarItem {
+                    Button {
+                        isPresentingNewVehicle = true
+                    } label: {
+                        Label("Neues Fahrzeug", systemImage: "plus")
+                    }
+                    .pointerStyle(.link)
+                }
+            }
+            .sheet(isPresented: $isPresentingNewVehicle) {
+                VehicleFormView()
+            }
+            .modifier(VehicleConfirmationModifier(
+                pending: $vehiclePendingDeletion,
+                title: "Fahrzeug wirklich löschen?",
+                actionLabel: "Löschen",
+                actionRole: .destructive,
+                message: { "„\($0.licensePlate ?? "")“ und alle zugehörigen \($0.engineType.refuelNounPlural) und Ausgaben werden unwiderruflich gelöscht." },
+                action: delete
+            ))
+            .modifier(VehicleConfirmationModifier(
+                pending: $vehiclePendingDecommission,
+                title: "Fahrzeug wirklich stilllegen?",
+                actionLabel: "Stilllegen",
+                actionRole: nil,
+                message: { "„\($0.licensePlate ?? "")“ wird als stillgelegt (verschrottet oder verkauft) markiert. Danach können keine \($0.engineType.refuelNounPlural) und sonstigen Ausgaben mehr erfasst werden." },
+                action: decommission
+            ))
+    }
+
+    private var list: some View {
         List {
             Section("Allgemein") {
                 Button {
@@ -32,19 +67,7 @@ struct SidebarView: View {
 
             Section("Fahrzeuge") {
                 ForEach(vehicles) { vehicle in
-                    Button {
-                        selection = .vehicle(vehicle)
-                    } label: {
-                        VehicleRow(vehicle: vehicle)
-                    }
-                    .buttonStyle(.plain)
-                    .pointerStyle(.link)
-                    .listRowBackground(rowBackground(for: .vehicle(vehicle)))
-                    .contextMenu {
-                        Button("Fahrzeug löschen", role: .destructive) {
-                            vehiclePendingDeletion = vehicle
-                        }
-                    }
+                    vehicleRow(vehicle)
                 }
                 .onDelete { offsets in
                     for index in offsets {
@@ -53,34 +76,34 @@ struct SidebarView: View {
                 }
             }
         }
-        .navigationTitle("Fuhrpark")
-        .toolbar {
-            ToolbarItem {
-                Button {
-                    isPresentingNewVehicle = true
-                } label: {
-                    Label("Neues Fahrzeug", systemImage: "plus")
-                }
-                .pointerStyle(.link)
+    }
+
+    @ViewBuilder
+    private func vehicleRow(_ vehicle: Vehicle) -> some View {
+        Button {
+            selection = .vehicle(vehicle)
+        } label: {
+            VehicleRow(vehicle: vehicle)
+        }
+        .buttonStyle(.plain)
+        .pointerStyle(.link)
+        .listRowBackground(rowBackground(for: .vehicle(vehicle)))
+        .contextMenu { vehicleContextMenu(for: vehicle) }
+    }
+
+    @ViewBuilder
+    private func vehicleContextMenu(for vehicle: Vehicle) -> some View {
+        if vehicle.decommissioned {
+            Button("Wieder in Betrieb nehmen") {
+                reactivate(vehicle)
+            }
+        } else {
+            Button("Fahrzeug stilllegen") {
+                vehiclePendingDecommission = vehicle
             }
         }
-        .sheet(isPresented: $isPresentingNewVehicle) {
-            VehicleFormView()
-        }
-        .confirmationDialog(
-            "Fahrzeug wirklich löschen?",
-            isPresented: Binding(
-                get: { vehiclePendingDeletion != nil },
-                set: { if !$0 { vehiclePendingDeletion = nil } }
-            ),
-            presenting: vehiclePendingDeletion
-        ) { vehicle in
-            Button("Löschen", role: .destructive) {
-                delete(vehicle)
-            }
-            Button("Abbrechen", role: .cancel) { }
-        } message: { vehicle in
-            Text("„\(vehicle.licensePlate ?? "")“ und alle zugehörigen \(vehicle.engineType.refuelNounPlural) und Ausgaben werden unwiderruflich gelöscht.")
+        Button("Fahrzeug löschen", role: .destructive) {
+            vehiclePendingDeletion = vehicle
         }
     }
 
@@ -95,6 +118,44 @@ struct SidebarView: View {
         viewContext.delete(vehicle)
         PersistenceController.shared.save(context: viewContext)
     }
+
+    private func decommission(_ vehicle: Vehicle) {
+        vehicle.decommissioned = true
+        PersistenceController.shared.save(context: viewContext)
+    }
+
+    private func reactivate(_ vehicle: Vehicle) {
+        vehicle.decommissioned = false
+        PersistenceController.shared.save(context: viewContext)
+    }
+}
+
+/// Wiederverwendbarer Bestätigungsdialog für eine Fahrzeug-Aktion (Löschen bzw.
+/// Stilllegen). Als eigener `ViewModifier`, damit `SidebarView.body` schlank und
+/// für den Type-Checker handhabbar bleibt.
+private struct VehicleConfirmationModifier: ViewModifier {
+    @Binding var pending: Vehicle?
+    let title: String
+    let actionLabel: String
+    let actionRole: ButtonRole?
+    let message: (Vehicle) -> String
+    let action: (Vehicle) -> Void
+
+    func body(content: Content) -> some View {
+        content.confirmationDialog(
+            title,
+            isPresented: Binding(
+                get: { pending != nil },
+                set: { if !$0 { pending = nil } }
+            ),
+            presenting: pending
+        ) { vehicle in
+            Button(actionLabel, role: actionRole) { action(vehicle) }
+            Button("Abbrechen", role: .cancel) { }
+        } message: { vehicle in
+            Text(message(vehicle))
+        }
+    }
 }
 
 private struct VehicleRow: View {
@@ -103,8 +164,18 @@ private struct VehicleRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(vehicle.licensePlate ?? "")
-                    .font(.headline)
+                HStack(spacing: 6) {
+                    Text(vehicle.licensePlate ?? "")
+                        .font(.headline)
+                    if vehicle.decommissioned {
+                        Text("Stillgelegt")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(.secondary.opacity(0.18), in: Capsule())
+                    }
+                }
                 Text("\(vehicle.manufacturer ?? "") \(vehicle.model ?? "")")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -117,6 +188,7 @@ private struct VehicleRow: View {
             }
             Spacer()
         }
+        .opacity(vehicle.decommissioned ? 0.6 : 1)
         .padding(.vertical, 2)
         .padding(.leading, 5)
         .contentShape(Rectangle())

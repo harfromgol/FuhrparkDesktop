@@ -19,11 +19,13 @@ struct VehicleDetailView: View {
                 header
 
                 sectionHeader(title: vehicle.engineType.refuelNounPlural, systemImage: "fuelpump.fill") {
-                    Button(vehicle.engineType.newRefuelTitle, systemImage: "plus") {
-                        isPresentingNewFuelEntry = true
+                    if !vehicle.decommissioned {
+                        Button(vehicle.engineType.newRefuelTitle, systemImage: "plus") {
+                            isPresentingNewFuelEntry = true
+                        }
+                        .buttonStyle(.glass)
+                        .pointerStyle(.link)
                     }
-                    .buttonStyle(.glass)
-                    .pointerStyle(.link)
                     if !vehicle.sortedFuelEntries.isEmpty {
                         Button("Liste anzeigen", systemImage: "list.bullet") {
                             if let vehicleRef {
@@ -44,11 +46,13 @@ struct VehicleDetailView: View {
                 }
 
                 sectionHeader(title: "Sonstige Ausgaben", systemImage: "eurosign.circle.fill") {
-                    Button("Neue Ausgabe", systemImage: "plus") {
-                        isPresentingNewExpense = true
+                    if !vehicle.decommissioned {
+                        Button("Neue Ausgabe", systemImage: "plus") {
+                            isPresentingNewExpense = true
+                        }
+                        .buttonStyle(.glass)
+                        .pointerStyle(.link)
                     }
-                    .buttonStyle(.glass)
-                    .pointerStyle(.link)
                     if !vehicle.sortedExpenses.isEmpty {
                         Button("Liste anzeigen", systemImage: "list.bullet") {
                             if let vehicleRef {
@@ -102,7 +106,7 @@ struct VehicleDetailView: View {
 
     private var header: some View {
         GlassCard {
-            HStack {
+            HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(vehicle.licensePlate ?? "")
                         .font(.title2.bold())
@@ -113,6 +117,14 @@ struct VehicleDetailView: View {
                         .foregroundStyle(.tertiary)
                 }
                 Spacer()
+                if vehicle.decommissioned {
+                    Label("Stillgelegt", systemImage: "xmark.seal.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(.secondary.opacity(0.15), in: Capsule())
+                }
             }
 
             Divider()
