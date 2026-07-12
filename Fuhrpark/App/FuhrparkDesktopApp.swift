@@ -19,6 +19,7 @@ struct FuhrparkDesktopApp: App {
                 .frame(minWidth: 800, idealWidth: 1000, minHeight: 500, idealHeight: 650)
                 .onAppear { appCommands.isMainWindowOpen = true }
                 .onDisappear { appCommands.isMainWindowOpen = false }
+                .persistWindowFrame(Self.mainWindowID)
         }
         .commands {
             AppMenuCommands(appCommands: appCommands)
@@ -28,6 +29,7 @@ struct FuhrparkDesktopApp: App {
             if let vehicleRef {
                 FuelEntryListWindow(vehicleRef: vehicleRef)
                     .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                    .persistWindowFrame("fuel-list")
             }
         }
         .defaultSize(width: 400, height: 520)
@@ -36,6 +38,7 @@ struct FuhrparkDesktopApp: App {
             if let vehicleRef {
                 ExpenseListWindow(vehicleRef: vehicleRef)
                     .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                    .persistWindowFrame("expense-list")
             }
         }
         .defaultSize(width: 400, height: 520)
@@ -44,6 +47,7 @@ struct FuhrparkDesktopApp: App {
             if let vehicleRef {
                 PriceChartWindow(vehicleRef: vehicleRef)
                     .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                    .persistWindowFrame("price-chart")
             }
         }
         .defaultSize(width: 620, height: 420)
@@ -52,6 +56,7 @@ struct FuhrparkDesktopApp: App {
             if let vehicleRef {
                 ConsumptionChartWindow(vehicleRef: vehicleRef)
                     .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                    .persistWindowFrame("consumption-chart")
             }
         }
         .defaultSize(width: 620, height: 420)

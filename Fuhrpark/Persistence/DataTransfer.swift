@@ -9,6 +9,9 @@ private struct ExportRoot: Codable {
     var schemaVersion: Int
     var exportedAt: Date
     var vehicles: [VehicleDTO]
+    /// Gespeicherte Fenster-Frames (Position/Größe) je Fenster-Schlüssel.
+    /// Optional, damit ältere Exporte (ohne dieses Feld) weiterhin lesbar sind.
+    var windowFrames: [String: WindowFrame]?
 }
 
 private struct VehicleDTO: Codable {
@@ -132,9 +135,10 @@ enum DataTransfer {
         request.sortDescriptors = [NSSortDescriptor(keyPath: \Vehicle.createdAt, ascending: true)]
         let vehicles = try context.fetch(request)
         let root = ExportRoot(
-            schemaVersion: 1,
+            schemaVersion: 2,
             exportedAt: Date(),
-            vehicles: vehicles.map(VehicleDTO.init(vehicle:))
+            vehicles: vehicles.map(VehicleDTO.init(vehicle:)),
+            windowFrames: WindowFrameStore.all()
         )
         return try makeEncoder().encode(root)
     }
@@ -202,6 +206,12 @@ enum DataTransfer {
         }
 
         controller.save(context: context)
+
+        // Fenster-Frames übernehmen. Fehlt das Feld (ältere Exporte), bleiben die
+        // aktuell gespeicherten Frames unangetastet.
+        if let windowFrames = root.windowFrames {
+            WindowFrameStore.replaceAll(windowFrames)
+        }
     }
 }
 
