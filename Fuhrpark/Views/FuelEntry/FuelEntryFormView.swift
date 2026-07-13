@@ -170,7 +170,7 @@ struct FuelEntryFormView: View {
             }
             .padding(16)
         }
-        .frame(width: 460, height: 660)
+        .frame(width: 460, height: 940)
     }
 
     private func save() {
