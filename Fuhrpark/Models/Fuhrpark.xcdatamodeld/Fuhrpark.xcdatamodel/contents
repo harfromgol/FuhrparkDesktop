@@ -39,6 +39,7 @@
         <attribute name="amount" optional="NO" attributeType="Decimal" defaultValueString="0.0" usesScalarValueType="NO"/>
         <attribute name="date" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isIncome" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="purpose" optional="NO" attributeType="String"/>
         <attribute name="recipient" optional="NO" attributeType="String"/>
         <relationship name="categories" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Category" inverseName="expenses" inverseEntity="Category"/>

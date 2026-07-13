@@ -1,6 +1,13 @@
 import Foundation
 
 extension Expense {
+    /// Vorzeichenbehafteter Betrag: Einnahmen zählen negativ, damit sie sich in
+    /// allen Kostensummen automatisch mit den Ausgaben verrechnen.
+    var signedAmount: Decimal {
+        let value = amount?.decimalValue ?? 0
+        return isIncome ? -value : value
+    }
+
     /// Zugeordnete Kategorien, nach Name sortiert.
     var sortedCategories: [Category] {
         let set = (categories as? Set<Category>) ?? []

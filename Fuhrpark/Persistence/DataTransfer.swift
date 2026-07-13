@@ -49,6 +49,9 @@ private struct ExpenseDTO: Codable {
     var id: UUID
     var date: Date
     var amount: Decimal
+    /// Einnahme statt Ausgabe. Optional, damit ältere Exporte (ohne dieses Feld)
+    /// weiterhin lesbar sind – fehlt es, gilt der Eintrag als Ausgabe.
+    var isIncome: Bool?
     var recipient: String
     var purpose: String
     var categoryIDs: [UUID]
@@ -102,6 +105,7 @@ private extension ExpenseDTO {
         id = expense.id ?? UUID()
         date = expense.date ?? Date()
         amount = expense.amount?.decimalValue ?? 0
+        isIncome = expense.isIncome
         recipient = expense.recipient ?? ""
         purpose = expense.purpose ?? ""
         categoryIDs = expense.sortedCategories.compactMap { $0.id }
@@ -139,7 +143,7 @@ enum DataTransfer {
         request.sortDescriptors = [NSSortDescriptor(keyPath: \Vehicle.createdAt, ascending: true)]
         let vehicles = try context.fetch(request)
         let root = ExportRoot(
-            schemaVersion: 2,
+            schemaVersion: 3,
             exportedAt: Date(),
             vehicles: vehicles.map(VehicleDTO.init(vehicle:)),
             windowFrames: WindowFrameStore.all()
@@ -201,6 +205,7 @@ enum DataTransfer {
             for e in dto.expenses {
                 let expense = Expense(context: context)
                 expense.id = e.id
+                expense.isIncome = e.isIncome ?? false
                 expense.date = e.date
                 expense.amount = NSDecimalNumber(decimal: e.amount)
                 expense.recipient = e.recipient

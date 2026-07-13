@@ -135,14 +135,14 @@ struct VehicleDetailView: View {
                 Divider()
                 StatTile(
                     title: "Kosten / km",
-                    value: vehicle.costPerKilometer.map { DisplayFormatter.currencyString($0) } ?? "–",
+                    value: vehicle.costPerKilometer.map { DisplayFormatter.costString($0) } ?? "–",
                     systemImage: "gauge.with.dots.needle.bottom.50percent",
                     subtitle: vehicle.drivenKilometers.map { "\($0) km gefahren" } ?? "keine Fahrleistung erfasst"
                 )
                 Divider()
                 StatTile(
                     title: "Gesamtkosten",
-                    value: DisplayFormatter.currencyString(vehicle.totalCost),
+                    value: DisplayFormatter.costString(vehicle.totalCost),
                     systemImage: "sum"
                 )
             }
@@ -286,7 +286,7 @@ struct VehicleDetailView: View {
                 Divider()
                 StatTile(
                     title: "Gesamtkosten",
-                    value: DisplayFormatter.currencyString(vehicle.totalExpenseCost),
+                    value: DisplayFormatter.costString(vehicle.totalExpenseCost),
                     systemImage: "eurosign"
                 )
             }
@@ -300,7 +300,7 @@ struct VehicleDetailView: View {
                     HStack {
                         Text(item.category)
                         Spacer()
-                        Text(DisplayFormatter.currencyString(item.total))
+                        Text(DisplayFormatter.costString(item.total))
                             .bold()
                     }
                     .font(.subheadline)
@@ -327,8 +327,8 @@ struct VehicleDetailView: View {
                     GridRow {
                         Text(String(item.year))
                         Text(DisplayFormatter.currencyString(item.fuel))
-                        Text(DisplayFormatter.currencyString(item.expense))
-                        Text(DisplayFormatter.currencyString(item.total))
+                        Text(DisplayFormatter.costString(item.expense))
+                        Text(DisplayFormatter.costString(item.total))
                             .bold()
                     }
                     .font(.subheadline)

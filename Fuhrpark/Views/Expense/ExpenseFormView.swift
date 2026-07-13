@@ -9,6 +9,8 @@ struct ExpenseFormView: View {
     /// Nur die Kategorien dieses Fahrzeugs (siehe `init`).
     @FetchRequest private var categories: FetchedResults<Category>
 
+    /// Ausgabe (false, Standard) oder Einnahme (true).
+    @State private var isIncome = false
     @State private var dateText = FieldValidator.string(from: Date())
     @State private var amountText = ""
     @State private var recipient = ""
@@ -46,8 +48,14 @@ struct ExpenseFormView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    GlassCard(title: "Ausgabe") {
+                    GlassCard(title: isIncome ? "Einnahme" : "Ausgabe") {
                         DateValidatedField(title: "Datum", text: $dateText, isValidBinding: $dateValid)
+                        Picker("Art", selection: $isIncome) {
+                            Text("Ausgabe").tag(false)
+                            Text("Einnahme").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
                         ValidatedField(
                             title: "Betrag (€)",
                             text: $amountText,
@@ -55,13 +63,13 @@ struct ExpenseFormView: View {
                             isValidBinding: $amountValid
                         )
                         ValidatedField(
-                            title: "Empfänger",
+                            title: isIncome ? "Zahler" : "Empfänger",
                             text: $recipient,
                             kind: .text(min: 1, max: 30),
                             isValidBinding: $recipientValid
                         )
                         ValidatedField(
-                            title: "Verwendungszweck",
+                            title: isIncome ? "Grund" : "Verwendungszweck",
                             text: $purpose,
                             kind: .text(min: 1, max: 30),
                             isValidBinding: $purposeValid
@@ -171,6 +179,7 @@ struct ExpenseFormView: View {
     private func save() {
         let expense = Expense(context: viewContext)
         expense.id = UUID()
+        expense.isIncome = isIncome
         expense.date = FieldValidator.dateValue(dateText) ?? Date()
         expense.amount = NSDecimalNumber(decimal: FieldValidator.decimalValue(amountText) ?? 0)
         expense.recipient = recipient

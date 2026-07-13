@@ -28,7 +28,7 @@ struct StatisticsView: View {
             for expense in vehicle.sortedExpenses {
                 guard let date = expense.date else { continue }
                 let year = calendar.component(.year, from: date)
-                expenseByYear[year, default: 0] += expense.amount?.decimalValue ?? 0
+                expenseByYear[year, default: 0] += expense.signedAmount
             }
         }
 
@@ -59,7 +59,7 @@ struct StatisticsView: View {
                             Divider()
                             StatTile(
                                 title: "Gesamtkosten",
-                                value: DisplayFormatter.currencyString(totalCost),
+                                value: DisplayFormatter.costString(totalCost),
                                 systemImage: "sum"
                             )
                         }
@@ -82,8 +82,8 @@ struct StatisticsView: View {
                                 GridRow {
                                     Text(vehicle.licensePlate ?? "")
                                     Text(DisplayFormatter.currencyString(vehicle.totalFuelCost))
-                                    Text(DisplayFormatter.currencyString(vehicle.totalExpenseCost))
-                                    Text(DisplayFormatter.currencyString(vehicle.totalCost))
+                                    Text(DisplayFormatter.costString(vehicle.totalExpenseCost))
+                                    Text(DisplayFormatter.costString(vehicle.totalCost))
                                         .bold()
                                 }
                                 .font(.subheadline)
@@ -108,8 +108,8 @@ struct StatisticsView: View {
                                 GridRow {
                                     Text(String(item.year))
                                     Text(DisplayFormatter.currencyString(item.fuel))
-                                    Text(DisplayFormatter.currencyString(item.expense))
-                                    Text(DisplayFormatter.currencyString(item.total))
+                                    Text(DisplayFormatter.costString(item.expense))
+                                    Text(DisplayFormatter.costString(item.total))
                                         .bold()
                                 }
                                 .font(.subheadline)

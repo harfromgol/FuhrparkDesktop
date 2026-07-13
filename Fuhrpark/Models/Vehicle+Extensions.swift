@@ -97,9 +97,10 @@ extension Vehicle {
         sortedFuelEntries.reduce(Decimal.zero) { $0 + ($1.amount?.decimalValue ?? 0) }
     }
 
-    /// Summe aller sonstigen Ausgaben.
+    /// Netto-Summe der sonstigen Buchungen: Ausgaben minus Einnahmen (Einnahmen
+    /// zählen über `signedAmount` negativ).
     var totalExpenseCost: Decimal {
-        sortedExpenses.reduce(Decimal.zero) { $0 + ($1.amount?.decimalValue ?? 0) }
+        sortedExpenses.reduce(Decimal.zero) { $0 + $1.signedAmount }
     }
 
     /// Anzahl der erfassten sonstigen Ausgaben.
@@ -118,7 +119,7 @@ extension Vehicle {
     var expenseCostByCategory: [(category: String, total: Decimal)] {
         var totals: [String: Decimal] = [:]
         for expense in sortedExpenses {
-            let amount = expense.amount?.decimalValue ?? 0
+            let amount = expense.signedAmount
             let names = expense.categoryNames
             if names.isEmpty {
                 totals["Ohne Kategorie", default: 0] += amount
@@ -152,7 +153,7 @@ extension Vehicle {
         for expense in sortedExpenses {
             guard let date = expense.date else { continue }
             let year = calendar.component(.year, from: date)
-            expenseByYear[year, default: 0] += expense.amount?.decimalValue ?? 0
+            expenseByYear[year, default: 0] += expense.signedAmount
         }
 
         let years = Set(fuelByYear.keys).union(expenseByYear.keys)

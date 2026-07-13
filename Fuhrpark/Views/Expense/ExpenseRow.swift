@@ -19,8 +19,9 @@ struct ExpenseRow: View {
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text(DisplayFormatter.currencyString(expense.amount?.decimalValue ?? 0))
+                    Text((expense.isIncome ? "+" : "") + DisplayFormatter.currencyString(expense.amount?.decimalValue ?? 0))
                         .font(.subheadline.bold())
+                        .foregroundStyle(expense.isIncome ? Color.green : Color.primary)
                     Text(expense.categoriesDisplay.isEmpty ? "–" : expense.categoriesDisplay)
                         .font(.caption)
                         .foregroundStyle(.secondary)

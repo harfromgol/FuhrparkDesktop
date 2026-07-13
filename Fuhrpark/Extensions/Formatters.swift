@@ -55,6 +55,13 @@ enum DisplayFormatter {
         string(from: decimal, formatter: currency)
     }
 
+    /// Kostenbetrag: ein negativer Wert bedeutet einen Überschuss (Einnahmen
+    /// übersteigen die Ausgaben) und wird mit führendem „+" dargestellt; sonst
+    /// normale Währungsdarstellung.
+    static func costString(_ decimal: Decimal) -> String {
+        decimal < 0 ? "+" + currencyString(-decimal) : currencyString(decimal)
+    }
+
     static func pricePerLiterString(_ decimal: Decimal) -> String {
         string(from: decimal, formatter: pricePerLiter)
     }
