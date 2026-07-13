@@ -80,8 +80,8 @@ struct VehicleDetailView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     if !vehicle.sortedFuelEntries.isEmpty {
-                        priceStatistics
                         consumptionStatistics
+                        priceStatistics
                     }
 
                     if !vehicle.sortedExpenses.isEmpty {
