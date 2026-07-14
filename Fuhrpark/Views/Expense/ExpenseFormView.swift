@@ -9,6 +9,9 @@ struct ExpenseFormView: View {
     /// Nur die Kategorien dieses Fahrzeugs (siehe `init`).
     @FetchRequest private var categories: FetchedResults<Category>
 
+    /// Ausgaben dieses Fahrzeugs – Quelle für die Empfänger-Vorschläge (siehe `init`).
+    @FetchRequest private var recipientExpenses: FetchedResults<Expense>
+
     /// Ausgabe (false, Standard) oder Einnahme (true).
     @State private var isIncome = false
     @State private var dateText = FieldValidator.string(from: Date())
@@ -30,10 +33,28 @@ struct ExpenseFormView: View {
             predicate: NSPredicate(format: "vehicle == %@", vehicle),
             animation: .default
         )
+        _recipientExpenses = FetchRequest(
+            sortDescriptors: [NSSortDescriptor(keyPath: \Expense.recipient, ascending: true)],
+            predicate: NSPredicate(format: "vehicle == %@", vehicle),
+            animation: .default
+        )
     }
 
     private var isFormValid: Bool {
         dateValid && amountValid && recipientValid && purposeValid && !selectedCategories.isEmpty
+    }
+
+    /// Bereits erfasste Empfänger dieses Fahrzeugs (distinct, case-insensitiv,
+    /// alphabetisch) als Vorschläge für die Autovervollständigung.
+    private var knownRecipients: [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+        for expense in recipientExpenses {
+            let name = (expense.recipient ?? "").trimmingCharacters(in: .whitespaces)
+            guard !name.isEmpty, seen.insert(name.lowercased()).inserted else { continue }
+            result.append(name)
+        }
+        return result.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
     var body: some View {
@@ -62,11 +83,11 @@ struct ExpenseFormView: View {
                             kind: .decimal(fractionDigits: 2, minLength: 4, maxLength: 8),
                             isValidBinding: $amountValid
                         )
-                        ValidatedField(
+                        RecipientField(
                             title: isIncome ? "Zahler" : "Empfänger",
                             text: $recipient,
-                            kind: .text(min: 1, max: 30),
-                            isValidBinding: $recipientValid
+                            isValidBinding: $recipientValid,
+                            suggestions: knownRecipients
                         )
                         ValidatedField(
                             title: isIncome ? "Grund" : "Verwendungszweck",
