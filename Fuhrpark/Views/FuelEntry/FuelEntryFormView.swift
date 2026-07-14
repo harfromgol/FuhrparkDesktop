@@ -34,6 +34,19 @@ struct FuelEntryFormView: View {
         max(vehicle.odometer, vehicle.sortedFuelEntries.map(\.odometer).max() ?? 0)
     }
 
+    /// Bereits erfasste Tankstellen dieses Fahrzeugs (distinct, case-insensitiv,
+    /// alphabetisch) als Vorschläge für die Autovervollständigung.
+    private var knownStations: [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+        for entry in vehicle.sortedFuelEntries {
+            let name = (entry.station ?? "").trimmingCharacters(in: .whitespaces)
+            guard !name.isEmpty, seen.insert(name.lowercased()).inserted else { continue }
+            result.append(name)
+        }
+        return result.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    }
+
     private var computedConsumption: Double? {
         guard let currentOdometer = FieldValidator.intValue(odometerText),
               let liters = FieldValidator.decimalValue(litersText) else { return nil }
@@ -87,11 +100,11 @@ struct FuelEntryFormView: View {
                             },
                             extraErrorMessage: "Muss größer als \(minimumOdometer) km sein"
                         )
-                        ValidatedField(
+                        SuggestingField(
                             title: engineType.stationLabel,
                             text: $station,
-                            kind: .text(min: 1, max: 30),
-                            isValidBinding: $stationValid
+                            isValidBinding: $stationValid,
+                            suggestions: knownStations
                         )
                         ValidatedField(
                             title: engineType.pricePerUnitFieldLabel,

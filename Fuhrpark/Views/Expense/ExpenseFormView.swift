@@ -83,7 +83,7 @@ struct ExpenseFormView: View {
                             kind: .decimal(fractionDigits: 2, minLength: 4, maxLength: 8),
                             isValidBinding: $amountValid
                         )
-                        RecipientField(
+                        SuggestingField(
                             title: isIncome ? "Zahler" : "Empfänger",
                             text: $recipient,
                             isValidBinding: $recipientValid,

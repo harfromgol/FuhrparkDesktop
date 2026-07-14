@@ -118,10 +118,11 @@ private struct FieldWidthKey: PreferenceKey {
     }
 }
 
-/// Empfänger-Feld mit Autovervollständigung: zeigt beim Tippen ein schwebendes
-/// Popup mit bereits erfassten Empfängern (nach Eingabe gefiltert). ↑/↓ markieren
-/// einen Vorschlag, Enter übernimmt ihn, Escape schließt das Popup.
-struct RecipientField: View {
+/// Textfeld mit Autovervollständigung: zeigt beim Tippen ein schwebendes Popup
+/// mit passenden Vorschlägen (nach Eingabe gefiltert). ↑/↓ markieren einen
+/// Vorschlag, Enter übernimmt ihn, Escape schließt das Popup; Vorschläge sind
+/// zusätzlich per Maus anklickbar.
+struct SuggestingField: View {
     let title: String
     @Binding var text: String
     var isValidBinding: Binding<Bool>? = nil
