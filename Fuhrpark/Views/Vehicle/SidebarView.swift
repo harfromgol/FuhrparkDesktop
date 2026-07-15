@@ -63,6 +63,15 @@ struct SidebarView: View {
                 .buttonStyle(.plain)
                 .pointerStyle(.link)
                 .listRowBackground(rowBackground(for: .statistics))
+
+                Button {
+                    selection = .fuelPrices
+                } label: {
+                    Label("Spritpreise", systemImage: "fuelpump.circle")
+                }
+                .buttonStyle(.plain)
+                .pointerStyle(.link)
+                .listRowBackground(rowBackground(for: .fuelPrices))
             }
 
             Section("Fahrzeuge") {

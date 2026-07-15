@@ -9,6 +9,7 @@ struct FuhrparkDesktopApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     let persistenceController = PersistenceController.shared
     @State private var appCommands = AppCommands()
+    @State private var fuelPricesViewModel = FuelPricesViewModel()
 
     var body: some Scene {
         // Einzelfenster-Szene: kann per Menü geschlossen und wieder geöffnet werden.
@@ -16,6 +17,7 @@ struct FuhrparkDesktopApp: App {
             ContentView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
                 .environment(appCommands)
+                .environment(fuelPricesViewModel)
                 .frame(minWidth: 800, idealWidth: 1000, minHeight: 500, idealHeight: 650)
                 .onAppear { appCommands.isMainWindowOpen = true }
                 .onDisappear { appCommands.isMainWindowOpen = false }

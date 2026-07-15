@@ -27,6 +27,8 @@
 	<string>1</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>FuhrparkDesktop verwendet deinen Standort, um Tankstellen und Spritpreise in deiner Umgebung anzuzeigen.</string>
 	<key>NSMainStoryboardFile</key>
 	<string></string>
 	<key>NSPrincipalClass</key>

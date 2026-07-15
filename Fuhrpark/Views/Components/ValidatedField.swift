@@ -32,6 +32,8 @@ struct ValidatedField: View {
             return "\(min)–\(max) Zeichen"
         case .licensePlate:
             return "z. B. KA-FD 123"
+        case .apiKey:
+            return "API-Schlüssel (UUID), z. B. 474e5046-deaf-4f9b-9a32-9797b778f047"
         case .integer(let minDigits, let maxDigits):
             return "\(minDigits)–\(maxDigits) Ziffern"
         case .decimal(let fractionDigits, _, _):

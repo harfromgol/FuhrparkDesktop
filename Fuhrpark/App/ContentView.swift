@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 /// Auswahl in der Seitenleiste: allgemeine Statistik oder ein Fahrzeug.
 enum SidebarSelection: Hashable {
     case statistics
+    case fuelPrices
     case vehicle(Vehicle)
 }
 
@@ -21,6 +22,8 @@ struct ContentView: View {
             switch selection {
             case .statistics:
                 StatisticsView()
+            case .fuelPrices:
+                FuelPricesView()
             case .vehicle(let vehicle):
                 VehicleDetailView(vehicle: vehicle)
                     .id(vehicle.objectID)
@@ -111,4 +114,5 @@ struct ContentView: View {
     ContentView()
         .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
         .environment(AppCommands())
+        .environment(FuelPricesViewModel())
 }

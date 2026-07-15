@@ -4,6 +4,7 @@ import Foundation
 enum FieldKind: Equatable {
     case text(min: Int, max: Int)
     case licensePlate
+    case apiKey
     case integer(minDigits: Int, maxDigits: Int)
     case decimal(fractionDigits: Int, minLength: Int, maxLength: Int)
     case date
@@ -29,6 +30,10 @@ enum FieldValidator {
         case .licensePlate:
             let allowed = input.uppercased().filter { $0.isLetter || $0.isNumber || $0 == " " || $0 == "-" }
             return String(allowed.prefix(12))
+
+        case .apiKey:
+            let allowed = input.lowercased().filter { $0.isHexDigit || $0 == "-" }
+            return String(allowed.prefix(36))
 
         case .integer(_, let maxDigits):
             let digits = input.filter(\.isNumber)
@@ -69,6 +74,9 @@ enum FieldValidator {
             let hasDigit = input.contains { $0.isNumber }
             let hasLetter = input.contains { $0.isLetter }
             return hasDigit && hasLetter
+
+        case .apiKey:
+            return UUID(uuidString: input) != nil
 
         case .integer(let minDigits, let maxDigits):
             guard !input.isEmpty, input.allSatisfy(\.isNumber) else { return false }

@@ -39,8 +39,11 @@ targets:
         CFBundleLocalizations:
           - de
           - en
+        NSLocationWhenInUseUsageDescription: "FuhrparkDesktop verwendet deinen Standort, um Tankstellen und Spritpreise in deiner Umgebung anzuzeigen."
     entitlements:
       path: FuhrparkDesktop/FuhrparkDesktop.entitlements
       properties:
         com.apple.security.app-sandbox: true
         com.apple.security.files.user-selected.read-write: true
+        com.apple.security.network.client: true
+        com.apple.security.personal-information.location: true
