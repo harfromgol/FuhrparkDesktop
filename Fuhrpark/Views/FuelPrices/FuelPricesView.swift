@@ -58,13 +58,16 @@ struct FuelPricesView: View {
                     kind: .apiKey,
                     isValidBinding: $vm.isKeyFieldValid
                 )
-                Button("Speichern & Laden") {
-                    vm.saveKeyAndStart()
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    let cooldownActive = vm.secondsRemaining(asOf: context.date) != nil
+                    Button("Speichern & Laden") {
+                        vm.saveKeyAndStart()
+                    }
+                    .buttonStyle(.glassProminent)
+                    .disabled(!vm.isKeyFieldValid || cooldownActive)
+                    .pointerStyle(vm.isKeyFieldValid && !cooldownActive ? .link : nil)
+                    .padding(.top, 20)
                 }
-                .buttonStyle(.glassProminent)
-                .disabled(!vm.isKeyFieldValid)
-                .pointerStyle(vm.isKeyFieldValid ? .link : nil)
-                .padding(.top, 20)
             }
         }
     }
@@ -126,12 +129,23 @@ struct FuelPricesView: View {
             HStack {
                 FuelTypeFilterView(enabled: $vm.enabledFuelKinds)
                 Spacer()
-                Button("Aktualisieren", systemImage: "arrow.clockwise") {
-                    vm.refresh()
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    let remaining = vm.secondsRemaining(asOf: context.date)
+                    HStack(spacing: 8) {
+                        if let remaining {
+                            Text("Nächste Abfrage in \(formattedCountdown(remaining))")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                        }
+                        Button("Aktualisieren", systemImage: "arrow.clockwise") {
+                            vm.refresh()
+                        }
+                        .buttonStyle(.glass)
+                        .disabled(remaining != nil)
+                        .pointerStyle(remaining == nil ? .link : nil)
+                    }
                 }
-                .buttonStyle(.glass)
-                .disabled(!vm.canRefresh)
-                .pointerStyle(vm.canRefresh ? .link : nil)
             }
 
             Map(position: $camera) {
@@ -168,6 +182,11 @@ struct FuelPricesView: View {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices") {
             NSWorkspace.shared.open(url)
         }
+    }
+
+    /// Verbleibende Sekunden als „m:ss", z. B. 9:47.
+    private func formattedCountdown(_ seconds: Int) -> String {
+        String(format: "%d:%02d", seconds / 60, seconds % 60)
     }
 }
 

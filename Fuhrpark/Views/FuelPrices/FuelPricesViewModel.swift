@@ -61,11 +61,28 @@ final class FuelPricesViewModel {
     private var running = false
     private var lastFetchAt: Date?
 
-    /// Manuelles Aktualisieren ist erst 60 s nach dem letzten Abruf wieder
-    /// erlaubt (Tankerkönigs Rate Limit); der automatische Erststart ist
-    /// davon ausgenommen.
-    var canRefresh: Bool {
-        !running && (lastFetchAt.map { Date().timeIntervalSince($0) >= 60 } ?? true)
+    /// Tankerkönigs Nutzungsbedingungen bitten darum, nicht öfter als alle
+    /// 5 Minuten abzufragen; hier bewusst mit Sicherheitsabstand auf 10
+    /// Minuten gesetzt. Gilt für jede neue Abfrage (Aktualisieren UND einen
+    /// neu eingegebenen Schlüssel), nicht nur den manuellen Button.
+    private let cooldown: TimeInterval = 600
+
+    /// Verbleibende Sekunden bis zur nächsten erlaubten Abfrage, `nil` wenn
+    /// gerade abgefragt werden darf. `asOf` erlaubt einen von außen
+    /// vorgegebenen Zeitpunkt (z. B. aus einer `TimelineView`) für einen live
+    /// aktualisierenden Countdown.
+    func secondsRemaining(asOf now: Date = Date()) -> Int? {
+        guard let lastFetchAt else { return nil }
+        let remaining = cooldown - now.timeIntervalSince(lastFetchAt)
+        guard remaining > 0 else { return nil }
+        return Int(remaining.rounded(.up))
+    }
+
+    /// Ob gerade eine neue Abfrage gestartet werden darf (weder ein Abruf
+    /// läuft noch die Abklingzeit aktiv ist). Der automatische Erststart ist
+    /// davon nicht betroffen, da `lastFetchAt` dann noch `nil` ist.
+    func canQuery(asOf now: Date = Date()) -> Bool {
+        !running && secondsRemaining(asOf: now) == nil
     }
 
     /// Sichtbare Stationen: mindestens eine angehakte Sorte wird dort geführt.
@@ -96,14 +113,17 @@ final class FuelPricesViewModel {
         start()
     }
 
-    /// Manuelles Aktualisieren, respektiert die 60-s-Abklingzeit.
+    /// Manuelles Aktualisieren, respektiert die Abklingzeit (siehe `start()`).
     func refresh() {
-        guard canRefresh else { return }
         start()
     }
 
+    /// Zentrale Stelle, die jede neue Abfrage gegen die Abklingzeit prüft –
+    /// sowohl „Aktualisieren" als auch ein neu gespeicherter Schlüssel laufen
+    /// hier durch, damit die Tankerkönig-Nutzungsbedingungen unabhängig vom
+    /// Auslöser eingehalten werden.
     private func start() {
-        guard !running else { return }
+        guard canQuery() else { return }
         running = true
         Task { await runFlow() }
     }
