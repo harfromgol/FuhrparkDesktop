@@ -4,8 +4,11 @@ import Observation
 /// Steuert den Ablauf der Spritpreise-Ansicht: API-Key → Standort → Abruf →
 /// Karte. Lebt als Environment-Objekt für die Dauer der App-Sitzung (siehe
 /// `FuhrparkDesktopApp.swift`), NICHT als lokaler `@State` in der View – so
-/// löst ein erneuter Sidebar-Besuch keinen wiederholten Abruf aus (Tankerkönigs
-/// Rate Limit liegt bei ca. 1 Anfrage/Minute).
+/// bleiben Cooldown/Countdown über Sidebar-Wechsel hinweg erhalten. Ein
+/// erneuter Besuch der Ansicht aktualisiert automatisch, aber nur wenn die
+/// Abklingzeit bereits abgelaufen ist – `start()` bleibt dafür der zentrale
+/// Cooldown-Wächter, der Tankerkönigs Rate Limit unabhängig vom Auslöser
+/// einhält.
 @MainActor
 @Observable
 final class FuelPricesViewModel {
@@ -57,7 +60,6 @@ final class FuelPricesViewModel {
     private(set) var userCoordinate: CLLocationCoordinate2D?
     var enabledFuelKinds: Set<FuelKind> = Set(FuelKind.allCases)
 
-    private var didAppear = false
     private var running = false
     private var lastFetchAt: Date?
 
@@ -92,17 +94,18 @@ final class FuelPricesViewModel {
         }
     }
 
-    /// Wird beim ersten Erscheinen der View aufgerufen. Startet den Ablauf nur
-    /// einmal pro App-Sitzung automatisch, wenn bereits ein gültiger
-    /// Schlüssel hinterlegt ist.
+    /// Wird bei jedem Erscheinen der View aufgerufen (auch nach Rückkehr aus
+    /// einem anderen Sidebar-Eintrag). Startet den Ablauf, wenn ein gültiger
+    /// Schlüssel hinterlegt ist – `start()` lässt das aber nur zu, wenn
+    /// gerade keine Abfrage läuft und die Abklingzeit bereits abgelaufen ist;
+    /// andernfalls bleiben die zuletzt geladenen Daten samt Countdown einfach
+    /// stehen.
     func onAppear() {
-        guard !didAppear else { return }
-        didAppear = true
-        if UUID(uuidString: apiKey) != nil {
-            start()
-        } else {
+        guard UUID(uuidString: apiKey) != nil else {
             phase = .needsKey
+            return
         }
+        start()
     }
 
     /// Speichert einen neu eingegebenen/geänderten Schlüssel und startet den
@@ -119,9 +122,10 @@ final class FuelPricesViewModel {
     }
 
     /// Zentrale Stelle, die jede neue Abfrage gegen die Abklingzeit prüft –
-    /// sowohl „Aktualisieren" als auch ein neu gespeicherter Schlüssel laufen
-    /// hier durch, damit die Tankerkönig-Nutzungsbedingungen unabhängig vom
-    /// Auslöser eingehalten werden.
+    /// „Aktualisieren", ein neu gespeicherter Schlüssel und die automatische
+    /// Prüfung bei jedem `onAppear()` laufen hier durch, damit die
+    /// Tankerkönig-Nutzungsbedingungen unabhängig vom Auslöser eingehalten
+    /// werden.
     private func start() {
         guard canQuery() else { return }
         running = true
