@@ -31,3 +31,6 @@ FuhrparkDesktop.xcodeproj/
 # Sonstiges
 *.swp
 *~
+
+# Release-Artefakte (siehe Scripts/build_dmg.sh)
+dist/

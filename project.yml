@@ -9,8 +9,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "1.1"
+    CURRENT_PROJECT_VERSION: "2"
 
 targets:
   FuhrparkDesktop:
@@ -32,6 +32,8 @@ targets:
       path: FuhrparkDesktop/Info.plist
       properties:
         CFBundleDisplayName: FuhrparkDesktop
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         NSPrincipalClass: NSApplication
         NSMainStoryboardFile: ""
         LSApplicationCategoryType: public.app-category.utilities
