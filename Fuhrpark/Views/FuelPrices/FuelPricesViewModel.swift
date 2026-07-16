@@ -58,7 +58,12 @@ final class FuelPricesViewModel {
     private(set) var phase: Phase = .needsKey
     private(set) var stations: [GasStation] = []
     private(set) var userCoordinate: CLLocationCoordinate2D?
-    var enabledFuelKinds: Set<FuelKind> = Set(FuelKind.allCases)
+    /// Vorbelegt aus den UserDefaults, damit die zuletzt gewählten Sorten
+    /// einen Neustart überstehen; ohne gespeicherten Wert sind alle Sorten
+    /// aktiv. Jede Änderung (z. B. per Checkbox) wird sofort zurückgespeichert.
+    var enabledFuelKinds: Set<FuelKind> = FuelTypeFilterStore.get() ?? Set(FuelKind.allCases) {
+        didSet { FuelTypeFilterStore.set(enabledFuelKinds) }
+    }
 
     private var running = false
     private var lastFetchAt: Date?
