@@ -10,6 +10,7 @@ enum SidebarSelection: Hashable {
 
 struct ContentView: View {
     @Environment(AppCommands.self) private var appCommands
+    @Environment(FuelPricesViewModel.self) private var fuelPricesViewModel
     @State private var selection: SidebarSelection = .statistics
 
     var body: some View {
@@ -39,7 +40,7 @@ struct ContentView: View {
             }
             Button("Abbrechen", role: .cancel) { }
         } message: {
-            Text("Alle Fahrzeuge, Betankungen, sonstigen Ausgaben und Kategorien werden unwiderruflich gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden.")
+            Text("Alle Fahrzeuge, Betankungen, sonstigen Ausgaben und Kategorien sowie der gespeicherte Tankerkönig-API-Schlüssel werden unwiderruflich gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden.")
         }
         .fileExporter(
             isPresented: $appCommands.showExportDialog,
@@ -107,6 +108,7 @@ struct ContentView: View {
         // gleich gelöschtes (invalidiertes) Fahrzeug zugreift.
         selection = .statistics
         PersistenceController.shared.deleteAllData()
+        fuelPricesViewModel.resetAPIKey()
     }
 }
 

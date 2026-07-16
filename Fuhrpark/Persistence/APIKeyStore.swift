@@ -14,4 +14,8 @@ enum TankerkoenigKeyStore {
     static func set(_ key: String) {
         UserDefaults.standard.set(key, forKey: defaultsKey)
     }
+
+    static func clear() {
+        UserDefaults.standard.removeObject(forKey: defaultsKey)
+    }
 }

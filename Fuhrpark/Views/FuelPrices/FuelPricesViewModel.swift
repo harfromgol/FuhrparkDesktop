@@ -121,6 +121,19 @@ final class FuelPricesViewModel {
         start()
     }
 
+    /// Löscht den gespeicherten API-Schlüssel (UserDefaults) und setzt den
+    /// laufenden Zustand zurück. Wird von „Alle Daten löschen" aufgerufen,
+    /// damit dabei auch kein Tankerkönig-Schlüssel zurückbleibt.
+    func resetAPIKey() {
+        TankerkoenigKeyStore.clear()
+        apiKey = ""
+        isKeyFieldValid = false
+        phase = .needsKey
+        stations = []
+        userCoordinate = nil
+        lastFetchAt = nil
+    }
+
     /// Zentrale Stelle, die jede neue Abfrage gegen die Abklingzeit prüft –
     /// „Aktualisieren", ein neu gespeicherter Schlüssel und die automatische
     /// Prüfung bei jedem `onAppear()` laufen hier durch, damit die
