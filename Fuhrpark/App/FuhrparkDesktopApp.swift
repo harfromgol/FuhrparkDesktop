@@ -68,13 +68,12 @@ struct FuhrparkDesktopApp: App {
 /// Menübefehle: „Ablage“ (Neues Fenster / Fenster schließen) und „Tools“.
 struct AppMenuCommands: Commands {
     @Environment(\.openWindow) private var openWindow
-    @Environment(\.dismissWindow) private var dismissWindow
 
     /// Geteilter Zustand (Öffnungszustand des Hauptfensters, Löschabfrage).
     let appCommands: AppCommands
 
     var body: some Commands {
-        // Ablage-Menü: Hauptfenster öffnen bzw. schließen.
+        // Ablage-Menü: Hauptfenster öffnen bzw. jeweils fokussiertes Fenster schließen.
         CommandGroup(replacing: .newItem) {
             Button("Neues Fenster") {
                 openWindow(id: FuhrparkDesktopApp.mainWindowID)
@@ -82,11 +81,14 @@ struct AppMenuCommands: Commands {
             .keyboardShortcut("n", modifiers: .command)
             .disabled(appCommands.isMainWindowOpen)
 
+            // Schließt das gerade fokussierte Fenster (Haupt-, Listen- oder
+            // Chart-Fenster) statt fest verdrahtet immer das Hauptfenster –
+            // sonst schließt ⌘W in einem Listen-/Chart-Fenster fälschlich
+            // das Hauptfenster.
             Button("Fenster schließen") {
-                dismissWindow(id: FuhrparkDesktopApp.mainWindowID)
+                NSApp.keyWindow?.performClose(nil)
             }
             .keyboardShortcut("w", modifiers: .command)
-            .disabled(!appCommands.isMainWindowOpen)
         }
 
         CommandMenu("Tools") {
