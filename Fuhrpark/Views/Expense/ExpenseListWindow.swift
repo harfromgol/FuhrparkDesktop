@@ -38,39 +38,41 @@ struct ExpenseListWindow: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                if expenses.isEmpty {
-                    ContentUnavailableView(
-                        "Keine Ausgaben",
-                        systemImage: "eurosign.circle",
-                        description: Text("Für dieses Fahrzeug sind noch keine sonstigen Ausgaben erfasst.")
-                    )
-                    .padding(.top, 60)
-                } else {
-                    if !categories.isEmpty {
-                        filterSection
-                    }
-
-                    if filteredExpenses.isEmpty {
-                        Text("Keine Ausgaben in den gewählten Kategorien.")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                            .padding(.top, 24)
-                            .frame(maxWidth: .infinity, alignment: .center)
+            GlassEffectContainer {
+                VStack(alignment: .leading, spacing: 12) {
+                    if expenses.isEmpty {
+                        ContentUnavailableView(
+                            "Keine Ausgaben",
+                            systemImage: "eurosign.circle",
+                            description: Text("Für dieses Fahrzeug sind noch keine sonstigen Ausgaben erfasst.")
+                        )
+                        .padding(.top, 60)
                     } else {
-                        ForEach(filteredExpenses) { expense in
-                            ExpenseRow(expense: expense)
-                                .contextMenu {
-                                    Button("Löschen", role: .destructive) {
-                                        pendingDeletion = expense
+                        if !categories.isEmpty {
+                            filterSection
+                        }
+
+                        if filteredExpenses.isEmpty {
+                            Text("Keine Ausgaben in den gewählten Kategorien.")
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                                .padding(.top, 24)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        } else {
+                            ForEach(filteredExpenses) { expense in
+                                ExpenseRow(expense: expense)
+                                    .contextMenu {
+                                        Button("Löschen", role: .destructive) {
+                                            pendingDeletion = expense
+                                        }
                                     }
-                                }
+                            }
                         }
                     }
                 }
+                .padding(20)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(20)
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(minWidth: 340, minHeight: 400)
         .navigationTitle("Sonstige Ausgaben – \(vehicleRef.licensePlate)")

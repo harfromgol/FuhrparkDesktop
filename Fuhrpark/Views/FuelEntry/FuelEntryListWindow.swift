@@ -21,27 +21,29 @@ struct FuelEntryListWindow: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                if entries.isEmpty {
-                    ContentUnavailableView(
-                        "Keine \(vehicleRef.engineType.refuelNounPlural)",
-                        systemImage: "fuelpump",
-                        description: Text("Für dieses Fahrzeug sind noch keine \(vehicleRef.engineType.refuelNounPlural) erfasst.")
-                    )
-                    .padding(.top, 60)
-                } else {
-                    ForEach(entries) { entry in
-                        FuelEntryRow(entry: entry)
-                            .contextMenu {
-                                Button("Löschen", role: .destructive) {
-                                    pendingDeletion = entry
+            GlassEffectContainer {
+                VStack(alignment: .leading, spacing: 12) {
+                    if entries.isEmpty {
+                        ContentUnavailableView(
+                            "Keine \(vehicleRef.engineType.refuelNounPlural)",
+                            systemImage: "fuelpump",
+                            description: Text("Für dieses Fahrzeug sind noch keine \(vehicleRef.engineType.refuelNounPlural) erfasst.")
+                        )
+                        .padding(.top, 60)
+                    } else {
+                        ForEach(entries) { entry in
+                            FuelEntryRow(entry: entry)
+                                .contextMenu {
+                                    Button("Löschen", role: .destructive) {
+                                        pendingDeletion = entry
+                                    }
                                 }
-                            }
+                        }
                     }
                 }
+                .padding(20)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(20)
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(minWidth: 340, minHeight: 400)
         .navigationTitle("\(vehicleRef.engineType.refuelNounPlural) – \(vehicleRef.licensePlate)")
