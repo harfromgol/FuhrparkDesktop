@@ -62,11 +62,11 @@ struct YearlyCost: Identifiable {
 }
 
 /// Gefahrene Kilometer eines Kalenderjahrs (siehe `Vehicle.kilometersByYear`).
-/// `kilometers` ist `nil`, wenn sich der Kilometerstand am Jahresanfang oder
-/// -ende nicht interpolieren lässt (z. B. im laufenden Jahr).
+/// Jahre, für die sich weder Start- noch Endstand ermitteln lassen, tauchen
+/// dort gar nicht erst auf – daher hier kein optionaler Wert.
 struct YearlyDistance: Identifiable {
     let year: Int
-    let kilometers: Int32?
+    let kilometers: Int32
     var id: Int { year }
 }
 
@@ -174,9 +174,17 @@ extension Vehicle {
     /// Interpolierter Kilometerstand zum 31.12. `year`, 23:59:59 Uhr: aus der
     /// letzten Betankung bis zu diesem Zeitpunkt und der ersten danach linear
     /// interpoliert (nach Datum, nicht nach Kilometerstand sortiert – anders
-    /// als `sortedFuelEntries`). `nil`, wenn eine der beiden Betankungen
-    /// fehlt, z. B. im laufenden Jahr, für das noch keine spätere Betankung
-    /// existiert, oder vor der allerersten Betankung.
+    /// als `sortedFuelEntries`).
+    ///
+    /// Randfälle:
+    /// - Fehlt die vorherige Betankung (vor der allerersten Betankung
+    ///   überhaupt), wird ersatzweise der Anfangsstand des Fahrzeugs als
+    ///   Näherung für diesen Zeitpunkt verwendet.
+    /// - Fehlt die folgende Betankung, weil `year` das laufende Kalenderjahr
+    ///   ist, wird ersatzweise der Stand der letzten Betankung verwendet.
+    /// - Fehlt die folgende Betankung aus einem anderen Grund (z. B. ein
+    ///   zukünftiges Jahr ohne jede Betankung), liefert die Funktion `nil` –
+    ///   `kilometersByYear` blendet ein solches Jahr dann aus.
     private func interpolatedOdometer(endOfYear year: Int) -> Double? {
         guard let boundary = Calendar.current.date(from: DateComponents(year: year + 1, month: 1, day: 1)) else {
             return nil
@@ -186,31 +194,40 @@ extension Vehicle {
                 guard let date = entry.date else { return nil }
                 return (date, entry.odometer)
             }
-        guard
-            let before = entriesByDate.filter({ $0.date < boundary }).max(by: { $0.date < $1.date }),
-            let after = entriesByDate.filter({ $0.date >= boundary }).min(by: { $0.date < $1.date })
-        else {
+        let before = entriesByDate.filter { $0.date < boundary }.max { $0.date < $1.date }
+        let after = entriesByDate.filter { $0.date >= boundary }.min { $0.date < $1.date }
+
+        switch (before, after) {
+        case let (before?, after?):
+            let totalInterval = after.date.timeIntervalSince(before.date)
+            guard totalInterval > 0 else { return Double(before.odometer) }
+            let fraction = boundary.timeIntervalSince(before.date) / totalInterval
+            return Double(before.odometer) + fraction * Double(after.odometer - before.odometer)
+        case (nil, .some):
+            return Double(odometer)
+        case let (before?, nil):
+            guard year == Calendar.current.component(.year, from: Date()) else { return nil }
+            return Double(before.odometer)
+        case (nil, nil):
             return nil
         }
-        let totalInterval = after.date.timeIntervalSince(before.date)
-        guard totalInterval > 0 else { return Double(before.odometer) }
-        let fraction = boundary.timeIntervalSince(before.date) / totalInterval
-        return Double(before.odometer) + fraction * Double(after.odometer - before.odometer)
     }
 
     /// Gefahrene Kilometer je Kalenderjahr, aus den zum jeweiligen 31.12.
     /// interpolierten Kilometerständen berechnet (siehe
-    /// `interpolatedOdometer(endOfYear:)`). Dieselbe Jahresliste wie
-    /// `costsByYear`, neuestes Jahr zuerst.
+    /// `interpolatedOdometer(endOfYear:)`). Dieselbe Jahresbasis wie
+    /// `costsByYear`, neuestes Jahr zuerst; Jahre ohne ermittelbaren Start-
+    /// oder Endstand (z. B. ein zukünftiges Jahr ohne jede Betankung) fehlen
+    /// in der Liste, statt mit einem Platzhalter angezeigt zu werden.
     var kilometersByYear: [YearlyDistance] {
         costsByYear
-            .map { yearlyCost -> YearlyDistance in
+            .compactMap { yearlyCost -> YearlyDistance? in
                 let year = yearlyCost.year
                 guard
                     let end = interpolatedOdometer(endOfYear: year),
                     let start = interpolatedOdometer(endOfYear: year - 1)
                 else {
-                    return YearlyDistance(year: year, kilometers: nil)
+                    return nil
                 }
                 return YearlyDistance(year: year, kilometers: Int32((end - start).rounded()))
             }
