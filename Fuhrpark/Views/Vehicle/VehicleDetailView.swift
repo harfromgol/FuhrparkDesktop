@@ -15,89 +15,91 @@ struct VehicleDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                header
+            GlassEffectContainer {
+                VStack(alignment: .leading, spacing: 20) {
+                    header
 
-                sectionHeader(title: vehicle.engineType.refuelNounPlural, systemImage: "fuelpump.fill") {
-                    if !vehicle.decommissioned {
-                        Button(vehicle.engineType.newRefuelTitle, systemImage: "plus") {
-                            isPresentingNewFuelEntry = true
-                        }
-                        .buttonStyle(.glass)
-                        .pointerStyle(.link)
-                    }
-                    if !vehicle.sortedFuelEntries.isEmpty {
-                        Button("Liste anzeigen", systemImage: "list.bullet") {
-                            if let vehicleRef {
-                                openWindow(id: "fuel-list", value: vehicleRef)
+                    sectionHeader(title: vehicle.engineType.refuelNounPlural, systemImage: "fuelpump.fill") {
+                        if !vehicle.decommissioned {
+                            Button(vehicle.engineType.newRefuelTitle, systemImage: "plus") {
+                                isPresentingNewFuelEntry = true
                             }
+                            .buttonStyle(.glass)
+                            .pointerStyle(.link)
                         }
-                        .buttonStyle(.glass)
-                        .pointerStyle(.link)
-                    }
-                }
-
-                if vehicle.sortedFuelEntries.isEmpty {
-                    Text("Noch keine \(vehicle.engineType.refuelNounPlural) erfasst.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else {
-                    fuelStatistics
-                }
-
-                sectionHeader(title: "Sonstige Ausgaben", systemImage: "eurosign.circle.fill") {
-                    if !vehicle.decommissioned {
-                        Button("Neue Ausgabe", systemImage: "plus") {
-                            isPresentingNewExpense = true
-                        }
-                        .buttonStyle(.glass)
-                        .pointerStyle(.link)
-                    }
-                    if !vehicle.sortedExpenses.isEmpty {
-                        Button("Liste anzeigen", systemImage: "list.bullet") {
-                            if let vehicleRef {
-                                openWindow(id: "expense-list", value: vehicleRef)
+                        if !vehicle.sortedFuelEntries.isEmpty {
+                            Button("Liste anzeigen", systemImage: "list.bullet") {
+                                if let vehicleRef {
+                                    openWindow(id: "fuel-list", value: vehicleRef)
+                                }
                             }
+                            .buttonStyle(.glass)
+                            .pointerStyle(.link)
                         }
-                        .buttonStyle(.glass)
-                        .pointerStyle(.link)
+                    }
+
+                    if vehicle.sortedFuelEntries.isEmpty {
+                        Text("Noch keine \(vehicle.engineType.refuelNounPlural) erfasst.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        fuelStatistics
+                    }
+
+                    sectionHeader(title: "Sonstige Ausgaben", systemImage: "eurosign.circle.fill") {
+                        if !vehicle.decommissioned {
+                            Button("Neue Ausgabe", systemImage: "plus") {
+                                isPresentingNewExpense = true
+                            }
+                            .buttonStyle(.glass)
+                            .pointerStyle(.link)
+                        }
+                        if !vehicle.sortedExpenses.isEmpty {
+                            Button("Liste anzeigen", systemImage: "list.bullet") {
+                                if let vehicleRef {
+                                    openWindow(id: "expense-list", value: vehicleRef)
+                                }
+                            }
+                            .buttonStyle(.glass)
+                            .pointerStyle(.link)
+                        }
+                    }
+
+                    if vehicle.sortedExpenses.isEmpty {
+                        Text("Noch keine Ausgaben erfasst.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        expenseStatistics
+                    }
+
+                    sectionHeader(title: "Statistik", systemImage: "chart.bar.xaxis") { }
+
+                    if vehicle.sortedFuelEntries.isEmpty && vehicle.sortedExpenses.isEmpty {
+                        Text("Noch keine \(vehicle.engineType.refuelNounPlural) oder sonstigen Ausgaben erfasst.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        if !vehicle.sortedFuelEntries.isEmpty {
+                            consumptionStatistics
+                            priceStatistics
+                        }
+
+                        if !vehicle.sortedExpenses.isEmpty {
+                            expenseCategoryStatistics
+                        }
+
+                        if !vehicle.costsByYear.isEmpty {
+                            yearlyCostStatistics
+                        }
+
+                        if !vehicle.kilometersByYear.isEmpty {
+                            kilometersByYearStatistics
+                        }
                     }
                 }
-
-                if vehicle.sortedExpenses.isEmpty {
-                    Text("Noch keine Ausgaben erfasst.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else {
-                    expenseStatistics
-                }
-
-                sectionHeader(title: "Statistik", systemImage: "chart.bar.xaxis") { }
-
-                if vehicle.sortedFuelEntries.isEmpty && vehicle.sortedExpenses.isEmpty {
-                    Text("Noch keine \(vehicle.engineType.refuelNounPlural) oder sonstigen Ausgaben erfasst.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else {
-                    if !vehicle.sortedFuelEntries.isEmpty {
-                        consumptionStatistics
-                        priceStatistics
-                    }
-
-                    if !vehicle.sortedExpenses.isEmpty {
-                        expenseCategoryStatistics
-                    }
-
-                    if !vehicle.costsByYear.isEmpty {
-                        yearlyCostStatistics
-                    }
-
-                    if !vehicle.kilometersByYear.isEmpty {
-                        kilometersByYearStatistics
-                    }
-                }
+                .padding(20)
             }
-            .padding(20)
         }
         // Generischer Fenstertitel statt des Kennzeichens: Das Kennzeichen steht
         // bereits in der Header-Karte, so wird die Dopplung vermieden.
