@@ -61,6 +61,15 @@ struct YearlyCost: Identifiable {
     var id: Int { year }
 }
 
+/// Gefahrene Kilometer eines Kalenderjahrs (siehe `Vehicle.kilometersByYear`).
+/// `kilometers` ist `nil`, wenn sich der Kilometerstand am Jahresanfang oder
+/// -ende nicht interpolieren lässt (z. B. im laufenden Jahr).
+struct YearlyDistance: Identifiable {
+    let year: Int
+    let kilometers: Int32?
+    var id: Int { year }
+}
+
 extension Vehicle {
     var engineType: EngineType {
         get { EngineType(rawValue: engineTypeRaw) ?? .combustion }
@@ -160,6 +169,51 @@ extension Vehicle {
         return years
             .map { YearlyCost(year: $0, fuel: fuelByYear[$0, default: 0], expense: expenseByYear[$0, default: 0]) }
             .sorted { $0.year > $1.year }
+    }
+
+    /// Interpolierter Kilometerstand zum 31.12. `year`, 23:59:59 Uhr: aus der
+    /// letzten Betankung bis zu diesem Zeitpunkt und der ersten danach linear
+    /// interpoliert (nach Datum, nicht nach Kilometerstand sortiert – anders
+    /// als `sortedFuelEntries`). `nil`, wenn eine der beiden Betankungen
+    /// fehlt, z. B. im laufenden Jahr, für das noch keine spätere Betankung
+    /// existiert, oder vor der allerersten Betankung.
+    private func interpolatedOdometer(endOfYear year: Int) -> Double? {
+        guard let boundary = Calendar.current.date(from: DateComponents(year: year + 1, month: 1, day: 1)) else {
+            return nil
+        }
+        let entriesByDate = sortedFuelEntries
+            .compactMap { entry -> (date: Date, odometer: Int32)? in
+                guard let date = entry.date else { return nil }
+                return (date, entry.odometer)
+            }
+        guard
+            let before = entriesByDate.filter({ $0.date < boundary }).max(by: { $0.date < $1.date }),
+            let after = entriesByDate.filter({ $0.date >= boundary }).min(by: { $0.date < $1.date })
+        else {
+            return nil
+        }
+        let totalInterval = after.date.timeIntervalSince(before.date)
+        guard totalInterval > 0 else { return Double(before.odometer) }
+        let fraction = boundary.timeIntervalSince(before.date) / totalInterval
+        return Double(before.odometer) + fraction * Double(after.odometer - before.odometer)
+    }
+
+    /// Gefahrene Kilometer je Kalenderjahr, aus den zum jeweiligen 31.12.
+    /// interpolierten Kilometerständen berechnet (siehe
+    /// `interpolatedOdometer(endOfYear:)`). Dieselbe Jahresliste wie
+    /// `costsByYear`, neuestes Jahr zuerst.
+    var kilometersByYear: [YearlyDistance] {
+        costsByYear
+            .map { yearlyCost -> YearlyDistance in
+                let year = yearlyCost.year
+                guard
+                    let end = interpolatedOdometer(endOfYear: year),
+                    let start = interpolatedOdometer(endOfYear: year - 1)
+                else {
+                    return YearlyDistance(year: year, kilometers: nil)
+                }
+                return YearlyDistance(year: year, kilometers: Int32((end - start).rounded()))
+            }
     }
 
     /// Höchster bekannter Kilometerstand: der Anlagestand oder – falls höher –

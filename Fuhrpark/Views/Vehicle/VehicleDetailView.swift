@@ -90,6 +90,7 @@ struct VehicleDetailView: View {
 
                     if !vehicle.costsByYear.isEmpty {
                         yearlyCostStatistics
+                        kilometersByYearStatistics
                     }
                 }
             }
@@ -329,6 +330,34 @@ struct VehicleDetailView: View {
                         Text(DisplayFormatter.currencyString(item.fuel))
                         Text(DisplayFormatter.costString(item.expense))
                         Text(DisplayFormatter.costString(item.total))
+                            .bold()
+                    }
+                    .font(.subheadline)
+                }
+            }
+        }
+    }
+
+    /// Gefahrene Kilometer je Kalenderjahr, aus den umgebenden Betankungen
+    /// zum jeweiligen Jahreswechsel interpoliert (siehe
+    /// `Vehicle.kilometersByYear`). „–" für Jahre, in denen sich Start- oder
+    /// End-Kilometerstand nicht interpolieren lässt (z. B. das laufende Jahr).
+    private var kilometersByYearStatistics: some View {
+        GlassCard(title: "Gefahrene km pro Jahr") {
+            Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
+                GridRow {
+                    Text("Jahr")
+                    Text("km").gridColumnAlignment(.trailing)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+                Divider()
+
+                ForEach(vehicle.kilometersByYear) { item in
+                    GridRow {
+                        Text(String(item.year))
+                        Text(item.kilometers.map { "\(DisplayFormatter.odometerString($0)) km" } ?? "–")
                             .bold()
                     }
                     .font(.subheadline)
