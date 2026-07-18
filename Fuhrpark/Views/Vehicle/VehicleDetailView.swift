@@ -7,10 +7,58 @@ struct VehicleDetailView: View {
 
     @State private var isPresentingNewFuelEntry = false
     @State private var isPresentingNewExpense = false
+    @State private var isPresentingCardConfig = false
+    /// Welche der optionalen Statistik-Karten sichtbar sind, aus den
+    /// UserDefaults vorbelegt (siehe `StatisticsCardVisibilityStore`). Wird
+    /// je Fahrzeug separat gespeichert; da diese View pro Fahrzeug neu
+    /// erzeugt wird (`.id(vehicle.objectID)` in ContentView), lädt `init`
+    /// hier automatisch den richtigen Stand.
+    @State private var enabledCards: Set<StatisticsCard>
+
+    init(vehicle: Vehicle) {
+        self.vehicle = vehicle
+        _enabledCards = State(initialValue: vehicle.id.map(StatisticsCardVisibilityStore.enabledCards(for:)) ?? Set(StatisticsCard.allCases))
+    }
 
     private var vehicleRef: VehicleRef? {
         guard let id = vehicle.id else { return nil }
         return VehicleRef(id: id, licensePlate: vehicle.licensePlate ?? "", engineType: vehicle.engineType)
+    }
+
+    /// Ein-/Ausschalten einer Statistik-Karte, sofort persistiert.
+    private func cardBinding(_ card: StatisticsCard) -> Binding<Bool> {
+        Binding(
+            get: { enabledCards.contains(card) },
+            set: { isOn in
+                if isOn { enabledCards.insert(card) } else { enabledCards.remove(card) }
+                if let id = vehicle.id {
+                    StatisticsCardVisibilityStore.setEnabledCards(enabledCards, for: id)
+                }
+            }
+        )
+    }
+
+    private func cardTitle(_ card: StatisticsCard) -> String {
+        switch card {
+        case .consumption: return "Verbrauch"
+        case .price: return vehicle.engineType.priceTitle
+        case .expenseCategory: return "Gesamtkosten pro Kategorie"
+        case .yearlyCost: return "Kosten pro Jahr"
+        case .yearlyDistance: return "Gefahrene km pro Jahr"
+        }
+    }
+
+    private var cardVisibilityPopover: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Sichtbare Statistiken")
+                .font(.headline)
+            ForEach(StatisticsCard.allCases) { card in
+                Toggle(cardTitle(card), isOn: cardBinding(card))
+                    .toggleStyle(.checkbox)
+            }
+        }
+        .padding(16)
+        .frame(width: 260, alignment: .leading)
     }
 
     var body: some View {
@@ -73,27 +121,47 @@ struct VehicleDetailView: View {
                         expenseStatistics
                     }
 
-                    sectionHeader(title: "Statistik", systemImage: "chart.bar.xaxis") { }
+                    sectionHeader(title: "Statistik", systemImage: "chart.bar.xaxis") {
+                        Button {
+                            isPresentingCardConfig = true
+                        } label: {
+                            Image(systemName: "gearshape")
+                        }
+                        .buttonStyle(.borderless)
+                        .pointerStyle(.link)
+                        .help("Sichtbare Statistiken konfigurieren")
+                        .popover(isPresented: $isPresentingCardConfig) {
+                            cardVisibilityPopover
+                        }
+                    }
 
                     if vehicle.sortedFuelEntries.isEmpty && vehicle.sortedExpenses.isEmpty {
                         Text("Noch keine \(vehicle.engineType.refuelNounPlural) oder sonstigen Ausgaben erfasst.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                    } else if enabledCards.isEmpty {
+                        Text("Alle Statistik-Karten sind ausgeblendet. Über das Zahnrad-Symbol oben können sie wieder eingeblendet werden.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     } else {
                         if !vehicle.sortedFuelEntries.isEmpty {
-                            consumptionStatistics
-                            priceStatistics
+                            if enabledCards.contains(.consumption) {
+                                consumptionStatistics
+                            }
+                            if enabledCards.contains(.price) {
+                                priceStatistics
+                            }
                         }
 
-                        if !vehicle.sortedExpenses.isEmpty {
+                        if !vehicle.sortedExpenses.isEmpty && enabledCards.contains(.expenseCategory) {
                             expenseCategoryStatistics
                         }
 
-                        if !vehicle.costsByYear.isEmpty {
+                        if !vehicle.costsByYear.isEmpty && enabledCards.contains(.yearlyCost) {
                             yearlyCostStatistics
                         }
 
-                        if !vehicle.kilometersByYear.isEmpty {
+                        if !vehicle.kilometersByYear.isEmpty && enabledCards.contains(.yearlyDistance) {
                             kilometersByYearStatistics
                         }
                     }
