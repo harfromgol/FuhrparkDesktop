@@ -40,85 +40,87 @@ struct StatisticsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                if vehicles.isEmpty {
-                    ContentUnavailableView(
-                        "Keine Daten",
-                        systemImage: "chart.bar",
-                        description: Text("Lege ein Fahrzeug an, um Statistiken zu sehen.")
-                    )
-                    .padding(.top, 60)
-                } else {
-                    GlassCard(title: "Übersicht") {
-                        HStack(alignment: .top, spacing: 16) {
-                            StatTile(
-                                title: "Fahrzeuge",
-                                value: "\(vehicles.count)",
-                                systemImage: "car.2.fill"
-                            )
-                            Divider()
-                            StatTile(
-                                title: "Gesamtkosten",
-                                value: DisplayFormatter.costString(totalCost),
-                                systemImage: "sum"
-                            )
-                        }
-                    }
-
-                    GlassCard(title: "Kosten je Fahrzeug") {
-                        Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
-                            GridRow {
-                                Text("Fahrzeug")
-                                Text("Betankungen").gridColumnAlignment(.trailing)
-                                Text("Sonstige").gridColumnAlignment(.trailing)
-                                Text("Gesamt").gridColumnAlignment(.trailing)
-                            }
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                            Divider()
-
-                            ForEach(vehicles) { vehicle in
-                                GridRow {
-                                    Text(vehicle.licensePlate ?? "")
-                                    Text(DisplayFormatter.currencyString(vehicle.totalFuelCost))
-                                    Text(DisplayFormatter.costString(vehicle.totalExpenseCost))
-                                    Text(DisplayFormatter.costString(vehicle.totalCost))
-                                        .bold()
-                                }
-                                .font(.subheadline)
+            GlassEffectContainer {
+                VStack(alignment: .leading, spacing: 20) {
+                    if vehicles.isEmpty {
+                        ContentUnavailableView(
+                            "Keine Daten",
+                            systemImage: "chart.bar",
+                            description: Text("Lege ein Fahrzeug an, um Statistiken zu sehen.")
+                        )
+                        .padding(.top, 60)
+                    } else {
+                        GlassCard(title: "Übersicht") {
+                            HStack(alignment: .top, spacing: 16) {
+                                StatTile(
+                                    title: "Fahrzeuge",
+                                    value: "\(vehicles.count)",
+                                    systemImage: "car.2.fill"
+                                )
+                                Divider()
+                                StatTile(
+                                    title: "Gesamtkosten",
+                                    value: DisplayFormatter.costString(totalCost),
+                                    systemImage: "sum"
+                                )
                             }
                         }
-                    }
 
-                    GlassCard(title: "Kosten pro Jahr") {
-                        Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
-                            GridRow {
-                                Text("Jahr")
-                                Text("Betankungen").gridColumnAlignment(.trailing)
-                                Text("Sonstige").gridColumnAlignment(.trailing)
-                                Text("Gesamt").gridColumnAlignment(.trailing)
-                            }
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                            Divider()
-
-                            ForEach(costsByYear) { item in
+                        GlassCard(title: "Kosten je Fahrzeug") {
+                            Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                                 GridRow {
-                                    Text(String(item.year))
-                                    Text(DisplayFormatter.currencyString(item.fuel))
-                                    Text(DisplayFormatter.costString(item.expense))
-                                    Text(DisplayFormatter.costString(item.total))
-                                        .bold()
+                                    Text("Fahrzeug")
+                                    Text("Betankungen").gridColumnAlignment(.trailing)
+                                    Text("Sonstige").gridColumnAlignment(.trailing)
+                                    Text("Gesamt").gridColumnAlignment(.trailing)
                                 }
-                                .font(.subheadline)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+
+                                Divider()
+
+                                ForEach(vehicles) { vehicle in
+                                    GridRow {
+                                        Text(vehicle.licensePlate ?? "")
+                                        Text(DisplayFormatter.currencyString(vehicle.totalFuelCost))
+                                        Text(DisplayFormatter.costString(vehicle.totalExpenseCost))
+                                        Text(DisplayFormatter.costString(vehicle.totalCost))
+                                            .bold()
+                                    }
+                                    .font(.subheadline)
+                                }
+                            }
+                        }
+
+                        GlassCard(title: "Kosten pro Jahr") {
+                            Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
+                                GridRow {
+                                    Text("Jahr")
+                                    Text("Betankungen").gridColumnAlignment(.trailing)
+                                    Text("Sonstige").gridColumnAlignment(.trailing)
+                                    Text("Gesamt").gridColumnAlignment(.trailing)
+                                }
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+
+                                Divider()
+
+                                ForEach(costsByYear) { item in
+                                    GridRow {
+                                        Text(String(item.year))
+                                        Text(DisplayFormatter.currencyString(item.fuel))
+                                        Text(DisplayFormatter.costString(item.expense))
+                                        Text(DisplayFormatter.costString(item.total))
+                                            .bold()
+                                    }
+                                    .font(.subheadline)
+                                }
                             }
                         }
                     }
                 }
+                .padding(20)
             }
-            .padding(20)
         }
         .navigationTitle("Statistik")
     }

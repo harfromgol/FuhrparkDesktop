@@ -60,6 +60,7 @@ struct ExpenseFormView: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
+                GlassEffectContainer {
                 VStack(alignment: .leading, spacing: 16) {
                     GlassCard(title: "Fahrzeug") {
                         Text(vehicle.licensePlate ?? "")
@@ -100,6 +101,7 @@ struct ExpenseFormView: View {
                     }
                 }
                 .padding(20)
+                }
             }
 
             Divider()

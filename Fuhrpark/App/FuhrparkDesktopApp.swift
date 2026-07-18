@@ -62,6 +62,15 @@ struct FuhrparkDesktopApp: App {
             }
         }
         .defaultSize(width: 620, height: 420)
+
+        WindowGroup("Gefahrene km pro Jahr", id: "distance-chart", for: VehicleRef.self) { $vehicleRef in
+            if let vehicleRef {
+                DistanceChartWindow(vehicleRef: vehicleRef)
+                    .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                    .persistWindowFrame("distance-chart")
+            }
+        }
+        .defaultSize(width: 620, height: 420)
     }
 }
 

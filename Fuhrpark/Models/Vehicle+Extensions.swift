@@ -61,6 +61,18 @@ struct YearlyCost: Identifiable {
     var id: Int { year }
 }
 
+/// Gefahrene Kilometer eines Kalenderjahrs (siehe `Vehicle.kilometersByYear`).
+/// Jahre, für die sich weder Start- noch Endstand ermitteln lassen, tauchen
+/// dort gar nicht erst auf – daher hier kein optionaler Wert.
+struct YearlyDistance: Identifiable {
+    let year: Int
+    let kilometers: Int32
+    /// Interpolierter Kilometerstand zum 31.12. dieses Jahres (siehe
+    /// `Vehicle.interpolatedOdometer(endOfYear:)`).
+    let odometerAtYearEnd: Int32
+    var id: Int { year }
+}
+
 extension Vehicle {
     var engineType: EngineType {
         get { EngineType(rawValue: engineTypeRaw) ?? .combustion }
@@ -160,6 +172,72 @@ extension Vehicle {
         return years
             .map { YearlyCost(year: $0, fuel: fuelByYear[$0, default: 0], expense: expenseByYear[$0, default: 0]) }
             .sorted { $0.year > $1.year }
+    }
+
+    /// Interpolierter Kilometerstand zum 31.12. `year`, 23:59:59 Uhr: aus der
+    /// letzten Betankung bis zu diesem Zeitpunkt und der ersten danach linear
+    /// interpoliert (nach Datum, nicht nach Kilometerstand sortiert – anders
+    /// als `sortedFuelEntries`).
+    ///
+    /// Randfälle:
+    /// - Fehlt die vorherige Betankung (vor der allerersten Betankung
+    ///   überhaupt), wird ersatzweise der Anfangsstand des Fahrzeugs als
+    ///   Näherung für diesen Zeitpunkt verwendet.
+    /// - Fehlt die folgende Betankung, weil `year` das laufende Kalenderjahr
+    ///   ist, wird ersatzweise der Stand der letzten Betankung verwendet.
+    /// - Fehlt die folgende Betankung aus einem anderen Grund (z. B. ein
+    ///   zukünftiges Jahr ohne jede Betankung), liefert die Funktion `nil` –
+    ///   `kilometersByYear` blendet ein solches Jahr dann aus.
+    private func interpolatedOdometer(endOfYear year: Int) -> Double? {
+        guard let boundary = Calendar.current.date(from: DateComponents(year: year + 1, month: 1, day: 1)) else {
+            return nil
+        }
+        let entriesByDate = sortedFuelEntries
+            .compactMap { entry -> (date: Date, odometer: Int32)? in
+                guard let date = entry.date else { return nil }
+                return (date, entry.odometer)
+            }
+        let before = entriesByDate.filter { $0.date < boundary }.max { $0.date < $1.date }
+        let after = entriesByDate.filter { $0.date >= boundary }.min { $0.date < $1.date }
+
+        switch (before, after) {
+        case let (before?, after?):
+            let totalInterval = after.date.timeIntervalSince(before.date)
+            guard totalInterval > 0 else { return Double(before.odometer) }
+            let fraction = boundary.timeIntervalSince(before.date) / totalInterval
+            return Double(before.odometer) + fraction * Double(after.odometer - before.odometer)
+        case (nil, .some):
+            return Double(odometer)
+        case let (before?, nil):
+            guard year == Calendar.current.component(.year, from: Date()) else { return nil }
+            return Double(before.odometer)
+        case (nil, nil):
+            return nil
+        }
+    }
+
+    /// Gefahrene Kilometer je Kalenderjahr, aus den zum jeweiligen 31.12.
+    /// interpolierten Kilometerständen berechnet (siehe
+    /// `interpolatedOdometer(endOfYear:)`). Dieselbe Jahresbasis wie
+    /// `costsByYear`, neuestes Jahr zuerst; Jahre ohne ermittelbaren Start-
+    /// oder Endstand (z. B. ein zukünftiges Jahr ohne jede Betankung) fehlen
+    /// in der Liste, statt mit einem Platzhalter angezeigt zu werden.
+    var kilometersByYear: [YearlyDistance] {
+        costsByYear
+            .compactMap { yearlyCost -> YearlyDistance? in
+                let year = yearlyCost.year
+                guard
+                    let end = interpolatedOdometer(endOfYear: year),
+                    let start = interpolatedOdometer(endOfYear: year - 1)
+                else {
+                    return nil
+                }
+                return YearlyDistance(
+                    year: year,
+                    kilometers: Int32((end - start).rounded()),
+                    odometerAtYearEnd: Int32(end.rounded())
+                )
+            }
     }
 
     /// Höchster bekannter Kilometerstand: der Anlagestand oder – falls höher –

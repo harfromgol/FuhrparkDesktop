@@ -22,6 +22,7 @@ struct VehicleFormView: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
+                GlassEffectContainer {
                 VStack(alignment: .leading, spacing: 16) {
                     GlassCard(title: "Fahrzeugdaten") {
                         ValidatedField(
@@ -61,6 +62,7 @@ struct VehicleFormView: View {
                     }
                 }
                 .padding(20)
+                }
             }
 
             Divider()
