@@ -300,7 +300,23 @@ struct VehicleDetailView: View {
     }
 
     private var expenseCategoryStatistics: some View {
-        GlassCard(title: "Gesamtkosten pro Kategorie") {
+        GlassCard {
+            HStack {
+                Text("Gesamtkosten pro Kategorie")
+                    .font(.headline)
+                Spacer()
+                if vehicle.expenseCostByCategory.count >= 2, let vehicleRef {
+                    Button {
+                        openWindow(id: "category-chart", value: vehicleRef)
+                    } label: {
+                        Image(systemName: "chart.pie")
+                            .imageScale(.large)
+                    }
+                    .buttonStyle(.borderless)
+                    .pointerStyle(.link)
+                    .help("Gesamtkosten pro Kategorie – Diagramm anzeigen")
+                }
+            }
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                 GridRow {
                     Text("Kategorie")
