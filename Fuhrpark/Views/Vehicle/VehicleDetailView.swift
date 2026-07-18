@@ -349,7 +349,23 @@ struct VehicleDetailView: View {
     /// End-Kilometerstand (z. B. ein zukünftiges Jahr ohne jede Betankung)
     /// fehlen dort bereits, statt mit einem Platzhalter angezeigt zu werden.
     private var kilometersByYearStatistics: some View {
-        GlassCard(title: "Gefahrene km pro Jahr") {
+        GlassCard {
+            HStack {
+                Text("Gefahrene km pro Jahr")
+                    .font(.headline)
+                Spacer()
+                if vehicle.kilometersByYear.count >= 2, let vehicleRef {
+                    Button {
+                        openWindow(id: "distance-chart", value: vehicleRef)
+                    } label: {
+                        Image(systemName: "chart.xyaxis.line")
+                            .imageScale(.large)
+                    }
+                    .buttonStyle(.borderless)
+                    .pointerStyle(.link)
+                    .help("Gefahrene km pro Jahr – Verlauf anzeigen")
+                }
+            }
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                 GridRow {
                     Text("Jahr")
