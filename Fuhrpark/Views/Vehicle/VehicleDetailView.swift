@@ -139,6 +139,10 @@ struct VehicleDetailView: View {
                         Text("Noch keine \(vehicle.engineType.refuelNounPlural) oder sonstigen Ausgaben erfasst.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                    } else if enabledCards.isEmpty {
+                        Text("Alle Statistik-Karten sind ausgeblendet. Über das Zahnrad-Symbol oben können sie wieder eingeblendet werden.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     } else {
                         if !vehicle.sortedFuelEntries.isEmpty {
                             if enabledCards.contains(.consumption) {
