@@ -67,6 +67,9 @@ struct YearlyCost: Identifiable {
 struct YearlyDistance: Identifiable {
     let year: Int
     let kilometers: Int32
+    /// Interpolierter Kilometerstand zum 31.12. dieses Jahres (siehe
+    /// `Vehicle.interpolatedOdometer(endOfYear:)`).
+    let odometerAtYearEnd: Int32
     var id: Int { year }
 }
 
@@ -229,7 +232,11 @@ extension Vehicle {
                 else {
                     return nil
                 }
-                return YearlyDistance(year: year, kilometers: Int32((end - start).rounded()))
+                return YearlyDistance(
+                    year: year,
+                    kilometers: Int32((end - start).rounded()),
+                    odometerAtYearEnd: Int32(end.rounded())
+                )
             }
     }
 

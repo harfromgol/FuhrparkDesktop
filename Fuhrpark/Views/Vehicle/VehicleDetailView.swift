@@ -370,6 +370,7 @@ struct VehicleDetailView: View {
                 GridRow {
                     Text("Jahr")
                     Text("km").gridColumnAlignment(.trailing)
+                    Text("Tachostand").gridColumnAlignment(.trailing)
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -381,6 +382,8 @@ struct VehicleDetailView: View {
                         Text(String(item.year))
                         Text("\(DisplayFormatter.odometerString(item.kilometers)) km")
                             .bold()
+                        Text("\(DisplayFormatter.odometerString(item.odometerAtYearEnd)) km")
+                            .foregroundStyle(.secondary)
                     }
                     .font(.subheadline)
                 }
