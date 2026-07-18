@@ -71,6 +71,15 @@ struct FuhrparkDesktopApp: App {
             }
         }
         .defaultSize(width: 620, height: 420)
+
+        WindowGroup("Gesamtkosten pro Kategorie", id: "category-chart", for: VehicleRef.self) { $vehicleRef in
+            if let vehicleRef {
+                CategoryChartWindow(vehicleRef: vehicleRef)
+                    .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                    .persistWindowFrame("category-chart")
+            }
+        }
+        .defaultSize(width: 620, height: 480)
     }
 }
 

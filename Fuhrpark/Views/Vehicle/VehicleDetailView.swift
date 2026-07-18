@@ -300,19 +300,53 @@ struct VehicleDetailView: View {
     }
 
     private var expenseCategoryStatistics: some View {
-        GlassCard(title: "Gesamtkosten pro Kategorie") {
-            VStack(spacing: 8) {
+        GlassCard {
+            HStack {
+                Text("Gesamtkosten pro Kategorie")
+                    .font(.headline)
+                Spacer()
+                if vehicle.expenseCostByCategory.count >= 2, let vehicleRef {
+                    Button {
+                        openWindow(id: "category-chart", value: vehicleRef)
+                    } label: {
+                        Image(systemName: "chart.pie")
+                            .imageScale(.large)
+                    }
+                    .buttonStyle(.borderless)
+                    .pointerStyle(.link)
+                    .help("Gesamtkosten pro Kategorie – Diagramm anzeigen")
+                }
+            }
+            Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
+                GridRow {
+                    Text("Kategorie")
+                    Text("Betrag").gridColumnAlignment(.trailing)
+                    Text("Anteil").gridColumnAlignment(.trailing)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+                Divider()
+
                 ForEach(vehicle.expenseCostByCategory, id: \.category) { item in
-                    HStack {
+                    GridRow {
                         Text(item.category)
-                        Spacer()
                         Text(DisplayFormatter.costString(item.total))
                             .bold()
+                        Text(categoryShareString(item.total))
+                            .foregroundStyle(.secondary)
                     }
                     .font(.subheadline)
                 }
             }
         }
+    }
+
+    /// Anteil eines Kategorie-Betrags an den Gesamtkosten des Fahrzeugs
+    /// (Betankungen + sonstige Ausgaben, siehe `header`/`vehicle.totalCost`).
+    private func categoryShareString(_ total: Decimal) -> String {
+        guard vehicle.totalCost > 0 else { return "–" }
+        return DisplayFormatter.percentString(total / vehicle.totalCost)
     }
 
     private var yearlyCostStatistics: some View {
