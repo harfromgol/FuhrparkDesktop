@@ -306,11 +306,18 @@ struct VehicleDetailView: View {
                     Text("Kategorie")
                     Text("Betrag").gridColumnAlignment(.trailing)
                     Text("Anteil").gridColumnAlignment(.trailing)
+                        .offset(x: -8)
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
+                // Divider() spannt implizit alle Spalten und würde ohne
+                // gridCellUnsizedAxes unbegrenzte Breite anfordern – dadurch
+                // würde das Grid unnötig breit gezogen und der komplette
+                // Leerraum in die letzte Spaltenlücke wandern (Apples
+                // dokumentiertes Divider-in-Grid-Problem).
                 Divider()
+                    .gridCellUnsizedAxes(.horizontal)
 
                 ForEach(vehicle.expenseCostByCategory, id: \.category) { item in
                     GridRow {
@@ -319,6 +326,7 @@ struct VehicleDetailView: View {
                             .bold()
                         Text(categoryShareString(item.total))
                             .foregroundStyle(.secondary)
+                            .offset(x: -8)
                     }
                     .font(.subheadline)
                 }
