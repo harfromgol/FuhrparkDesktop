@@ -350,7 +350,23 @@ struct VehicleDetailView: View {
     }
 
     private var yearlyCostStatistics: some View {
-        GlassCard(title: "Kosten pro Jahr") {
+        GlassCard {
+            HStack {
+                Text("Kosten pro Jahr")
+                    .font(.headline)
+                Spacer()
+                if vehicle.costsByYear.count >= 2, let vehicleRef {
+                    Button {
+                        openWindow(id: "yearly-cost-chart", value: vehicleRef)
+                    } label: {
+                        Image(systemName: "chart.bar.fill")
+                            .imageScale(.large)
+                    }
+                    .buttonStyle(.borderless)
+                    .pointerStyle(.link)
+                    .help("Kosten pro Jahr – Diagramm anzeigen")
+                }
+            }
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                 GridRow {
                     Text("Jahr")

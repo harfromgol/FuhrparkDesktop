@@ -80,6 +80,15 @@ struct FuhrparkDesktopApp: App {
             }
         }
         .defaultSize(width: 620, height: 480)
+
+        WindowGroup("Kosten pro Jahr", id: "yearly-cost-chart", for: VehicleRef.self) { $vehicleRef in
+            if let vehicleRef {
+                YearlyCostChartWindow(vehicleRef: vehicleRef)
+                    .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                    .persistWindowFrame("yearly-cost-chart")
+            }
+        }
+        .defaultSize(width: 620, height: 420)
     }
 }
 
