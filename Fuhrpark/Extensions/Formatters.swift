@@ -69,4 +69,19 @@ enum DisplayFormatter {
     static func odometerString(_ value: Int32) -> String {
         odometer.string(from: NSNumber(value: value)) ?? "\(value)"
     }
+
+    /// Prozentanteil, z. B. „12,3 %". Erwartet den Anteil als Bruch (0,123),
+    /// nicht bereits mit 100 multipliziert.
+    static let percent: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .percent
+        formatter.locale = Locale(identifier: "de_DE")
+        formatter.minimumFractionDigits = 1
+        formatter.maximumFractionDigits = 1
+        return formatter
+    }()
+
+    static func percentString(_ fraction: Decimal) -> String {
+        string(from: fraction, formatter: percent)
+    }
 }
