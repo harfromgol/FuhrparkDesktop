@@ -112,6 +112,9 @@ struct SidebarView: View {
         if selection == .vehicle(vehicle) {
             selection = .statistics
         }
+        if let id = vehicle.id {
+            StatisticsCardVisibilityStore.removeEnabledCards(for: id)
+        }
         viewContext.delete(vehicle)
         PersistenceController.shared.save(context: viewContext)
     }
