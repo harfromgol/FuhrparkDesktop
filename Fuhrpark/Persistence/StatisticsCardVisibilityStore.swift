@@ -35,4 +35,12 @@ enum StatisticsCardVisibilityStore {
         all[vehicleID.uuidString] = cards.map(\.rawValue)
         UserDefaults.standard.set(all, forKey: defaultsKey)
     }
+
+    /// Entfernt die gespeicherte Konfiguration eines gelöschten Fahrzeugs, damit
+    /// keine Karteileiche in den UserDefaults zurückbleibt.
+    static func removeEnabledCards(for vehicleID: UUID) {
+        var all = (UserDefaults.standard.dictionary(forKey: defaultsKey) as? [String: [String]]) ?? [:]
+        all.removeValue(forKey: vehicleID.uuidString)
+        UserDefaults.standard.set(all, forKey: defaultsKey)
+    }
 }
