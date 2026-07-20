@@ -43,6 +43,14 @@
         <attribute name="purpose" optional="NO" attributeType="String"/>
         <attribute name="recipient" optional="NO" attributeType="String"/>
         <relationship name="categories" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Category" inverseName="expenses" inverseEntity="Category"/>
+        <relationship name="documents" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Dokument" inverseName="expense" inverseEntity="Dokument"/>
         <relationship name="vehicle" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Vehicle" inverseName="expenses" inverseEntity="Vehicle"/>
+    </entity>
+    <entity name="Dokument" representedClassName="Dokument" syncable="YES" codeGenerationType="class">
+        <attribute name="bookmarkData" optional="NO" attributeType="Binary"/>
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="path" optional="NO" attributeType="String"/>
+        <relationship name="expense" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Expense" inverseName="documents" inverseEntity="Expense"/>
     </entity>
 </model>
