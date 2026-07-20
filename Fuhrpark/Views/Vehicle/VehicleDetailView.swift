@@ -233,6 +233,9 @@ struct VehicleDetailView: View {
                         .foregroundStyle(.tertiary)
                 }
                 Spacer()
+                if vehicle.decommissioned {
+                    DecommissionedBadge(showsIcon: true)
+                }
                 Menu {
                     if vehicle.decommissioned {
                         Button("Wieder in Betrieb nehmen") { reactivate() }
@@ -250,10 +253,6 @@ struct VehicleDetailView: View {
                 .fixedSize()
                 .pointerStyle(.link)
                 .help("Weitere Aktionen")
-
-                if vehicle.decommissioned {
-                    DecommissionedBadge(showsIcon: true)
-                }
             }
 
             Divider()
