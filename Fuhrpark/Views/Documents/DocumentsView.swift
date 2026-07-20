@@ -52,29 +52,35 @@ struct DocumentsView: View {
     }
 
     var body: some View {
-        ScrollView {
-            GlassEffectContainer {
-                VStack(alignment: .leading, spacing: 20) {
+        Group {
+            if documents.isEmpty {
+                VStack(spacing: 20) {
                     addButtonRow
-
-                    if documents.isEmpty {
-                        ContentUnavailableView(
-                            "Keine Dokumente",
-                            systemImage: "folder",
-                            description: Text("Füge über „Neues Dokument“ eine Datei zu einer sonstigen Ausgabe hinzu.")
-                        )
-                        .padding(.top, 60)
-                    } else {
-                        if !vehicles.isEmpty {
-                            vehicleFilterSection
-                        }
-                        if !allCategoryNames.isEmpty {
-                            categoryFilterSection
-                        }
-                        documentListSection
-                    }
+                    Spacer()
+                    ContentUnavailableView(
+                        "Keine Dokumente",
+                        systemImage: "folder",
+                        description: Text("Füge über „Neues Dokument“ eine Datei zu einer sonstigen Ausgabe hinzu.")
+                    )
+                    Spacer()
                 }
                 .padding(20)
+            } else {
+                ScrollView {
+                    GlassEffectContainer {
+                        VStack(alignment: .leading, spacing: 20) {
+                            addButtonRow
+                            if !vehicles.isEmpty {
+                                vehicleFilterSection
+                            }
+                            if !allCategoryNames.isEmpty {
+                                categoryFilterSection
+                            }
+                            documentListSection
+                        }
+                        .padding(20)
+                    }
+                }
             }
         }
         .navigationTitle("Dokumente")
