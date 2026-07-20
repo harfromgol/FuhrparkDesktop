@@ -16,7 +16,6 @@ struct SidebarView: View {
 
     @State private var isPresentingNewVehicle = false
     @State private var vehiclePendingDeletion: Vehicle?
-    @State private var vehiclePendingDecommission: Vehicle?
 
     var body: some View {
         list
@@ -41,14 +40,6 @@ struct SidebarView: View {
                 actionRole: .destructive,
                 message: { "„\($0.licensePlate ?? "")“ und alle zugehörigen \($0.engineType.refuelNounPlural) und Ausgaben werden unwiderruflich gelöscht." },
                 action: delete
-            ))
-            .modifier(VehicleConfirmationModifier(
-                pending: $vehiclePendingDecommission,
-                title: "Fahrzeug wirklich stilllegen?",
-                actionLabel: "Stilllegen",
-                actionRole: nil,
-                message: { "„\($0.licensePlate ?? "")“ wird als stillgelegt (verschrottet oder verkauft) markiert. Danach können keine \($0.engineType.refuelNounPlural) und sonstigen Ausgaben mehr erfasst werden." },
-                action: decommission
             ))
     }
 
@@ -92,12 +83,7 @@ struct SidebarView: View {
         Button {
             selection = .vehicle(vehicle)
         } label: {
-            VehicleRow(
-                vehicle: vehicle,
-                onDecommission: { vehiclePendingDecommission = vehicle },
-                onReactivate: { reactivate(vehicle) },
-                onDelete: { vehiclePendingDeletion = vehicle }
-            )
+            VehicleRow(vehicle: vehicle)
         }
         .buttonStyle(.plain)
         .pointerStyle(.link)
@@ -112,28 +98,15 @@ struct SidebarView: View {
         if selection == .vehicle(vehicle) {
             selection = .statistics
         }
-        if let id = vehicle.id {
-            StatisticsCardVisibilityStore.removeEnabledCards(for: id)
-        }
-        viewContext.delete(vehicle)
-        PersistenceController.shared.save(context: viewContext)
-    }
-
-    private func decommission(_ vehicle: Vehicle) {
-        vehicle.decommissioned = true
-        PersistenceController.shared.save(context: viewContext)
-    }
-
-    private func reactivate(_ vehicle: Vehicle) {
-        vehicle.decommissioned = false
-        PersistenceController.shared.save(context: viewContext)
+        vehicle.delete(in: viewContext)
     }
 }
 
 /// Wiederverwendbarer Bestätigungsdialog für eine Fahrzeug-Aktion (Löschen bzw.
-/// Stilllegen). Als eigener `ViewModifier`, damit `SidebarView.body` schlank und
-/// für den Type-Checker handhabbar bleibt.
-private struct VehicleConfirmationModifier: ViewModifier {
+/// Stilllegen). Als eigener `ViewModifier`, damit die aufrufende View schlank
+/// und für den Type-Checker handhabbar bleibt. Wird von `SidebarView` (Löschen
+/// per Wisch-Geste) und `VehicleDetailView` (Aktionsmenü) genutzt.
+struct VehicleConfirmationModifier: ViewModifier {
     @Binding var pending: Vehicle?
     let title: String
     let actionLabel: String
@@ -160,9 +133,6 @@ private struct VehicleConfirmationModifier: ViewModifier {
 
 private struct VehicleRow: View {
     @ObservedObject var vehicle: Vehicle
-    let onDecommission: () -> Void
-    let onReactivate: () -> Void
-    let onDelete: () -> Void
 
     private var dimmed: Double { vehicle.decommissioned ? 0.5 : 1 }
 
@@ -195,17 +165,6 @@ private struct VehicleRow: View {
         .padding(.vertical, 2)
         .padding(.leading, 5)
         .contentShape(Rectangle())
-        // Das Kontextmenü liegt bewusst hier (VehicleRow beobachtet das Fahrzeug
-        // via @ObservedObject), damit es sofort auf Stilllegen/Reaktivieren
-        // reagiert – im Eltern-Scope würde es erst bei Auswahlwechsel neu bauen.
-        .contextMenu {
-            if vehicle.decommissioned {
-                Button("Wieder in Betrieb nehmen", action: onReactivate)
-            } else {
-                Button("Fahrzeug stilllegen", action: onDecommission)
-            }
-            Button("Fahrzeug löschen", role: .destructive, action: onDelete)
-        }
     }
 }
 

@@ -102,6 +102,24 @@ extension Vehicle {
         return entries.filter { $0.odometer < entry.odometer }.max { $0.odometer < $1.odometer }
     }
 
+    // MARK: - Mutationen
+
+    /// Löscht dieses Fahrzeug inkl. aller zugehörigen Betankungen/Ausgaben
+    /// (Core-Data-Cascade) und räumt die gespeicherte Statistik-Karten-
+    /// Konfiguration auf, die sonst als Karteileiche zurückbliebe.
+    func delete(in context: NSManagedObjectContext) {
+        if let id {
+            StatisticsCardVisibilityStore.removeEnabledCards(for: id)
+        }
+        context.delete(self)
+        PersistenceController.shared.save(context: context)
+    }
+
+    func setDecommissioned(_ value: Bool, in context: NSManagedObjectContext) {
+        decommissioned = value
+        PersistenceController.shared.save(context: context)
+    }
+
     // MARK: - Statistik
 
     /// Summe aller Betankungskosten.

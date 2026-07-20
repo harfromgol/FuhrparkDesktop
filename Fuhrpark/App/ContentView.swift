@@ -26,7 +26,7 @@ struct ContentView: View {
             case .fuelPrices:
                 FuelPricesView()
             case .vehicle(let vehicle):
-                VehicleDetailView(vehicle: vehicle)
+                VehicleDetailView(vehicle: vehicle, onDelete: { selection = .statistics })
                     .id(vehicle.objectID)
             }
         }
