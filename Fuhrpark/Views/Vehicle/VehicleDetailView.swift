@@ -8,6 +8,7 @@ struct VehicleDetailView: View {
     @State private var isPresentingNewFuelEntry = false
     @State private var isPresentingNewExpense = false
     @State private var isPresentingCardConfig = false
+    @State private var isPresentingEditVehicle = false
     /// Welche der optionalen Statistik-Karten sichtbar sind, aus den
     /// UserDefaults vorbelegt (siehe `StatisticsCardVisibilityStore`). Wird
     /// je Fahrzeug separat gespeichert; da diese View pro Fahrzeug neu
@@ -178,6 +179,9 @@ struct VehicleDetailView: View {
         .sheet(isPresented: $isPresentingNewExpense) {
             ExpenseFormView(vehicle: vehicle)
         }
+        .sheet(isPresented: $isPresentingEditVehicle) {
+            VehicleFormView(vehicleToEdit: vehicle)
+        }
     }
 
     private var header: some View {
@@ -193,6 +197,15 @@ struct VehicleDetailView: View {
                         .foregroundStyle(.tertiary)
                 }
                 Spacer()
+                Button {
+                    isPresentingEditVehicle = true
+                } label: {
+                    Image(systemName: "pencil")
+                }
+                .buttonStyle(.borderless)
+                .pointerStyle(.link)
+                .help("Fahrzeug bearbeiten")
+
                 if vehicle.decommissioned {
                     DecommissionedBadge(showsIcon: true)
                 }
