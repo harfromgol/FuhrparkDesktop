@@ -4,11 +4,17 @@ struct VehicleDetailView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.openWindow) private var openWindow
     @ObservedObject var vehicle: Vehicle
+    /// Wird nach dem Löschen dieses Fahrzeugs aufgerufen, damit der Aufrufer
+    /// (`ContentView`) die Auswahl von diesem (jetzt ungültigen) Fahrzeug weg
+    /// zurücksetzen kann.
+    let onDelete: () -> Void
 
     @State private var isPresentingNewFuelEntry = false
     @State private var isPresentingNewExpense = false
     @State private var isPresentingCardConfig = false
     @State private var isPresentingEditVehicle = false
+    @State private var vehiclePendingDeletion: Vehicle?
+    @State private var vehiclePendingDecommission: Vehicle?
     /// Welche der optionalen Statistik-Karten sichtbar sind, aus den
     /// UserDefaults vorbelegt (siehe `StatisticsCardVisibilityStore`). Wird
     /// je Fahrzeug separat gespeichert; da diese View pro Fahrzeug neu
@@ -16,8 +22,9 @@ struct VehicleDetailView: View {
     /// hier automatisch den richtigen Stand.
     @State private var enabledCards: Set<StatisticsCard>
 
-    init(vehicle: Vehicle) {
+    init(vehicle: Vehicle, onDelete: @escaping () -> Void) {
         self.vehicle = vehicle
+        self.onDelete = onDelete
         _enabledCards = State(initialValue: vehicle.id.map(StatisticsCardVisibilityStore.enabledCards(for:)) ?? Set(StatisticsCard.allCases))
     }
 
@@ -182,6 +189,35 @@ struct VehicleDetailView: View {
         .sheet(isPresented: $isPresentingEditVehicle) {
             VehicleFormView(vehicleToEdit: vehicle)
         }
+        .modifier(VehicleConfirmationModifier(
+            pending: $vehiclePendingDeletion,
+            title: "Fahrzeug wirklich löschen?",
+            actionLabel: "Löschen",
+            actionRole: .destructive,
+            message: { "„\($0.licensePlate ?? "")“ und alle zugehörigen \($0.engineType.refuelNounPlural) und Ausgaben werden unwiderruflich gelöscht." },
+            action: delete
+        ))
+        .modifier(VehicleConfirmationModifier(
+            pending: $vehiclePendingDecommission,
+            title: "Fahrzeug wirklich stilllegen?",
+            actionLabel: "Stilllegen",
+            actionRole: nil,
+            message: { "„\($0.licensePlate ?? "")“ wird als stillgelegt (verschrottet oder verkauft) markiert. Danach können keine \($0.engineType.refuelNounPlural) und sonstigen Ausgaben mehr erfasst werden." },
+            action: decommission
+        ))
+    }
+
+    private func delete(_ vehicle: Vehicle) {
+        onDelete()
+        vehicle.delete(in: viewContext)
+    }
+
+    private func decommission(_ vehicle: Vehicle) {
+        vehicle.setDecommissioned(true, in: viewContext)
+    }
+
+    private func reactivate() {
+        vehicle.setDecommissioned(false, in: viewContext)
     }
 
     private var header: some View {
@@ -197,14 +233,23 @@ struct VehicleDetailView: View {
                         .foregroundStyle(.tertiary)
                 }
                 Spacer()
-                Button {
-                    isPresentingEditVehicle = true
+                Menu {
+                    if vehicle.decommissioned {
+                        Button("Wieder in Betrieb nehmen") { reactivate() }
+                    } else {
+                        Button("Stilllegen") { vehiclePendingDecommission = vehicle }
+                    }
+                    Divider()
+                    Button("Bearbeiten") { isPresentingEditVehicle = true }
+                    Button("Löschen", role: .destructive) { vehiclePendingDeletion = vehicle }
                 } label: {
-                    Image(systemName: "pencil")
+                    Image(systemName: "ellipsis.circle")
                 }
-                .buttonStyle(.borderless)
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
                 .pointerStyle(.link)
-                .help("Fahrzeug bearbeiten")
+                .help("Weitere Aktionen")
 
                 if vehicle.decommissioned {
                     DecommissionedBadge(showsIcon: true)
@@ -543,6 +588,6 @@ struct VehicleDetailView: View {
 #Preview {
     let context = PersistenceController.preview.container.viewContext
     let vehicle = (try! context.fetch(Vehicle.fetchRequest()) as! [Vehicle]).first!
-    return VehicleDetailView(vehicle: vehicle)
+    return VehicleDetailView(vehicle: vehicle, onDelete: {})
         .environment(\.managedObjectContext, context)
 }
