@@ -115,8 +115,10 @@ extension Vehicle {
         PersistenceController.shared.save(context: context)
     }
 
-    func setDecommissioned(_ value: Bool, in context: NSManagedObjectContext) {
-        decommissioned = value
+    /// Markiert das Fahrzeug als stillgelegt. Endgültig: eine Reaktivierung
+    /// ist nicht vorgesehen.
+    func decommission(in context: NSManagedObjectContext) {
+        decommissioned = true
         PersistenceController.shared.save(context: context)
     }
 
