@@ -23,4 +23,10 @@ extension Expense {
     var categoriesDisplay: String {
         categoryNames.joined(separator: ", ")
     }
+
+    /// Zugeordnete Dokumente, neueste zuerst.
+    var sortedDocuments: [Dokument] {
+        let set = (documents as? Set<Dokument>) ?? []
+        return set.sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
+    }
 }

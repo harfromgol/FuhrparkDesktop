@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ExpenseFormView: View {
     @Environment(\.managedObjectContext) private var viewContext
@@ -20,11 +21,24 @@ struct ExpenseFormView: View {
     @State private var purpose = ""
     @State private var selectedCategories: Set<Category> = []
     @State private var newCategoryName = ""
+    @State private var pendingDocuments: [PendingDocument] = []
+    @State private var isPresentingFilePicker = false
+    @State private var filePickerError: String?
 
     @State private var dateValid = false
     @State private var amountValid = false
     @State private var recipientValid = false
     @State private var purposeValid = false
+
+    /// Beim Anlegen ausgewählte, aber noch nicht gespeicherte Datei – wird erst
+    /// beim Speichern der Ausgabe als `Dokument` angelegt.
+    private struct PendingDocument: Identifiable {
+        let id = UUID()
+        let path: String
+        let bookmarkData: Data
+
+        var filename: String { (path as NSString).lastPathComponent }
+    }
 
     init(vehicle: Vehicle) {
         self.vehicle = vehicle
@@ -98,6 +112,7 @@ struct ExpenseFormView: View {
                         )
 
                         categorySection
+                        documentsSection
                     }
                 }
                 .padding(20)
@@ -118,6 +133,25 @@ struct ExpenseFormView: View {
             .padding(16)
         }
         .frame(width: 440, height: 700)
+        .fileImporter(
+            isPresented: $isPresentingFilePicker,
+            allowedContentTypes: [.item],
+            allowsMultipleSelection: true
+        ) { result in
+            handleFileSelection(result)
+        }
+        .alert(
+            "Datei konnte nicht hinzugefügt werden",
+            isPresented: Binding(
+                get: { filePickerError != nil },
+                set: { if !$0 { filePickerError = nil } }
+            ),
+            presenting: filePickerError
+        ) { _ in
+            Button("OK", role: .cancel) { }
+        } message: { message in
+            Text(message)
+        }
     }
 
     private var categorySection: some View {
@@ -158,6 +192,65 @@ struct ExpenseFormView: View {
                     .disabled(newCategoryName.trimmingCharacters(in: .whitespaces).isEmpty)
                     .pointerStyle(newCategoryName.trimmingCharacters(in: .whitespaces).isEmpty ? nil : .link)
             }
+        }
+    }
+
+    private var documentsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Dokumente")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if !pendingDocuments.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(pendingDocuments) { document in
+                        HStack {
+                            Label(document.filename, systemImage: "doc")
+                                .lineLimit(1)
+                                .font(.caption)
+                            Spacer()
+                            Button {
+                                pendingDocuments.removeAll { $0.id == document.id }
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                            }
+                            .buttonStyle(.plain)
+                            .pointerStyle(.link)
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+
+            Button("Dokument auswählen", systemImage: "doc.badge.plus") {
+                isPresentingFilePicker = true
+            }
+            .buttonStyle(.glass)
+            .pointerStyle(.link)
+        }
+    }
+
+    /// Sichert für jede ausgewählte Datei ein Security-Scoped Bookmark (die
+    /// App läuft sandboxed), damit der Zugriff auch nach einem Neustart
+    /// erhalten bleibt. Das eigentliche `Dokument` wird erst beim Speichern
+    /// der Ausgabe angelegt.
+    private func handleFileSelection(_ result: Result<[URL], Error>) {
+        guard case .success(let urls) = result else { return }
+        for url in urls {
+            guard url.startAccessingSecurityScopedResource() else {
+                filePickerError = "Zugriff auf „\(url.lastPathComponent)“ wurde verweigert."
+                continue
+            }
+            defer { url.stopAccessingSecurityScopedResource() }
+            guard let bookmark = try? url.bookmarkData(
+                options: .withSecurityScope,
+                includingResourceValuesForKeys: nil,
+                relativeTo: nil
+            ) else {
+                filePickerError = "Für „\(url.lastPathComponent)“ konnte kein dauerhafter Zugriff gespeichert werden."
+                continue
+            }
+            pendingDocuments.append(PendingDocument(path: url.path, bookmarkData: bookmark))
         }
     }
 
@@ -209,6 +302,15 @@ struct ExpenseFormView: View {
         expense.purpose = purpose
         expense.categories = NSSet(array: Array(selectedCategories))
         expense.vehicle = vehicle
+
+        for pending in pendingDocuments {
+            let document = Dokument(context: viewContext)
+            document.id = UUID()
+            document.path = pending.path
+            document.bookmarkData = pending.bookmarkData
+            document.createdAt = Date()
+            document.expense = expense
+        }
 
         vehicle.touch()
         PersistenceController.shared.save(context: viewContext)

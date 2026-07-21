@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 enum SidebarSelection: Hashable {
     case statistics
     case fuelPrices
+    case documents
     case vehicle(Vehicle)
 }
 
@@ -25,6 +26,8 @@ struct ContentView: View {
                 StatisticsView()
             case .fuelPrices:
                 FuelPricesView()
+            case .documents:
+                DocumentsView()
             case .vehicle(let vehicle):
                 VehicleDetailView(vehicle: vehicle, onDelete: { selection = .statistics })
                     .id(vehicle.objectID)
