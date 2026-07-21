@@ -7,6 +7,9 @@ struct VehicleFormView: View {
     /// Fahrzeug, das bearbeitet wird; `nil` beim Anlegen eines neuen Fahrzeugs.
     let vehicleToEdit: Vehicle?
 
+    @FetchRequest(sortDescriptors: [])
+    private var allVehicles: FetchedResults<Vehicle>
+
     @State private var licensePlate = ""
     @State private var manufacturer = ""
     @State private var model = ""
@@ -38,6 +41,17 @@ struct VehicleFormView: View {
         vehicleToEdit?.sortedFuelEntries.first?.odometer
     }
 
+    /// Prüft, ob das Kennzeichen bereits von einem anderen, aktiven Fahrzeug
+    /// verwendet wird. Stillgelegte Fahrzeuge blockieren das Kennzeichen
+    /// nicht – ein Nachfolgefahrzeug darf dasselbe Kennzeichen erhalten.
+    private func isLicensePlateTaken(_ text: String) -> Bool {
+        allVehicles.contains { candidate in
+            candidate !== vehicleToEdit
+                && !candidate.decommissioned
+                && (candidate.licensePlate ?? "").caseInsensitiveCompare(text) == .orderedSame
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
@@ -48,7 +62,9 @@ struct VehicleFormView: View {
                             title: "Kennzeichen",
                             text: $licensePlate,
                             kind: .licensePlate,
-                            isValidBinding: $licensePlateValid
+                            isValidBinding: $licensePlateValid,
+                            extraValidation: { !isLicensePlateTaken($0) },
+                            extraErrorMessage: "Kennzeichen bereits vergeben"
                         )
                         ValidatedField(
                             title: "Hersteller",
