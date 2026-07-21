@@ -17,6 +17,18 @@ struct SidebarView: View {
     @State private var isPresentingNewVehicle = false
     @State private var vehiclePendingDeletion: Vehicle?
 
+    /// Aktive Fahrzeuge in der bestehenden Sortierung (zuletzt geändert zuerst).
+    private var activeVehicles: [Vehicle] {
+        vehicles.filter { !$0.decommissioned }
+    }
+
+    /// Stillgelegte Fahrzeuge, alphabetisch nach Kennzeichen.
+    private var decommissionedVehicles: [Vehicle] {
+        vehicles
+            .filter(\.decommissioned)
+            .sorted { ($0.licensePlate ?? "") < ($1.licensePlate ?? "") }
+    }
+
     var body: some View {
         list
             .navigationTitle("Fuhrpark")
@@ -75,12 +87,25 @@ struct SidebarView: View {
             }
 
             Section("Fahrzeuge") {
-                ForEach(vehicles) { vehicle in
+                ForEach(activeVehicles) { vehicle in
                     vehicleRow(vehicle)
                 }
                 .onDelete { offsets in
                     for index in offsets {
-                        vehiclePendingDeletion = vehicles[index]
+                        vehiclePendingDeletion = activeVehicles[index]
+                    }
+                }
+            }
+
+            if !decommissionedVehicles.isEmpty {
+                Section("Stillgelegte Fahrzeuge") {
+                    ForEach(decommissionedVehicles) { vehicle in
+                        vehicleRow(vehicle)
+                    }
+                    .onDelete { offsets in
+                        for index in offsets {
+                            vehiclePendingDeletion = decommissionedVehicles[index]
+                        }
                     }
                 }
             }
