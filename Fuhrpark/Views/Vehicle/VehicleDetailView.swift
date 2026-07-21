@@ -103,13 +103,11 @@ struct VehicleDetailView: View {
                     }
 
                     sectionHeader(title: "Sonstige Ausgaben", systemImage: "eurosign.circle.fill") {
-                        if !vehicle.decommissioned {
-                            Button("Neue Ausgabe", systemImage: "plus") {
-                                isPresentingNewExpense = true
-                            }
-                            .buttonStyle(.glass)
-                            .pointerStyle(.link)
+                        Button("Neue Ausgabe", systemImage: "plus") {
+                            isPresentingNewExpense = true
                         }
+                        .buttonStyle(.glass)
+                        .pointerStyle(.link)
                         if !vehicle.sortedExpenses.isEmpty {
                             Button("Liste anzeigen", systemImage: "list.bullet") {
                                 if let vehicleRef {
@@ -202,7 +200,7 @@ struct VehicleDetailView: View {
             title: "Fahrzeug wirklich stilllegen?",
             actionLabel: "Stilllegen",
             actionRole: nil,
-            message: { "„\($0.licensePlate ?? "")“ wird als stillgelegt (verschrottet oder verkauft) markiert. Danach können keine \($0.engineType.refuelNounPlural) und sonstigen Ausgaben mehr erfasst werden." },
+            message: { "„\($0.licensePlate ?? "")“ wird als stillgelegt (verschrottet oder verkauft) markiert. Danach können keine \($0.engineType.refuelNounPlural) mehr erfasst werden. Dieser Schritt ist endgültig, eine Reaktivierung ist nicht möglich." },
             action: decommission
         ))
     }
@@ -213,11 +211,7 @@ struct VehicleDetailView: View {
     }
 
     private func decommission(_ vehicle: Vehicle) {
-        vehicle.setDecommissioned(true, in: viewContext)
-    }
-
-    private func reactivate() {
-        vehicle.setDecommissioned(false, in: viewContext)
+        vehicle.decommission(in: viewContext)
     }
 
     private var header: some View {
@@ -237,11 +231,8 @@ struct VehicleDetailView: View {
                     DecommissionedBadge(showsIcon: true)
                 }
                 Menu {
-                    if vehicle.decommissioned {
-                        Button("Wieder in Betrieb nehmen") { reactivate() }
-                    } else {
-                        Button("Stilllegen") { vehiclePendingDecommission = vehicle }
-                    }
+                    Button("Stilllegen") { vehiclePendingDecommission = vehicle }
+                        .disabled(vehicle.decommissioned)
                     Divider()
                     Button("Bearbeiten") { isPresentingEditVehicle = true }
                     Button("Löschen", role: .destructive) { vehiclePendingDeletion = vehicle }
