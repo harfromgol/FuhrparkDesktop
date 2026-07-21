@@ -55,6 +55,18 @@ private struct ExpenseDTO: Codable {
     var recipient: String
     var purpose: String
     var categoryIDs: [UUID]
+    /// Zugeordnete Dokumente. Optional, damit ältere Exporte (ohne dieses Feld)
+    /// weiterhin lesbar sind – fehlt es, hat die Ausgabe keine Dokumente.
+    var documents: [DokumentDTO]?
+}
+
+private struct DokumentDTO: Codable {
+    var id: UUID
+    var path: String
+    /// Security-Scoped Bookmark der Datei. Löst sich beim Import nur auf,
+    /// wenn die Datei noch am selben Ort auf demselben Mac liegt.
+    var bookmarkData: Data
+    var createdAt: Date
 }
 
 private struct CategoryDTO: Codable {
@@ -109,6 +121,16 @@ private extension ExpenseDTO {
         recipient = expense.recipient ?? ""
         purpose = expense.purpose ?? ""
         categoryIDs = expense.sortedCategories.compactMap { $0.id }
+        documents = expense.sortedDocuments.map(DokumentDTO.init(document:))
+    }
+}
+
+private extension DokumentDTO {
+    init(document: Dokument) {
+        id = document.id ?? UUID()
+        path = document.path ?? ""
+        bookmarkData = document.bookmarkData ?? Data()
+        createdAt = document.createdAt ?? Date()
     }
 }
 
@@ -143,7 +165,7 @@ enum DataTransfer {
         request.sortDescriptors = [NSSortDescriptor(keyPath: \Vehicle.createdAt, ascending: true)]
         let vehicles = try context.fetch(request)
         let root = ExportRoot(
-            schemaVersion: 3,
+            schemaVersion: 4,
             exportedAt: Date(),
             vehicles: vehicles.map(VehicleDTO.init(vehicle:)),
             windowFrames: WindowFrameStore.all()
@@ -212,6 +234,15 @@ enum DataTransfer {
                 expense.purpose = e.purpose
                 expense.categories = NSSet(array: e.categoryIDs.compactMap { categoriesByID[$0] })
                 expense.vehicle = vehicle
+
+                for d in e.documents ?? [] {
+                    let document = Dokument(context: context)
+                    document.id = d.id
+                    document.path = d.path
+                    document.bookmarkData = d.bookmarkData
+                    document.createdAt = d.createdAt
+                    document.expense = expense
+                }
             }
         }
 
