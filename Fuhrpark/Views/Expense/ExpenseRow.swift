@@ -3,6 +3,7 @@ import SwiftUI
 /// Zeilendarstellung einer einzelnen sonstigen Ausgabe.
 struct ExpenseRow: View {
     @ObservedObject var expense: Expense
+    @State private var isPresentingDocuments = false
 
     var body: some View {
         GlassCard {
@@ -19,14 +20,48 @@ struct ExpenseRow: View {
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text((expense.isIncome ? "+" : "") + DisplayFormatter.currencyString(expense.amount?.decimalValue ?? 0))
-                        .font(.subheadline.bold())
-                        .foregroundStyle(expense.isIncome ? Color.green : Color.primary)
+                    HStack(spacing: 6) {
+                        if !expense.sortedDocuments.isEmpty {
+                            Button {
+                                isPresentingDocuments = true
+                            } label: {
+                                Image(systemName: "paperclip")
+                            }
+                            .buttonStyle(.borderless)
+                            .pointerStyle(.link)
+                            .help("\(expense.sortedDocuments.count) zugeordnete\(expense.sortedDocuments.count == 1 ? "s" : "") Dokument\(expense.sortedDocuments.count == 1 ? "" : "e")")
+                            .popover(isPresented: $isPresentingDocuments) {
+                                documentsPopover
+                            }
+                        }
+                        Text((expense.isIncome ? "+" : "") + DisplayFormatter.currencyString(expense.amount?.decimalValue ?? 0))
+                            .font(.subheadline.bold())
+                            .foregroundStyle(expense.isIncome ? Color.green : Color.primary)
+                    }
                     Text(expense.categoriesDisplay.isEmpty ? "–" : expense.categoriesDisplay)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
         }
+    }
+
+    private var documentsPopover: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Dokumente")
+                .font(.headline)
+            ForEach(expense.sortedDocuments) { document in
+                Button {
+                    document.open()
+                } label: {
+                    Label(document.filename, systemImage: "doc")
+                        .lineLimit(1)
+                }
+                .buttonStyle(.plain)
+                .pointerStyle(.link)
+            }
+        }
+        .padding(12)
+        .frame(minWidth: 220, alignment: .leading)
     }
 }
