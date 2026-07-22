@@ -1,6 +1,6 @@
 # FuhrparkDesktop für macOS
 
-[![Codeberg](https://img.shields.io/badge/Lizenz-MIT-orange)](https://codeberg.org/Gerd/fuhrpark-macos/src/branch/develop/LICENSE)
+[![Codeberg](https://img.shields.io/badge/Lizenz-MIT-orange)](https://codeberg.org/Gerd/fuhrpark-macos/src/branch/main/LICENSE)
 [![Codeberg](https://img.shields.io/badge/Version-v1%2E1-blue)](https://codeberg.org/Gerd/fuhrpark-macos/releases)
 
 
