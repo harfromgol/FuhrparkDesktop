@@ -1,4 +1,8 @@
-# FuhrparkDesktop
+# FuhrparkDesktop für macOS
+
+[![Codeberg](https://img.shields.io/badge/Lizenz-MIT-orange)](https://codeberg.org/Gerd/fuhrpark-macos/src/branch/develop/LICENSE)
+[![Codeberg](https://img.shields.io/badge/Version-v1%2E1-blue)](https://codeberg.org/Gerd/fuhrpark-macos/releases)
+
 
 Native macOS-App (SwiftUI + Core Data) zur Verwaltung eines kleinen Fuhrparks:
 Fahrzeuge, Betankungen, sonstige Ausgaben, Belege und Spritpreise an einem Ort.
@@ -67,3 +71,7 @@ Scripts/build_dmg.sh
 ```
 
 Erzeugt ein installierbares DMG unter `dist/FuhrparkDesktop-<Version>.dmg`.
+
+## Kontakt
+
+Solltest Du Fragen, Anregungen, Drohungen etc. haben, dann darfst Du gerne [Kontakt](mailto:nospam@gerd-klaus.de) zu mir aufnehmen. Wenn es meine Zeit zulässt, werde ich gerne weiterhelfen.
