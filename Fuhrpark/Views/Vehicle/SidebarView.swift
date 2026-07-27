@@ -80,15 +80,6 @@ struct SidebarView: View {
                 .listRowBackground(rowBackground(for: .statistics))
 
                 Button {
-                    selection = .fuelPrices
-                } label: {
-                    Label("Spritpreise", systemImage: "fuelpump.circle")
-                }
-                .buttonStyle(.plain)
-                .pointerStyle(.link)
-                .listRowBackground(rowBackground(for: .fuelPrices))
-
-                Button {
                     selection = .documents
                 } label: {
                     Label("Dokumente", systemImage: "folder.fill")
@@ -111,6 +102,15 @@ struct SidebarView: View {
                 .buttonStyle(.plain)
                 .pointerStyle(.link)
                 .listRowBackground(rowBackground(for: .reminders))
+
+                Button {
+                    selection = .fuelPrices
+                } label: {
+                    Label("Spritpreise", systemImage: "fuelpump.circle")
+                }
+                .buttonStyle(.plain)
+                .pointerStyle(.link)
+                .listRowBackground(rowBackground(for: .fuelPrices))
             }
 
             Section("Fahrzeuge") {
