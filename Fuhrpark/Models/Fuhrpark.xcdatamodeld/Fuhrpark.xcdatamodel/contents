@@ -11,6 +11,7 @@
         <attribute name="model" optional="NO" attributeType="String"/>
         <attribute name="odometer" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <relationship name="categories" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Category" inverseName="vehicle" inverseEntity="Category"/>
+        <relationship name="erinnerungen" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Erinnerung" inverseName="vehicle" inverseEntity="Erinnerung"/>
         <relationship name="expenses" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Expense" inverseName="vehicle" inverseEntity="Expense"/>
         <relationship name="fuelEntries" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="FuelEntry" inverseName="vehicle" inverseEntity="FuelEntry"/>
     </entity>
@@ -52,5 +53,16 @@
         <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="path" optional="NO" attributeType="String"/>
         <relationship name="expense" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Expense" inverseName="documents" inverseEntity="Expense"/>
+    </entity>
+    <entity name="Erinnerung" representedClassName="Erinnerung" syncable="YES" codeGenerationType="class">
+        <attribute name="advanceNoticeRaw" optional="NO" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="dueDate" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isDone" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="repeatIntervalValue" optional="NO" attributeType="Integer 16" defaultValueString="1" usesScalarValueType="YES"/>
+        <attribute name="repeatUnitRaw" optional="NO" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="title" optional="NO" attributeType="String"/>
+        <relationship name="vehicle" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Vehicle" inverseName="erinnerungen" inverseEntity="Vehicle"/>
     </entity>
 </model>

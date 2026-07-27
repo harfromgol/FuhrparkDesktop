@@ -14,8 +14,20 @@ struct SidebarView: View {
     )
     private var vehicles: FetchedResults<Vehicle>
 
+    @FetchRequest(
+        sortDescriptors: [],
+        predicate: NSPredicate(format: "isDone == NO"),
+        animation: .default
+    )
+    private var openReminders: FetchedResults<Erinnerung>
+
     @State private var isPresentingNewVehicle = false
     @State private var vehiclePendingDeletion: Vehicle?
+
+    /// Anzahl offener Erinnerungen, die bereits fällig sind (siehe `Erinnerung.isDue`).
+    private var dueReminderCount: Int {
+        openReminders.filter(\.isDue).count
+    }
 
     /// Aktive Fahrzeuge in der bestehenden Sortierung (zuletzt geändert zuerst).
     private var activeVehicles: [Vehicle] {
@@ -50,7 +62,7 @@ struct SidebarView: View {
                 title: "Fahrzeug wirklich löschen?",
                 actionLabel: "Löschen",
                 actionRole: .destructive,
-                message: { "„\($0.licensePlate ?? "")“ und alle zugehörigen \($0.engineType.refuelNounPlural) und Ausgaben werden unwiderruflich gelöscht." },
+                message: { "„\($0.licensePlate ?? "")“ und alle zugehörigen \($0.engineType.refuelNounPlural), Ausgaben und Erinnerungen werden unwiderruflich gelöscht." },
                 action: delete
             ))
     }
@@ -84,6 +96,21 @@ struct SidebarView: View {
                 .buttonStyle(.plain)
                 .pointerStyle(.link)
                 .listRowBackground(rowBackground(for: .documents))
+
+                Button {
+                    selection = .reminders
+                } label: {
+                    HStack {
+                        Label("Erinnerungen", systemImage: "bell.fill")
+                        Spacer()
+                        if dueReminderCount > 0 {
+                            ReminderCountBadge(count: dueReminderCount)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .pointerStyle(.link)
+                .listRowBackground(rowBackground(for: .reminders))
             }
 
             Section("Fahrzeuge") {
@@ -221,5 +248,19 @@ struct DecommissionedBadge: View {
         .padding(.vertical, 2)
         .background(.red.opacity(0.15), in: Capsule())
         .overlay(Capsule().strokeBorder(.red.opacity(0.4), lineWidth: 0.5))
+    }
+}
+
+/// Rote numerische Marke für die Anzahl fälliger Erinnerungen.
+struct ReminderCountBadge: View {
+    let count: Int
+
+    var body: some View {
+        Text("\(count)")
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(.red, in: Capsule())
     }
 }

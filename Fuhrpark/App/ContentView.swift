@@ -6,6 +6,7 @@ enum SidebarSelection: Hashable {
     case statistics
     case fuelPrices
     case documents
+    case reminders
     case vehicle(Vehicle)
 }
 
@@ -28,6 +29,8 @@ struct ContentView: View {
                 FuelPricesView()
             case .documents:
                 DocumentsView()
+            case .reminders:
+                RemindersView()
             case .vehicle(let vehicle):
                 VehicleDetailView(vehicle: vehicle, onDelete: { selection = .statistics })
                     .id(vehicle.objectID)
@@ -43,7 +46,7 @@ struct ContentView: View {
             }
             Button("Abbrechen", role: .cancel) { }
         } message: {
-            Text("Alle Fahrzeuge, Betankungen, sonstigen Ausgaben und Kategorien sowie der gespeicherte Tankerkönig-API-Schlüssel werden unwiderruflich gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden.")
+            Text("Alle Fahrzeuge, Betankungen, sonstigen Ausgaben, Kategorien und Erinnerungen sowie der gespeicherte Tankerkönig-API-Schlüssel werden unwiderruflich gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden.")
         }
         .fileExporter(
             isPresented: $appCommands.showExportDialog,

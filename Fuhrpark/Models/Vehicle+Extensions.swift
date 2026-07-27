@@ -95,6 +95,12 @@ extension Vehicle {
         return items.sorted { ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }
     }
 
+    /// Zugeordnete Erinnerungen, nach Fälligkeitsdatum aufsteigend sortiert.
+    var sortedReminders: [Erinnerung] {
+        let set = (erinnerungen as? Set<Erinnerung>) ?? []
+        return set.sorted { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) }
+    }
+
     /// Letzte (vom Kilometerstand her höchste) Betankung, exklusive der übergebenen.
     func previousFuelEntry(before entry: FuelEntry?) -> FuelEntry? {
         let entries = sortedFuelEntries.filter { $0 !== entry }
