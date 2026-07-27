@@ -92,7 +92,7 @@ struct PersistenceController {
     /// (z. B. eigenständige Kategorien) sicher mitzunehmen.
     func deleteAllData() {
         let context = container.viewContext
-        let entityNames = ["Vehicle", "FuelEntry", "Expense", "Category", "Dokument"]
+        let entityNames = ["Vehicle", "FuelEntry", "Expense", "Category", "Dokument", "Erinnerung"]
         for name in entityNames {
             let request = NSFetchRequest<NSManagedObject>(entityName: name)
             request.includesPropertyValues = false

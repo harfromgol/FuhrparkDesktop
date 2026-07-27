@@ -192,7 +192,7 @@ struct VehicleDetailView: View {
             title: "Fahrzeug wirklich löschen?",
             actionLabel: "Löschen",
             actionRole: .destructive,
-            message: { "„\($0.licensePlate ?? "")“ und alle zugehörigen \($0.engineType.refuelNounPlural) und Ausgaben werden unwiderruflich gelöscht." },
+            message: { "„\($0.licensePlate ?? "")“ und alle zugehörigen \($0.engineType.refuelNounPlural), Ausgaben und Erinnerungen werden unwiderruflich gelöscht." },
             action: delete
         ))
         .modifier(VehicleConfirmationModifier(

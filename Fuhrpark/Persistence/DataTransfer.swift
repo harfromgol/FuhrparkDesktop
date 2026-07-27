@@ -29,6 +29,9 @@ private struct VehicleDTO: Codable {
     var fuelEntries: [FuelEntryDTO]
     var expenses: [ExpenseDTO]
     var categories: [CategoryDTO]
+    /// Zugeordnete Erinnerungen. Optional, damit ältere Exporte (ohne dieses
+    /// Feld) weiterhin lesbar sind – fehlt es, hat das Fahrzeug keine Erinnerungen.
+    var reminders: [ReminderDTO]?
 }
 
 private struct FuelEntryDTO: Codable {
@@ -75,6 +78,17 @@ private struct CategoryDTO: Codable {
     var createdAt: Date
 }
 
+private struct ReminderDTO: Codable {
+    var id: UUID
+    var title: String
+    var dueDate: Date
+    var isDone: Bool
+    var repeatIntervalValue: Int16
+    var repeatUnitRaw: Int16
+    var advanceNoticeRaw: Int16
+    var createdAt: Date
+}
+
 // MARK: - Entität -> DTO
 
 private extension VehicleDTO {
@@ -93,6 +107,7 @@ private extension VehicleDTO {
         categories = (vehicle.categories as? Set<Category> ?? [])
             .sorted { ($0.name ?? "") < ($1.name ?? "") }
             .map(CategoryDTO.init(category:))
+        reminders = vehicle.sortedReminders.map(ReminderDTO.init(reminder:))
     }
 }
 
@@ -142,6 +157,19 @@ private extension CategoryDTO {
     }
 }
 
+private extension ReminderDTO {
+    init(reminder: Erinnerung) {
+        id = reminder.id ?? UUID()
+        title = reminder.title ?? ""
+        dueDate = reminder.dueDate ?? Date()
+        isDone = reminder.isDone
+        repeatIntervalValue = reminder.repeatIntervalValue
+        repeatUnitRaw = reminder.repeatUnitRaw
+        advanceNoticeRaw = reminder.advanceNoticeRaw
+        createdAt = reminder.createdAt ?? Date()
+    }
+}
+
 // MARK: - Export / Import
 
 enum DataTransfer {
@@ -165,7 +193,7 @@ enum DataTransfer {
         request.sortDescriptors = [NSSortDescriptor(keyPath: \Vehicle.createdAt, ascending: true)]
         let vehicles = try context.fetch(request)
         let root = ExportRoot(
-            schemaVersion: 4,
+            schemaVersion: 5,
             exportedAt: Date(),
             vehicles: vehicles.map(VehicleDTO.init(vehicle:)),
             windowFrames: WindowFrameStore.all()
@@ -243,6 +271,19 @@ enum DataTransfer {
                     document.createdAt = d.createdAt
                     document.expense = expense
                 }
+            }
+
+            for r in dto.reminders ?? [] {
+                let reminder = Erinnerung(context: context)
+                reminder.id = r.id
+                reminder.title = r.title
+                reminder.dueDate = r.dueDate
+                reminder.isDone = r.isDone
+                reminder.repeatIntervalValue = r.repeatIntervalValue
+                reminder.repeatUnitRaw = r.repeatUnitRaw
+                reminder.advanceNoticeRaw = r.advanceNoticeRaw
+                reminder.createdAt = r.createdAt
+                reminder.vehicle = vehicle
             }
         }
 
