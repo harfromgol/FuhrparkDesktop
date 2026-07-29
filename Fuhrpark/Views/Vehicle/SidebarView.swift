@@ -3,6 +3,7 @@ import CoreData
 
 struct SidebarView: View {
     @Environment(\.managedObjectContext) private var viewContext
+    @Environment(AppCommands.self) private var appCommands
     @Binding var selection: SidebarSelection
 
     @FetchRequest(
@@ -25,8 +26,11 @@ struct SidebarView: View {
     @State private var vehiclePendingDeletion: Vehicle?
 
     /// Anzahl offener Erinnerungen, die bereits fällig sind (siehe `Erinnerung.isDue`).
+    /// Liest `dailyDueCheckTick` mit, damit der Badge auch ohne Klick oder
+    /// Datenänderung einmal täglich neu berechnet wird (siehe dort).
     private var dueReminderCount: Int {
-        openReminders.filter(\.isDue).count
+        _ = appCommands.dailyDueCheckTick
+        return openReminders.filter(\.isDue).count
     }
 
     /// Aktive Fahrzeuge in der bestehenden Sortierung (zuletzt geändert zuerst).
