@@ -21,6 +21,7 @@ struct FuhrparkDesktopApp: App {
                 .frame(minWidth: 800, idealWidth: 1000, minHeight: 500, idealHeight: 650)
                 .onAppear { appCommands.isMainWindowOpen = true }
                 .onDisappear { appCommands.isMainWindowOpen = false }
+                .task { await appCommands.scheduleDailyDueCheck() }
                 .persistWindowFrame(Self.mainWindowID)
         }
         .commands {

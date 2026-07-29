@@ -1,3 +1,4 @@
+import Foundation
 import Observation
 
 /// Verbindet Menübefehle (Scene `commands`) mit der Haupt-GUI.
@@ -25,4 +26,25 @@ final class AppCommands {
     /// Menüpunkte „Neues Fenster“ / „Fenster schließen“. Wird von `ContentView`
     /// über `onAppear`/`onDisappear` gepflegt.
     var isMainWindowOpen = false
+
+    /// Ändert sich einmal täglich um Mitternacht (siehe `scheduleDailyDueCheck`).
+    /// `Erinnerung.isDue`/`isOverdue` sind reine Momentaufnahmen ohne eigene
+    /// Änderungsbenachrichtigung; Views, die davon abhängen (Sidebar-Badge,
+    /// Fälligkeits-Farbe in der Erinnerungsliste), lesen diesen Wert mit, damit
+    /// SwiftUI sie auch ohne Klick oder Datenänderung neu zeichnet.
+    var dailyDueCheckTick = Date()
+
+    /// Läuft für die Lebensdauer des Hauptfensters und aktualisiert
+    /// `dailyDueCheckTick` jede Mitternacht neu.
+    func scheduleDailyDueCheck() async {
+        while !Task.isCancelled {
+            let next = Calendar.current.nextDate(
+                after: Date(),
+                matching: DateComponents(hour: 0, minute: 0, second: 0),
+                matchingPolicy: .nextTime
+            ) ?? Date().addingTimeInterval(86_400)
+            try? await Task.sleep(for: .seconds(next.timeIntervalSinceNow))
+            dailyDueCheckTick = Date()
+        }
+    }
 }

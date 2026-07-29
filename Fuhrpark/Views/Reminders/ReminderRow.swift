@@ -4,11 +4,15 @@ import SwiftUI
 /// rechts (rot bei überfällig, orange bei fällig durch Vorlaufzeit).
 struct ReminderRow: View {
     @Environment(\.managedObjectContext) private var viewContext
+    @Environment(AppCommands.self) private var appCommands
     @ObservedObject var reminder: Erinnerung
     let onEdit: () -> Void
     let onDelete: () -> Void
 
+    /// Liest `dailyDueCheckTick` mit, damit die Fälligkeits-Farbe auch ohne
+    /// Klick oder Datenänderung einmal täglich neu berechnet wird (siehe dort).
     private var dateColor: Color {
+        _ = appCommands.dailyDueCheckTick
         if reminder.isOverdue { return .red }
         if reminder.isDue { return .orange }
         return .secondary
