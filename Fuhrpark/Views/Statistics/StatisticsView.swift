@@ -11,6 +11,8 @@ struct StatisticsView: View {
 
     @State private var visibleVehicleGroups: Set<VehicleVisibility> = VehicleCostFilterStore.get() ?? Set(VehicleVisibility.allCases)
     @State private var isPresentingVehicleCostFilter = false
+    @State private var yearlyCostCountOverride = YearlyCostCountStore.get()
+    @State private var isPresentingYearlyCostConfig = false
 
     private var totalCost: Decimal { vehicles.reduce(.zero) { $0 + $1.totalCost } }
     private var totalFuelCost: Decimal { vehicles.reduce(.zero) { $0 + $1.totalFuelCost } }
@@ -77,6 +79,47 @@ struct StatisticsView: View {
         return years
             .map { YearlyCost(year: $0, fuel: fuelByYear[$0, default: 0], expense: expenseByYear[$0, default: 0]) }
             .sorted { $0.year > $1.year }
+    }
+
+    /// Höchstmögliche Anzahl Jahre – die tatsächlich vorhandenen Jahre mit
+    /// Kosten (mindestens 1, damit der Stepper-Bereich immer gültig ist).
+    private var maxYearlyCostCount: Int {
+        max(costsByYear.count, 1)
+    }
+
+    /// Anzahl anzuzeigender Jahre: nutzerdefiniert (siehe
+    /// `yearlyCostCountOverride`), sonst alle verfügbaren Jahre. Auf die
+    /// tatsächlich vorhandene Anzahl begrenzt, falls sich die Datenlage seit
+    /// der letzten Auswahl verringert hat.
+    private var yearlyCostCount: Int {
+        min(yearlyCostCountOverride ?? costsByYear.count, maxYearlyCostCount)
+    }
+
+    private var yearlyCostCountBinding: Binding<Int> {
+        Binding(
+            get: { yearlyCostCount },
+            set: { newValue in
+                yearlyCostCountOverride = newValue
+                YearlyCostCountStore.set(newValue)
+            }
+        )
+    }
+
+    /// Auf `yearlyCostCount` begrenzte, neueste Jahre aus `costsByYear`.
+    private var limitedCostsByYear: [YearlyCost] {
+        Array(costsByYear.prefix(yearlyCostCount))
+    }
+
+    private var yearlyCostConfigPopover: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Anzahl Jahre")
+                .font(.headline)
+            Stepper(value: yearlyCostCountBinding, in: 1...maxYearlyCostCount) {
+                Text("\(yearlyCostCount) Jahre")
+            }
+        }
+        .padding(16)
+        .frame(width: 220, alignment: .leading)
     }
 
     var body: some View {
@@ -150,7 +193,24 @@ struct StatisticsView: View {
                             }
                         }
 
-                        GlassCard(title: "Kosten pro Jahr") {
+                        GlassCard {
+                            HStack {
+                                Text("Kosten pro Jahr")
+                                    .font(.headline)
+                                Spacer()
+                                Button {
+                                    isPresentingYearlyCostConfig = true
+                                } label: {
+                                    Image(systemName: "gearshape")
+                                }
+                                .buttonStyle(.borderless)
+                                .pointerStyle(.link)
+                                .help("Anzeige konfigurieren")
+                                .popover(isPresented: $isPresentingYearlyCostConfig) {
+                                    yearlyCostConfigPopover
+                                }
+                            }
+
                             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                                 GridRow {
                                     Text("Jahr")
@@ -163,7 +223,7 @@ struct StatisticsView: View {
 
                                 Divider()
 
-                                ForEach(costsByYear) { item in
+                                ForEach(limitedCostsByYear) { item in
                                     GridRow {
                                         Text(String(item.year))
                                         Text(DisplayFormatter.currencyString(item.fuel))
