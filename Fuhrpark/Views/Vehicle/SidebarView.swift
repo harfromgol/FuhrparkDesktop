@@ -24,6 +24,8 @@ struct SidebarView: View {
 
     @State private var isPresentingNewVehicle = false
     @State private var vehiclePendingDeletion: Vehicle?
+    @State private var isVehiclesExpanded = true
+    @State private var isDecommissionedExpanded = true
 
     /// Anzahl offener Erinnerungen, die bereits fällig sind (siehe `Erinnerung.isDue`).
     /// Liest `dailyDueCheckTick` mit, damit der Badge auch ohne Klick oder
@@ -117,7 +119,7 @@ struct SidebarView: View {
                 .listRowBackground(rowBackground(for: .fuelPrices))
             }
 
-            Section("Fahrzeuge") {
+            Section(isExpanded: $isVehiclesExpanded) {
                 ForEach(activeVehicles) { vehicle in
                     vehicleRow(vehicle)
                 }
@@ -126,10 +128,12 @@ struct SidebarView: View {
                         vehiclePendingDeletion = activeVehicles[index]
                     }
                 }
+            } header: {
+                sectionHeader("Fahrzeuge", count: activeVehicles.count)
             }
 
             if !decommissionedVehicles.isEmpty {
-                Section("Stillgelegte Fahrzeuge") {
+                Section(isExpanded: $isDecommissionedExpanded) {
                     ForEach(decommissionedVehicles) { vehicle in
                         vehicleRow(vehicle)
                     }
@@ -138,8 +142,21 @@ struct SidebarView: View {
                             vehiclePendingDeletion = decommissionedVehicles[index]
                         }
                     }
+                } header: {
+                    sectionHeader("Stillgelegte Fahrzeuge", count: decommissionedVehicles.count)
                 }
             }
+        }
+    }
+
+    /// Section-Header mit Titel und Anzahl, für die auf-/zuklappbaren
+    /// Fahrzeug-Sektionen.
+    private func sectionHeader(_ title: String, count: Int) -> some View {
+        HStack {
+            Text(title)
+            Spacer()
+            Text("\(count)")
+                .foregroundStyle(.tertiary)
         }
     }
 
