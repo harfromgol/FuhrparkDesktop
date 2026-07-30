@@ -9,9 +9,49 @@ struct StatisticsView: View {
     )
     private var vehicles: FetchedResults<Vehicle>
 
+    @State private var vehicleCostFilter: VehicleCostFilter = VehicleCostFilterStore.get() ?? .all
+    @State private var isPresentingVehicleCostFilter = false
+
     private var totalCost: Decimal { vehicles.reduce(.zero) { $0 + $1.totalCost } }
     private var totalFuelCost: Decimal { vehicles.reduce(.zero) { $0 + $1.totalFuelCost } }
     private var totalExpenseCost: Decimal { vehicles.reduce(.zero) { $0 + $1.totalExpenseCost } }
+
+    /// Fahrzeuge für die „Kosten je Fahrzeug“-Tabelle: nach `vehicleCostFilter`
+    /// gefiltert, aktive Fahrzeuge immer vor stillgelegten (siehe dort für die
+    /// gleiche Reihenfolge in der Sidebar).
+    private var costPerVehicleList: [Vehicle] {
+        let filtered: [Vehicle]
+        switch vehicleCostFilter {
+        case .all: filtered = Array(vehicles)
+        case .active: filtered = vehicles.filter { !$0.decommissioned }
+        case .decommissioned: filtered = vehicles.filter(\.decommissioned)
+        }
+        return filtered.sorted { lhs, rhs in
+            if lhs.decommissioned != rhs.decommissioned {
+                return !lhs.decommissioned
+            }
+            return (lhs.licensePlate ?? "") < (rhs.licensePlate ?? "")
+        }
+    }
+
+    private var vehicleCostFilterPopover: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Fahrzeuge anzeigen")
+                .font(.headline)
+            Picker("Fahrzeuge anzeigen", selection: $vehicleCostFilter) {
+                ForEach(VehicleCostFilter.allCases) { filter in
+                    Text(filter.displayName).tag(filter)
+                }
+            }
+            .pickerStyle(.radioGroup)
+            .labelsHidden()
+        }
+        .padding(16)
+        .frame(width: 220, alignment: .leading)
+        .onChange(of: vehicleCostFilter) { _, newValue in
+            VehicleCostFilterStore.set(newValue)
+        }
+    }
 
     /// Aggregierte Kosten pro Kalenderjahr über alle Fahrzeuge, neuestes Jahr zuerst.
     private var costsByYear: [YearlyCost] {
@@ -66,7 +106,24 @@ struct StatisticsView: View {
                             }
                         }
 
-                        GlassCard(title: "Kosten je Fahrzeug") {
+                        GlassCard {
+                            HStack {
+                                Text("Kosten je Fahrzeug")
+                                    .font(.headline)
+                                Spacer()
+                                Button {
+                                    isPresentingVehicleCostFilter = true
+                                } label: {
+                                    Image(systemName: "gearshape")
+                                }
+                                .buttonStyle(.borderless)
+                                .pointerStyle(.link)
+                                .help("Anzeige konfigurieren")
+                                .popover(isPresented: $isPresentingVehicleCostFilter) {
+                                    vehicleCostFilterPopover
+                                }
+                            }
+
                             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                                 GridRow {
                                     Text("Fahrzeug")
@@ -79,7 +136,7 @@ struct StatisticsView: View {
 
                                 Divider()
 
-                                ForEach(vehicles) { vehicle in
+                                ForEach(costPerVehicleList) { vehicle in
                                     GridRow {
                                         Text(vehicle.licensePlate ?? "")
                                         Text(DisplayFormatter.currencyString(vehicle.totalFuelCost))
