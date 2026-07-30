@@ -157,6 +157,7 @@ struct SidebarView: View {
             Spacer()
             Text("\(count)")
                 .foregroundStyle(.tertiary)
+                .padding(.trailing, 18)
         }
     }
 
