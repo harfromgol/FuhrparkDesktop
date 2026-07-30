@@ -24,6 +24,7 @@ struct SidebarView: View {
 
     @State private var isPresentingNewVehicle = false
     @State private var vehiclePendingDeletion: Vehicle?
+    @State private var isGeneralExpanded = true
     @State private var isVehiclesExpanded = true
     @State private var isDecommissionedExpanded = true
 
@@ -75,7 +76,7 @@ struct SidebarView: View {
 
     private var list: some View {
         List {
-            Section("Allgemein") {
+            Section(isExpanded: $isGeneralExpanded) {
                 Button {
                     selection = .statistics
                 } label: {
@@ -117,6 +118,8 @@ struct SidebarView: View {
                 .buttonStyle(.plain)
                 .pointerStyle(.link)
                 .listRowBackground(rowBackground(for: .fuelPrices))
+            } header: {
+                Text("Allgemein")
             }
 
             Section(isExpanded: $isVehiclesExpanded) {
