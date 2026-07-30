@@ -11,7 +11,7 @@ struct StatisticsView: View {
 
     @State private var visibleVehicleGroups: Set<VehicleVisibility> = VehicleCostFilterStore.get() ?? Set(VehicleVisibility.allCases)
     @State private var isPresentingVehicleCostFilter = false
-    @State private var yearlyCostCount = YearlyCostCountStore.get()
+    @State private var yearlyCostCountOverride = YearlyCostCountStore.get()
     @State private var isPresentingYearlyCostConfig = false
 
     private var totalCost: Decimal { vehicles.reduce(.zero) { $0 + $1.totalCost } }
@@ -81,6 +81,30 @@ struct StatisticsView: View {
             .sorted { $0.year > $1.year }
     }
 
+    /// Höchstmögliche Anzahl Jahre – die tatsächlich vorhandenen Jahre mit
+    /// Kosten (mindestens 1, damit der Stepper-Bereich immer gültig ist).
+    private var maxYearlyCostCount: Int {
+        max(costsByYear.count, 1)
+    }
+
+    /// Anzahl anzuzeigender Jahre: nutzerdefiniert (siehe
+    /// `yearlyCostCountOverride`), sonst alle verfügbaren Jahre. Auf die
+    /// tatsächlich vorhandene Anzahl begrenzt, falls sich die Datenlage seit
+    /// der letzten Auswahl verringert hat.
+    private var yearlyCostCount: Int {
+        min(yearlyCostCountOverride ?? costsByYear.count, maxYearlyCostCount)
+    }
+
+    private var yearlyCostCountBinding: Binding<Int> {
+        Binding(
+            get: { yearlyCostCount },
+            set: { newValue in
+                yearlyCostCountOverride = newValue
+                YearlyCostCountStore.set(newValue)
+            }
+        )
+    }
+
     /// Auf `yearlyCostCount` begrenzte, neueste Jahre aus `costsByYear`.
     private var limitedCostsByYear: [YearlyCost] {
         Array(costsByYear.prefix(yearlyCostCount))
@@ -90,11 +114,8 @@ struct StatisticsView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Anzahl Jahre")
                 .font(.headline)
-            Stepper(value: $yearlyCostCount, in: YearlyCostCountStore.range) {
+            Stepper(value: yearlyCostCountBinding, in: 1...maxYearlyCostCount) {
                 Text("\(yearlyCostCount) Jahre")
-            }
-            .onChange(of: yearlyCostCount) { _, newValue in
-                YearlyCostCountStore.set(newValue)
             }
         }
         .padding(16)
