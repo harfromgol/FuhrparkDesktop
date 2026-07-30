@@ -9,48 +9,49 @@ struct StatisticsView: View {
     )
     private var vehicles: FetchedResults<Vehicle>
 
-    @State private var vehicleCostFilter: VehicleCostFilter = VehicleCostFilterStore.get() ?? .all
+    @State private var visibleVehicleGroups: Set<VehicleVisibility> = VehicleCostFilterStore.get() ?? Set(VehicleVisibility.allCases)
     @State private var isPresentingVehicleCostFilter = false
 
     private var totalCost: Decimal { vehicles.reduce(.zero) { $0 + $1.totalCost } }
     private var totalFuelCost: Decimal { vehicles.reduce(.zero) { $0 + $1.totalFuelCost } }
     private var totalExpenseCost: Decimal { vehicles.reduce(.zero) { $0 + $1.totalExpenseCost } }
 
-    /// Fahrzeuge für die „Kosten je Fahrzeug“-Tabelle: nach `vehicleCostFilter`
+    /// Fahrzeuge für die „Kosten je Fahrzeug“-Tabelle: nach `visibleVehicleGroups`
     /// gefiltert, aktive Fahrzeuge immer vor stillgelegten (siehe dort für die
     /// gleiche Reihenfolge in der Sidebar).
     private var costPerVehicleList: [Vehicle] {
-        let filtered: [Vehicle]
-        switch vehicleCostFilter {
-        case .all: filtered = Array(vehicles)
-        case .active: filtered = vehicles.filter { !$0.decommissioned }
-        case .decommissioned: filtered = vehicles.filter(\.decommissioned)
-        }
-        return filtered.sorted { lhs, rhs in
-            if lhs.decommissioned != rhs.decommissioned {
-                return !lhs.decommissioned
+        vehicles
+            .filter { visibleVehicleGroups.contains($0.decommissioned ? .decommissioned : .active) }
+            .sorted { lhs, rhs in
+                if lhs.decommissioned != rhs.decommissioned {
+                    return !lhs.decommissioned
+                }
+                return (lhs.licensePlate ?? "") < (rhs.licensePlate ?? "")
             }
-            return (lhs.licensePlate ?? "") < (rhs.licensePlate ?? "")
-        }
+    }
+
+    /// Ein-/Ausschalten einer Fahrzeuggruppe, sofort persistiert.
+    private func vehicleGroupBinding(_ group: VehicleVisibility) -> Binding<Bool> {
+        Binding(
+            get: { visibleVehicleGroups.contains(group) },
+            set: { isOn in
+                if isOn { visibleVehicleGroups.insert(group) } else { visibleVehicleGroups.remove(group) }
+                VehicleCostFilterStore.set(visibleVehicleGroups)
+            }
+        )
     }
 
     private var vehicleCostFilterPopover: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Fahrzeuge anzeigen")
                 .font(.headline)
-            Picker("Fahrzeuge anzeigen", selection: $vehicleCostFilter) {
-                ForEach(VehicleCostFilter.allCases) { filter in
-                    Text(filter.displayName).tag(filter)
-                }
+            ForEach(VehicleVisibility.allCases) { group in
+                Toggle(group.displayName, isOn: vehicleGroupBinding(group))
+                    .toggleStyle(.checkbox)
             }
-            .pickerStyle(.radioGroup)
-            .labelsHidden()
         }
         .padding(16)
         .frame(width: 220, alignment: .leading)
-        .onChange(of: vehicleCostFilter) { _, newValue in
-            VehicleCostFilterStore.set(newValue)
-        }
     }
 
     /// Aggregierte Kosten pro Kalenderjahr über alle Fahrzeuge, neuestes Jahr zuerst.

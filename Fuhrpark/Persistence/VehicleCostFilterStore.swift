@@ -1,9 +1,8 @@
 import Foundation
 
-/// Auswahl für die „Kosten je Fahrzeug“-Tabelle in `StatisticsView`: welche
-/// Fahrzeuge (nach Stilllegungsstatus) angezeigt werden.
-enum VehicleCostFilter: String, CaseIterable, Identifiable {
-    case all
+/// Sichtbarkeit einzelner Fahrzeuggruppen in der „Kosten je Fahrzeug“-Tabelle
+/// (`StatisticsView`).
+enum VehicleVisibility: String, CaseIterable, Identifiable {
     case active
     case decommissioned
 
@@ -11,26 +10,28 @@ enum VehicleCostFilter: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .all: return "Alle"
-        case .active: return "Aktive"
-        case .decommissioned: return "Stillgelegte"
+        case .active: return "Aktive Fahrzeuge"
+        case .decommissioned: return "Stillgelegte Fahrzeuge"
         }
     }
 }
 
-/// Speichert die zuletzt gewählte Filterauswahl der „Kosten je Fahrzeug“-
-/// Tabelle in den UserDefaults, damit sie einen Neustart der App übersteht
-/// (analog zum bestehenden `FuelTypeFilterStore`-Muster).
+/// Speichert, welche Fahrzeuggruppen in der „Kosten je Fahrzeug“-Tabelle
+/// sichtbar sein sollen, in den UserDefaults, damit die Auswahl einen
+/// Neustart der App übersteht (analog zum bestehenden `FuelTypeFilterStore`-
+/// Muster).
 enum VehicleCostFilterStore {
-    private static let defaultsKey = "statisticsVehicleCostFilter"
+    private static let defaultsKey = "statisticsVehicleCostVisibility"
 
-    /// `nil`, wenn noch nichts gespeichert wurde – dann sollen alle Fahrzeuge angezeigt werden.
-    static func get() -> VehicleCostFilter? {
-        guard let rawValue = UserDefaults.standard.string(forKey: defaultsKey) else { return nil }
-        return VehicleCostFilter(rawValue: rawValue)
+    /// `nil`, wenn noch nichts gespeichert wurde – dann sollen alle Gruppen sichtbar sein.
+    static func get() -> Set<VehicleVisibility>? {
+        guard let rawValues = UserDefaults.standard.array(forKey: defaultsKey) as? [String] else {
+            return nil
+        }
+        return Set(rawValues.compactMap(VehicleVisibility.init(rawValue:)))
     }
 
-    static func set(_ filter: VehicleCostFilter) {
-        UserDefaults.standard.set(filter.rawValue, forKey: defaultsKey)
+    static func set(_ visibility: Set<VehicleVisibility>) {
+        UserDefaults.standard.set(visibility.map(\.rawValue), forKey: defaultsKey)
     }
 }
