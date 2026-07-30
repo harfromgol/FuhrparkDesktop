@@ -1,11 +1,12 @@
 # FuhrparkDesktop für macOS
 
-[![Codeberg](https://img.shields.io/badge/Lizenz-MIT-orange)](https://codeberg.org/Gerd/fuhrpark-macos/src/branch/main/LICENSE)
-[![Codeberg](https://img.shields.io/badge/Version-v1%2E1-blue)](https://codeberg.org/Gerd/fuhrpark-macos/releases)
-
+[![GitHub](https://img.shields.io/badge/Lizenz-MIT-orange)](https://github.com/harfromgol/FuhrparkDesktop/blob/main/LICENSE) [![GitHub](https://img.shields.io/badge/Version-v1%2E3-blue)](https://github.com/harfromgol/FuhrparkDesktop/releases)
 
 Native macOS-App (SwiftUI + Core Data) zur Verwaltung eines kleinen Fuhrparks:
 Fahrzeuge, Betankungen, sonstige Ausgaben, Belege und Spritpreise an einem Ort.
+
+> [!WARNING]
+> Dies ist ein reines vibe - coding Projekt, weil ich die Möglichkeiten von Claude Code antesten wollte, d.h. die App und die zugeörige Webseite sind komplett KI generiert. Nutzung auf eigene Gefahr! :)
 
 ## Funktionen
 
@@ -21,6 +22,7 @@ Fahrzeuge, Betankungen, sonstige Ausgaben, Belege und Spritpreise an einem Ort.
   Empfänger-Autovervollständigung.
 - **Dokumente** – Belege (PDF, Fotos, …) einer Ausgabe zuordnen, zentrale
   Dokumenten-Übersicht mit Filter nach Fahrzeug/Kategorie.
+- **Erinnerungen** - laß Dich an den nächsten TÜV Termin oder an die fällige Versicherung/Steuer erinnern
 - **Statistik** – Kosten pro Kategorie, pro Jahr, pro Fahrzeug.
 - **Spritpreise** – Umkreissuche über die Tankerkönig-API (eigener API-Key
   erforderlich, wird lokal gespeichert und nicht mit exportiert).
@@ -33,6 +35,12 @@ Fahrzeuge, Betankungen, sonstige Ausgaben, Belege und Spritpreise an einem Ort.
 - macOS 26 oder neuer
 - Xcode (aktuelle Version)
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`)
+
+## Datenschutz
+
+Alle eingegebenen Daten bleiben auf deinem Rechner. Es werden keinerlei Daten in die Cloud gesendet.
+
+Ausnahme: der Tankerkönig-API Key - falls eingegeben - muss natürlich an den Tankerkönig Server gesendet werden, sonst funktioniert die Tankstellen Umkreissuche nicht.
 
 ## Projekt einrichten & starten
 
@@ -74,4 +82,4 @@ Erzeugt ein installierbares DMG unter `dist/FuhrparkDesktop-<Version>.dmg`.
 
 ## Kontakt
 
-Solltest Du Fragen, Anregungen, Drohungen etc. haben, dann darfst Du gerne [Kontakt](mailto:nospam@gerd-klaus.de) zu mir aufnehmen. Wenn es meine Zeit zulässt, werde ich gerne weiterhelfen.
+Solltest Du Fragen, Anregungen etc. haben, dann darfst Du gerne [Kontakt](mailto:nospam@gerd-klaus.de) zu mir aufnehmen. Wenn es meine Zeit zulässt, werde ich gerne weiterhelfen.
