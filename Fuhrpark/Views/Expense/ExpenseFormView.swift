@@ -23,7 +23,8 @@ struct ExpenseFormView: View {
     @State private var newCategoryName = ""
     @State private var pendingDocuments: [PendingDocument] = []
     @State private var isPresentingFilePicker = false
-    @State private var filePickerError: String?
+    @State private var errorMessage: String?
+    @State private var hasSavedExpense = false
 
     @State private var dateValid = false
     @State private var amountValid = false
@@ -127,8 +128,8 @@ struct ExpenseFormView: View {
                 Spacer()
                 Button("Speichern") { save() }
                     .buttonStyle(.glassProminent)
-                    .disabled(!isFormValid)
-                    .pointerStyle(isFormValid ? .link : nil)
+                    .disabled(!isFormValid || hasSavedExpense)
+                    .pointerStyle(isFormValid && !hasSavedExpense ? .link : nil)
             }
             .padding(16)
         }
@@ -141,12 +142,12 @@ struct ExpenseFormView: View {
             handleFileSelection(result)
         }
         .alert(
-            "Datei konnte nicht hinzugefügt werden",
+            "Fehler",
             isPresented: Binding(
-                get: { filePickerError != nil },
-                set: { if !$0 { filePickerError = nil } }
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
             ),
-            presenting: filePickerError
+            presenting: errorMessage
         ) { _ in
             Button("OK", role: .cancel) { }
         } message: { message in
@@ -223,22 +224,30 @@ struct ExpenseFormView: View {
             }
 
             Button("Dokument auswählen", systemImage: "doc.badge.plus") {
-                isPresentingFilePicker = true
+                addDocumentTapped()
             }
             .buttonStyle(.glass)
             .pointerStyle(.link)
         }
     }
 
+    private func addDocumentTapped() {
+        guard WorkingDirectoryStore.isConfigured else {
+            errorMessage = "Bevor du Dokumente hinzufügen kannst, lege im Bereich „Dokumente“ über das Zahnrad-Symbol ein Arbeitsverzeichnis fest."
+            return
+        }
+        isPresentingFilePicker = true
+    }
+
     /// Sichert für jede ausgewählte Datei ein Security-Scoped Bookmark (die
-    /// App läuft sandboxed), damit der Zugriff auch nach einem Neustart
-    /// erhalten bleibt. Das eigentliche `Dokument` wird erst beim Speichern
-    /// der Ausgabe angelegt.
+    /// App läuft sandboxed), damit der Zugriff bis zum Speichern erhalten
+    /// bleibt. Das eigentliche `Dokument` (inkl. Kopie ins Arbeitsverzeichnis)
+    /// wird erst beim Speichern der Ausgabe angelegt.
     private func handleFileSelection(_ result: Result<[URL], Error>) {
         guard case .success(let urls) = result else { return }
         for url in urls {
             guard url.startAccessingSecurityScopedResource() else {
-                filePickerError = "Zugriff auf „\(url.lastPathComponent)“ wurde verweigert."
+                errorMessage = "Zugriff auf „\(url.lastPathComponent)“ wurde verweigert."
                 continue
             }
             defer { url.stopAccessingSecurityScopedResource() }
@@ -247,7 +256,7 @@ struct ExpenseFormView: View {
                 includingResourceValuesForKeys: nil,
                 relativeTo: nil
             ) else {
-                filePickerError = "Für „\(url.lastPathComponent)“ konnte kein dauerhafter Zugriff gespeichert werden."
+                errorMessage = "Für „\(url.lastPathComponent)“ konnte kein dauerhafter Zugriff gespeichert werden."
                 continue
             }
             pendingDocuments.append(PendingDocument(path: url.path, bookmarkData: bookmark))
@@ -303,17 +312,39 @@ struct ExpenseFormView: View {
         expense.categories = NSSet(array: Array(selectedCategories))
         expense.vehicle = vehicle
 
+        var failedFilenames: [String] = []
         for pending in pendingDocuments {
+            var isStale = false
+            guard let sourceURL = try? URL(
+                resolvingBookmarkData: pending.bookmarkData,
+                options: [.withSecurityScope],
+                relativeTo: nil,
+                bookmarkDataIsStale: &isStale
+            ), sourceURL.startAccessingSecurityScopedResource() else {
+                failedFilenames.append(pending.filename)
+                continue
+            }
+            defer { sourceURL.stopAccessingSecurityScopedResource() }
+
+            guard let relativePath = try? DocumentStorage.copyIntoWorkingDirectory(from: sourceURL, documentID: pending.id) else {
+                failedFilenames.append(pending.filename)
+                continue
+            }
             let document = Dokument(context: viewContext)
-            document.id = UUID()
-            document.path = pending.path
-            document.bookmarkData = pending.bookmarkData
+            document.id = pending.id
+            document.path = relativePath
             document.createdAt = Date()
             document.expense = expense
         }
 
         vehicle.touch()
+        hasSavedExpense = true
         PersistenceController.shared.save(context: viewContext)
-        dismiss()
+
+        if failedFilenames.isEmpty {
+            dismiss()
+        } else {
+            errorMessage = "Die Ausgabe wurde gespeichert, folgende Dokumente konnten aber nicht hinzugefügt werden: \(failedFilenames.joined(separator: ", "))."
+        }
     }
 }

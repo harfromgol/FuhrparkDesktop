@@ -3,9 +3,11 @@ import CoreData
 import UniformTypeIdentifiers
 
 /// Fahrzeugübergreifende Liste aller referenzierten Dokumente (Rechnungen,
-/// Belege etc.), mit Filter nach Fahrzeug und/oder Kategorie. Die Dateien
-/// selbst werden nicht kopiert/gespeichert – nur Pfad + ein Security-Scoped
-/// Bookmark für den dauerhaften Zugriff (die App läuft sandboxed).
+/// Belege etc.), mit Filter nach Fahrzeug und/oder Kategorie. Dateien werden
+/// beim Hinzufügen als Kopie in ein vom Nutzer gewähltes Arbeitsverzeichnis
+/// abgelegt (siehe `WorkingDirectoryStore`/`DocumentStorage`), damit sie auch
+/// dann auffindbar bleiben, wenn sich der Speicherort der Originaldatei
+/// später ändert.
 struct DocumentsView: View {
     @Environment(\.managedObjectContext) private var viewContext
 
@@ -18,12 +20,42 @@ struct DocumentsView: View {
     @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Vehicle.licensePlate, ascending: true)])
     private var vehicles: FetchedResults<Vehicle>
 
-    @State private var isPresentingFilePicker = false
-    @State private var isPresentingAssignment = false
     @State private var pendingPath: String?
     @State private var pendingBookmark: Data?
-    @State private var filePickerError: String?
+    @State private var errorMessage: String?
     @State private var pendingDeletion: Dokument?
+
+    @State private var isPresentingWorkingDirectoryPopover = false
+    @State private var migrationFailures: [DocumentMigration.Failure] = []
+
+    /// Welches Sheet gerade angezeigt wird. Bewusst ein einziges `.sheet`
+    /// für beide Fälle (statt zwei separater Modifier) – aus demselben
+    /// Grund wie bei `ImporterKind`: nur der zuletzt deklarierte
+    /// Präsentations-Modifier funktioniert auf diesem SDK-Stand zuverlässig.
+    private enum SheetKind: Identifiable {
+        case assignment
+        case migrationFailures
+        var id: Self { self }
+    }
+    @State private var activeSheet: SheetKind?
+
+    /// Welcher Dateiauswahl-Dialog gerade angefordert ist. Bewusst ein
+    /// einziger `.fileImporter` für beide Fälle (statt zwei separater
+    /// Modifier mit je eigenem `isPresented`) – auf diesem SDK-Stand
+    /// funktioniert bei zwei `.fileImporter`-Modifiern auf derselben View
+    /// zuverlässig nur der zuletzt deklarierte.
+    private enum ImporterKind {
+        case document
+        case folder
+    }
+    @State private var activeImporter: ImporterKind?
+
+    /// Stabile Kopie von `activeImporter`, ausschließlich zum Auswerten im
+    /// `onCompletion`-Callback des `.fileImporter`. Der Binding-Setter von
+    /// `isPresented` setzt `activeImporter` beim Schließen bereits auf `nil`,
+    /// bevor `onCompletion` aufgerufen wird – ohne diese zweite, nur von uns
+    /// selbst geleerte Variable würde der Callback dort immer `nil` lesen.
+    @State private var completingImporter: ImporterKind?
 
     @State private var selectedVehicleFilter: Set<Vehicle> = []
     @State private var selectedCategoryFilter: Set<String> = []
@@ -84,25 +116,43 @@ struct DocumentsView: View {
             }
         }
         .navigationTitle("Dokumente")
-        .fileImporter(isPresented: $isPresentingFilePicker, allowedContentTypes: [.item]) { result in
-            handleFileSelection(result)
+        .fileImporter(
+            isPresented: Binding(
+                get: { activeImporter != nil },
+                set: { if !$0 { activeImporter = nil } }
+            ),
+            allowedContentTypes: activeImporter == .folder ? [.folder] : [.item]
+        ) { result in
+            switch completingImporter {
+            case .document: handleFileSelection(result)
+            case .folder: handleFolderSelection(result)
+            case nil: break
+            }
+            completingImporter = nil
         }
-        .sheet(isPresented: $isPresentingAssignment) {
-            if let pendingPath, let pendingBookmark {
-                NewDocumentAssignmentView(path: pendingPath, bookmarkData: pendingBookmark) {
-                    isPresentingAssignment = false
-                    self.pendingPath = nil
-                    self.pendingBookmark = nil
+        .sheet(item: $activeSheet) { kind in
+            switch kind {
+            case .assignment:
+                if let pendingPath, let pendingBookmark {
+                    NewDocumentAssignmentView(path: pendingPath, bookmarkData: pendingBookmark) {
+                        activeSheet = nil
+                        self.pendingPath = nil
+                        self.pendingBookmark = nil
+                    } onError: { message in
+                        errorMessage = message
+                    }
                 }
+            case .migrationFailures:
+                migrationFailuresSheet
             }
         }
         .alert(
-            "Datei konnte nicht gespeichert werden",
+            "Fehler",
             isPresented: Binding(
-                get: { filePickerError != nil },
-                set: { if !$0 { filePickerError = nil } }
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
             ),
-            presenting: filePickerError
+            presenting: errorMessage
         ) { _ in
             Button("OK", role: .cancel) { }
         } message: { message in
@@ -117,26 +167,88 @@ struct DocumentsView: View {
             presenting: pendingDeletion
         ) { document in
             Button("Entfernen", role: .destructive) {
+                if let path = document.path {
+                    DocumentStorage.delete(relativePath: path)
+                }
                 viewContext.delete(document)
                 PersistenceController.shared.save(context: viewContext)
             }
             Button("Abbrechen", role: .cancel) { }
         } message: { document in
-            Text("„\(document.filename)“ wird nur aus der Liste entfernt, die Datei selbst bleibt unangetastet.")
+            Text("„\(document.filename)“ und die zugehörige Kopie im Arbeitsverzeichnis werden entfernt. Ein eventuell noch vorhandenes Original bleibt unberührt.")
         }
     }
 
     private var addButtonRow: some View {
         HStack {
-            Spacer()
             Button {
-                isPresentingFilePicker = true
+                isPresentingWorkingDirectoryPopover = true
+            } label: {
+                Image(systemName: "gearshape")
+            }
+            .buttonStyle(.borderless)
+            .pointerStyle(.link)
+            .help("Arbeitsverzeichnis konfigurieren")
+            .popover(isPresented: $isPresentingWorkingDirectoryPopover) {
+                workingDirectoryPopover
+            }
+
+            Spacer()
+
+            Button {
+                addDocumentTapped()
             } label: {
                 Label("Neues Dokument", systemImage: "doc.badge.plus")
             }
             .buttonStyle(.glassProminent)
             .pointerStyle(.link)
         }
+    }
+
+    private var workingDirectoryPopover: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Arbeitsverzeichnis")
+                .font(.headline)
+            Text(WorkingDirectoryStore.displayPath ?? "Kein Arbeitsverzeichnis festgelegt")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .truncationMode(.middle)
+            Button(WorkingDirectoryStore.isConfigured ? "Ändern…" : "Ordner wählen…") {
+                isPresentingWorkingDirectoryPopover = false
+                activeImporter = .folder
+                completingImporter = .folder
+            }
+            .buttonStyle(.bordered)
+            .pointerStyle(.link)
+        }
+        .padding(16)
+        .frame(width: 280, alignment: .leading)
+    }
+
+    private var migrationFailuresSheet: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Einige Dokumente konnten nicht automatisch übernommen werden")
+                .font(.headline)
+                .padding(20)
+            List(migrationFailures, id: \.documentID) { failure in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(failure.filename)
+                        .font(.subheadline.bold())
+                    Text(failure.reason)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Divider()
+            HStack {
+                Spacer()
+                Button("OK") { activeSheet = nil }
+                    .pointerStyle(.link)
+            }
+            .padding(16)
+        }
+        .frame(width: 420, height: 360)
     }
 
     private var vehicleFilterSection: some View {
@@ -217,17 +329,30 @@ struct DocumentsView: View {
             } else {
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(filteredDocuments) { document in
-                        DocumentRow(document: document, onDelete: { pendingDeletion = document })
+                        DocumentRow(
+                            document: document,
+                            onDelete: { pendingDeletion = document },
+                            onError: { message in errorMessage = message }
+                        )
                     }
                 }
             }
         }
     }
 
+    private func addDocumentTapped() {
+        guard WorkingDirectoryStore.isConfigured else {
+            errorMessage = "Bevor du Dokumente hinzufügen kannst, lege über das Zahnrad-Symbol ein Arbeitsverzeichnis fest."
+            return
+        }
+        activeImporter = .document
+        completingImporter = .document
+    }
+
     private func handleFileSelection(_ result: Result<URL, Error>) {
         guard case .success(let url) = result else { return }
         guard url.startAccessingSecurityScopedResource() else {
-            filePickerError = "Zugriff auf die Datei wurde verweigert."
+            errorMessage = "Zugriff auf die Datei wurde verweigert."
             return
         }
         defer { url.stopAccessingSecurityScopedResource() }
@@ -236,11 +361,25 @@ struct DocumentsView: View {
             includingResourceValuesForKeys: nil,
             relativeTo: nil
         ) else {
-            filePickerError = "Für „\(url.lastPathComponent)“ konnte kein dauerhafter Zugriff gespeichert werden."
+            errorMessage = "Für „\(url.lastPathComponent)“ konnte kein dauerhafter Zugriff gespeichert werden."
             return
         }
         pendingPath = url.path
         pendingBookmark = bookmark
-        isPresentingAssignment = true
+        activeSheet = .assignment
+    }
+
+    private func handleFolderSelection(_ result: Result<URL, Error>) {
+        guard case .success(let url) = result else { return }
+        do {
+            try WorkingDirectoryStore.set(url: url)
+            let failures = DocumentMigration.migrateLegacyDocuments(using: PersistenceController.shared)
+            if !failures.isEmpty {
+                migrationFailures = failures
+                activeSheet = .migrationFailures
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }

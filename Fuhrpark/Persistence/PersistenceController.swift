@@ -23,6 +23,9 @@ struct PersistenceController {
 
         if !inMemory {
             backfillVehicleTimestamps()
+            if WorkingDirectoryStore.isConfigured {
+                DocumentMigration.migrateLegacyDocuments(using: self)
+            }
         }
     }
 
@@ -92,6 +95,16 @@ struct PersistenceController {
     /// (z. B. eigenständige Kategorien) sicher mitzunehmen.
     func deleteAllData() {
         let context = container.viewContext
+
+        let documentRequest = NSFetchRequest<Dokument>(entityName: "Dokument")
+        if let documents = try? context.fetch(documentRequest) {
+            for document in documents {
+                if let path = document.path {
+                    DocumentStorage.delete(relativePath: path)
+                }
+            }
+        }
+
         let entityNames = ["Vehicle", "FuelEntry", "Expense", "Category", "Dokument", "Erinnerung"]
         for name in entityNames {
             let request = NSFetchRequest<NSManagedObject>(entityName: name)

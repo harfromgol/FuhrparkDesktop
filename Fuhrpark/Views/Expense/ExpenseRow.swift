@@ -4,6 +4,7 @@ import SwiftUI
 struct ExpenseRow: View {
     @ObservedObject var expense: Expense
     @State private var isPresentingDocuments = false
+    @State private var errorMessage: String?
 
     var body: some View {
         GlassCard {
@@ -44,6 +45,18 @@ struct ExpenseRow: View {
                 }
             }
         }
+        .alert(
+            "Fehler",
+            isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            ),
+            presenting: errorMessage
+        ) { _ in
+            Button("OK", role: .cancel) { }
+        } message: { message in
+            Text(message)
+        }
     }
 
     private var documentsPopover: some View {
@@ -52,7 +65,11 @@ struct ExpenseRow: View {
                 .font(.headline)
             ForEach(expense.sortedDocuments) { document in
                 Button {
-                    document.open()
+                    do {
+                        try document.open()
+                    } catch {
+                        errorMessage = error.localizedDescription
+                    }
                 } label: {
                     Label(document.filename, systemImage: "doc")
                         .lineLimit(1)

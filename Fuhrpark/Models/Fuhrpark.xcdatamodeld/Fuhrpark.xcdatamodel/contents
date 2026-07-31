@@ -48,7 +48,7 @@
         <relationship name="vehicle" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Vehicle" inverseName="expenses" inverseEntity="Vehicle"/>
     </entity>
     <entity name="Dokument" representedClassName="Dokument" syncable="YES" codeGenerationType="class">
-        <attribute name="bookmarkData" optional="NO" attributeType="Binary"/>
+        <attribute name="bookmarkData" optional="YES" attributeType="Binary"/>
         <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="path" optional="NO" attributeType="String"/>

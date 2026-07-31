@@ -63,12 +63,15 @@ private struct ExpenseDTO: Codable {
     var documents: [DokumentDTO]?
 }
 
+/// Dateien werden nicht mehr per Security-Scoped-Bookmark referenziert,
+/// sondern beim Hinzufügen in ein konfiguriertes Arbeitsverzeichnis kopiert
+/// (siehe `WorkingDirectoryStore`/`DocumentStorage`). Der Export enthält
+/// daher keine Binärdaten, nur den relativen Pfad – beim Import müssen die
+/// referenzierten Dateien bereits im (auf dem Zielrechner separat zu
+/// konfigurierenden) Arbeitsverzeichnis liegen.
 private struct DokumentDTO: Codable {
     var id: UUID
     var path: String
-    /// Security-Scoped Bookmark der Datei. Löst sich beim Import nur auf,
-    /// wenn die Datei noch am selben Ort auf demselben Mac liegt.
-    var bookmarkData: Data
     var createdAt: Date
 }
 
@@ -144,7 +147,6 @@ private extension DokumentDTO {
     init(document: Dokument) {
         id = document.id ?? UUID()
         path = document.path ?? ""
-        bookmarkData = document.bookmarkData ?? Data()
         createdAt = document.createdAt ?? Date()
     }
 }
@@ -193,7 +195,7 @@ enum DataTransfer {
         request.sortDescriptors = [NSSortDescriptor(keyPath: \Vehicle.createdAt, ascending: true)]
         let vehicles = try context.fetch(request)
         let root = ExportRoot(
-            schemaVersion: 5,
+            schemaVersion: 6,
             exportedAt: Date(),
             vehicles: vehicles.map(VehicleDTO.init(vehicle:)),
             windowFrames: WindowFrameStore.all()
@@ -267,7 +269,6 @@ enum DataTransfer {
                     let document = Dokument(context: context)
                     document.id = d.id
                     document.path = d.path
-                    document.bookmarkData = d.bookmarkData
                     document.createdAt = d.createdAt
                     document.expense = expense
                 }
