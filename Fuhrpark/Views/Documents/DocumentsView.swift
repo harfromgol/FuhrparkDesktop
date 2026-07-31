@@ -92,7 +92,11 @@ struct DocumentsView: View {
                     ContentUnavailableView(
                         "Keine Dokumente",
                         systemImage: "folder",
-                        description: Text("Füge über „Neues Dokument“ eine Datei zu einer sonstigen Ausgabe hinzu.")
+                        description: Text(
+                            WorkingDirectoryStore.isConfigured
+                                ? "Füge über „Neues Dokument“ eine Datei zu einer sonstigen Ausgabe hinzu."
+                                : "Lege zuerst über das Zahnrad-Symbol oben links ein Arbeitsverzeichnis fest, bevor du Dokumente hinzufügen kannst."
+                        )
                     )
                     Spacer()
                 }
