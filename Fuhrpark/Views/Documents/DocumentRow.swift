@@ -5,10 +5,25 @@ import SwiftUI
 struct DocumentRow: View {
     @ObservedObject var document: Dokument
     let onDelete: () -> Void
+    let onError: (String) -> Void
+
+    /// Aufgelöster Pfad im Arbeitsverzeichnis zur Anzeige, oder ein
+    /// verständlicher Hinweis, falls die Datei (noch) nicht auffindbar ist.
+    private var locationDisplay: String {
+        guard let path = document.path else { return "" }
+        if let url = try? DocumentStorage.resolvedURL(forRelativePath: path) {
+            return url.path
+        }
+        return "Datei nicht gefunden"
+    }
 
     var body: some View {
         Button {
-            document.open()
+            do {
+                try document.open()
+            } catch {
+                onError(error.localizedDescription)
+            }
         } label: {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
@@ -24,7 +39,7 @@ struct DocumentRow: View {
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    Text(document.path ?? "")
+                    Text(locationDisplay)
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
@@ -49,7 +64,13 @@ struct DocumentRow: View {
         .buttonStyle(.plain)
         .pointerStyle(.link)
         .contextMenu {
-            Button("Im Finder anzeigen") { document.reveal() }
+            Button("Im Finder anzeigen") {
+                do {
+                    try document.reveal()
+                } catch {
+                    onError(error.localizedDescription)
+                }
+            }
             Button("Entfernen", role: .destructive, action: onDelete)
         }
         Divider()

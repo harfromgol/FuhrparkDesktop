@@ -1,8 +1,27 @@
 import Foundation
 import AppKit
 
+/// Fehler beim Zugriff auf eine Dokument-Datei im Arbeitsverzeichnis.
+enum DokumentAccessError: LocalizedError {
+    case workingDirectoryNotConfigured
+    case fileNotFound(String)
+    case openFailed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .workingDirectoryNotConfigured:
+            return "Es ist noch kein Arbeitsverzeichnis für Dokumente festgelegt."
+        case .fileNotFound(let filename):
+            return "„\(filename)“ wurde im Arbeitsverzeichnis nicht gefunden."
+        case .openFailed(let filename):
+            return "„\(filename)“ konnte nicht geöffnet werden."
+        }
+    }
+}
+
 extension Dokument {
-    /// Dateiname ohne Pfad, z. B. „Rechnung.pdf".
+    /// Dateiname ohne Pfad, z. B. „Rechnung.pdf" (funktioniert unverändert
+    /// mit dem relativen Pfadformat "<uuid>/Rechnung.pdf").
     var filename: String {
         (path as NSString?)?.lastPathComponent ?? ""
     }
@@ -22,34 +41,48 @@ extension Dokument {
         expense?.categoriesDisplay ?? ""
     }
 
-    /// Löst das gespeicherte Security-Scoped Bookmark auf. Nötig, da die App
-    /// sandboxed läuft: ein reiner Pfad-String verliert nach einem Neustart
-    /// den Dateizugriff, das Bookmark stellt ihn wieder her.
-    private func resolveURL() -> URL? {
-        guard let bookmarkData else { return nil }
-        var isStale = false
-        return try? URL(
-            resolvingBookmarkData: bookmarkData,
-            options: [.withSecurityScope],
-            relativeTo: nil,
-            bookmarkDataIsStale: &isStale
-        )
+    /// Führt `body` mit der aufgelösten Datei-URL aus, während der
+    /// Security-Scope auf das Arbeitsverzeichnis aktiv ist. Wichtig: der
+    /// eigentliche Zugriff (z. B. `NSWorkspace.shared.open(_:)`) muss
+    /// innerhalb dieses Aufrufs passieren – der Scope endet, sobald
+    /// `WorkingDirectoryStore.withAccess` zurückkehrt, eine außerhalb davon
+    /// weitergereichte URL wäre für andere Prozesse (z. B. die per
+    /// `NSWorkspace` gestartete Standard-App) nicht mehr zugreifbar.
+    private func withResolvedURL<T>(_ body: (URL) throws -> T) throws -> T {
+        guard let path else { throw DokumentAccessError.fileNotFound(filename) }
+        do {
+            return try WorkingDirectoryStore.withAccess { workingDirURL in
+                let url = workingDirURL.appendingPathComponent(path)
+                guard FileManager.default.fileExists(atPath: url.path) else {
+                    throw DokumentAccessError.fileNotFound(filename)
+                }
+                return try body(url)
+            }
+        } catch let error as WorkingDirectoryStore.WorkingDirectoryError {
+            _ = error
+            throw DokumentAccessError.workingDirectoryNotConfigured
+        } catch let error as DokumentAccessError {
+            throw error
+        }
     }
 
     /// Öffnet die Datei mit der zuständigen Standard-App.
     @discardableResult
-    func open() -> Bool {
-        guard let url = resolveURL(), url.startAccessingSecurityScopedResource() else { return false }
-        defer { url.stopAccessingSecurityScopedResource() }
-        return NSWorkspace.shared.open(url)
+    func open() throws -> Bool {
+        try withResolvedURL { url in
+            guard NSWorkspace.shared.open(url) else {
+                throw DokumentAccessError.openFailed(filename)
+            }
+            return true
+        }
     }
 
     /// Zeigt die Datei im Finder an, mit der Datei als Auswahl.
     @discardableResult
-    func reveal() -> Bool {
-        guard let url = resolveURL(), url.startAccessingSecurityScopedResource() else { return false }
-        defer { url.stopAccessingSecurityScopedResource() }
-        NSWorkspace.shared.activateFileViewerSelecting([url])
-        return true
+    func reveal() throws -> Bool {
+        try withResolvedURL { url in
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+            return true
+        }
     }
 }

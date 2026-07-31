@@ -10,6 +10,7 @@ struct NewDocumentAssignmentView: View {
     let path: String
     let bookmarkData: Data
     let onSaved: () -> Void
+    let onError: (String) -> Void
 
     @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Vehicle.licensePlate, ascending: true)])
     private var vehicles: FetchedResults<Vehicle>
@@ -46,7 +47,8 @@ struct NewDocumentAssignmentView: View {
                                 vehicle: selectedVehicle,
                                 path: path,
                                 bookmarkData: bookmarkData,
-                                onSaved: onSaved
+                                onSaved: onSaved,
+                                onError: onError
                             )
                         }
                     }
@@ -76,13 +78,15 @@ private struct ExpensePickerSection: View {
     let path: String
     let bookmarkData: Data
     let onSaved: () -> Void
+    let onError: (String) -> Void
 
     @FetchRequest private var expenses: FetchedResults<Expense>
 
-    init(vehicle: Vehicle, path: String, bookmarkData: Data, onSaved: @escaping () -> Void) {
+    init(vehicle: Vehicle, path: String, bookmarkData: Data, onSaved: @escaping () -> Void, onError: @escaping (String) -> Void) {
         self.path = path
         self.bookmarkData = bookmarkData
         self.onSaved = onSaved
+        self.onError = onError
         _expenses = FetchRequest(
             sortDescriptors: [NSSortDescriptor(keyPath: \Expense.date, ascending: false)],
             predicate: NSPredicate(format: "vehicle == %@", vehicle),
@@ -138,11 +142,34 @@ private struct ExpensePickerSection: View {
         }
     }
 
+    /// Löst die per Bookmark referenzierte Quelldatei erneut auf und kopiert
+    /// sie erst jetzt (beim tatsächlichen Zuordnen) ins Arbeitsverzeichnis –
+    /// bricht der Nutzer vorher ab, bleiben keine Spuren zurück.
     private func assign(to expense: Expense) {
+        let documentID = UUID()
+        var isStale = false
+        guard let sourceURL = try? URL(
+            resolvingBookmarkData: bookmarkData,
+            options: [.withSecurityScope],
+            relativeTo: nil,
+            bookmarkDataIsStale: &isStale
+        ), sourceURL.startAccessingSecurityScopedResource() else {
+            onError("Auf die ausgewählte Datei konnte nicht mehr zugegriffen werden.")
+            return
+        }
+        defer { sourceURL.stopAccessingSecurityScopedResource() }
+
+        let relativePath: String
+        do {
+            relativePath = try DocumentStorage.copyIntoWorkingDirectory(from: sourceURL, documentID: documentID)
+        } catch {
+            onError(error.localizedDescription)
+            return
+        }
+
         let document = Dokument(context: viewContext)
-        document.id = UUID()
-        document.path = path
-        document.bookmarkData = bookmarkData
+        document.id = documentID
+        document.path = relativePath
         document.createdAt = Date()
         document.expense = expense
         PersistenceController.shared.save(context: viewContext)
