@@ -1,6 +1,7 @@
 import SwiftUI
 import CoreData
 import UniformTypeIdentifiers
+import AppKit
 
 /// Fahrzeugübergreifende Liste aller referenzierten Dokumente (Rechnungen,
 /// Belege etc.), mit Filter nach Fahrzeug und/oder Kategorie. Dateien werden
@@ -28,10 +29,17 @@ struct DocumentsView: View {
     @State private var isPresentingWorkingDirectoryPopover = false
     @State private var migrationFailures: [DocumentMigration.Failure] = []
 
+    /// Gespiegelter Zustand von `WorkingDirectoryStore.isConfigured`. Der
+    /// Store ist reines UserDefaults ohne SwiftUI-Reaktivität – ohne diesen
+    /// `@State`-Spiegel würde die Ansicht nach `WorkingDirectoryStore.set(url:)`
+    /// nicht automatisch neu gerendert, da dieser Aufruf selbst keinen
+    /// SwiftUI-State ändert.
+    @State private var isWorkingDirectoryConfigured = WorkingDirectoryStore.isConfigured
+
     /// Welches Sheet gerade angezeigt wird. Bewusst ein einziges `.sheet`
-    /// für beide Fälle (statt zwei separater Modifier) – aus demselben
-    /// Grund wie bei `ImporterKind`: nur der zuletzt deklarierte
-    /// Präsentations-Modifier funktioniert auf diesem SDK-Stand zuverlässig.
+    /// für beide Fälle (statt zwei separater Modifier) – auf diesem
+    /// SDK-Stand funktioniert bei mehreren gleichzeitig deklarierten
+    /// Präsentations-Modifiern zuverlässig nur der zuletzt deklarierte.
     private enum SheetKind: Identifiable {
         case assignment
         case migrationFailures
@@ -39,23 +47,12 @@ struct DocumentsView: View {
     }
     @State private var activeSheet: SheetKind?
 
-    /// Welcher Dateiauswahl-Dialog gerade angefordert ist. Bewusst ein
-    /// einziger `.fileImporter` für beide Fälle (statt zwei separater
-    /// Modifier mit je eigenem `isPresented`) – auf diesem SDK-Stand
-    /// funktioniert bei zwei `.fileImporter`-Modifiern auf derselben View
-    /// zuverlässig nur der zuletzt deklarierte.
-    private enum ImporterKind {
-        case document
-        case folder
-    }
-    @State private var activeImporter: ImporterKind?
-
-    /// Stabile Kopie von `activeImporter`, ausschließlich zum Auswerten im
-    /// `onCompletion`-Callback des `.fileImporter`. Der Binding-Setter von
-    /// `isPresented` setzt `activeImporter` beim Schließen bereits auf `nil`,
-    /// bevor `onCompletion` aufgerufen wird – ohne diese zweite, nur von uns
-    /// selbst geleerte Variable würde der Callback dort immer `nil` lesen.
-    @State private var completingImporter: ImporterKind?
+    /// Auswahldialog für die Dokument-Datei selbst. Der Ordner-Dialog für
+    /// das Arbeitsverzeichnis läuft bewusst NICHT über `.fileImporter`,
+    /// sondern über ein direktes `NSOpenPanel` (siehe `presentFolderPicker`),
+    /// da `.fileImporter` den Dialog als Sheet zeigt, das am Fenster
+    /// verankert und nicht frei verschiebbar ist.
+    @State private var isPresentingDocumentImporter = false
 
     @State private var selectedVehicleFilter: Set<Vehicle> = []
     @State private var selectedCategoryFilter: Set<String> = []
@@ -93,7 +90,7 @@ struct DocumentsView: View {
                         "Keine Dokumente",
                         systemImage: "folder",
                         description: Text(
-                            WorkingDirectoryStore.isConfigured
+                            isWorkingDirectoryConfigured
                                 ? "Füge über „Neues Dokument“ eine Datei zu einer sonstigen Ausgabe hinzu."
                                 : "Lege zuerst über das Zahnrad-Symbol oben links ein Arbeitsverzeichnis fest, bevor du Dokumente hinzufügen kannst."
                         )
@@ -121,18 +118,10 @@ struct DocumentsView: View {
         }
         .navigationTitle("Dokumente")
         .fileImporter(
-            isPresented: Binding(
-                get: { activeImporter != nil },
-                set: { if !$0 { activeImporter = nil } }
-            ),
-            allowedContentTypes: activeImporter == .folder ? [.folder] : [.item]
+            isPresented: $isPresentingDocumentImporter,
+            allowedContentTypes: [.item]
         ) { result in
-            switch completingImporter {
-            case .document: handleFileSelection(result)
-            case .folder: handleFolderSelection(result)
-            case nil: break
-            }
-            completingImporter = nil
+            handleFileSelection(result)
         }
         .sheet(item: $activeSheet) { kind in
             switch kind {
@@ -218,10 +207,9 @@ struct DocumentsView: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
                 .truncationMode(.middle)
-            Button(WorkingDirectoryStore.isConfigured ? "Ändern…" : "Ordner wählen…") {
+            Button(isWorkingDirectoryConfigured ? "Ändern…" : "Ordner wählen…") {
                 isPresentingWorkingDirectoryPopover = false
-                activeImporter = .folder
-                completingImporter = .folder
+                presentFolderPicker()
             }
             .buttonStyle(.bordered)
             .pointerStyle(.link)
@@ -345,12 +333,25 @@ struct DocumentsView: View {
     }
 
     private func addDocumentTapped() {
-        guard WorkingDirectoryStore.isConfigured else {
+        guard isWorkingDirectoryConfigured else {
             errorMessage = "Bevor du Dokumente hinzufügen kannst, lege über das Zahnrad-Symbol ein Arbeitsverzeichnis fest."
             return
         }
-        activeImporter = .document
-        completingImporter = .document
+        isPresentingDocumentImporter = true
+    }
+
+    /// Öffnet den Ordner-Auswahldialog direkt über AppKit statt über
+    /// `.fileImporter`: Letzteres zeigt den Dialog als Sheet an, das am
+    /// Fenster verankert und nicht frei verschiebbar ist. `NSOpenPanel`
+    /// erzeugt stattdessen ein eigenständiges, verschiebbares Fenster.
+    private func presentFolderPicker() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Wählen"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        handleFolderSelection(.success(url))
     }
 
     private func handleFileSelection(_ result: Result<URL, Error>) {
@@ -377,6 +378,7 @@ struct DocumentsView: View {
         guard case .success(let url) = result else { return }
         do {
             try WorkingDirectoryStore.set(url: url)
+            isWorkingDirectoryConfigured = true
             let failures = DocumentMigration.migrateLegacyDocuments(using: PersistenceController.shared)
             if !failures.isEmpty {
                 migrationFailures = failures
