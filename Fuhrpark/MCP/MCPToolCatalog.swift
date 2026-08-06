@@ -48,7 +48,7 @@ enum MCPToolCatalog {
     static let serverInstructions = """
         Zugriff auf die Fuhrparkdaten der App FuhrparkDesktop (nur lesend).
 
-        Vier Eigenheiten der Datenlogik, die für die Auswertung wichtig sind:
+        Fünf Eigenheiten der Datenlogik, die für die Auswertung wichtig sind:
 
         1. Einnahmen zählen in allen Kostensummen NEGATIV. Das Feld „betrag“ ist
            stets positiv, „signedAmount“ trägt das Vorzeichen. Eine negative
@@ -64,6 +64,12 @@ enum MCPToolCatalog {
         4. Betankungen sind nach KILOMETERSTAND sortiert, nicht nach Datum. Die
            gefahrenen Kilometer je Jahr beruhen auf Interpolation; Jahre ohne
            ermittelbaren Stand fehlen in der Liste.
+
+        5. Ein Beleg kann MEHRERE Ausgaben belegen (etwa eine Rechnung, die in
+           zwei Buchungen aufgeteilt wurde). „anzahlBelege“ einer Ausgabe darf
+           deshalb nicht über Ausgaben aufsummiert werden – derselbe Beleg
+           zählte sonst mehrfach. Alle Ausgaben eines Belegs gehören stets zum
+           selben Fahrzeug.
 
         Für Jahres- und Monatszuordnungen immer die Felder mit der Endung
         „Local“ verwenden (Kalendertag in der Zeitzone des Nutzers), nicht die
@@ -755,7 +761,9 @@ enum MCPToolCatalog {
             name: "list_documents",
             description: """
                 Listet hinterlegte Belege und Rechnungen mit Dateiname, \
-                zugehöriger Ausgabe und Ablagepfad. Die Dateien selbst liegen \
+                zugehörigen Ausgaben und Ablagepfad. Ein Beleg kann mehrere \
+                Ausgaben belegen – das Feld „ausgaben“ ist deshalb eine Liste. \
+                Die Dateien selbst liegen \
                 im Arbeitsverzeichnis, das in der App eingestellt ist; ist \
                 keines gesetzt, bleibt der absolute Pfad leer.
                 """,

@@ -86,9 +86,14 @@ struct ExpenseListWindow: View {
         ) { expense in
             Button("Löschen", role: .destructive) {
                 viewContext.delete(expense)
-                PersistenceController.shared.save(context: viewContext)
+                DocumentCleanup.finishDeletion(in: viewContext)
             }
             Button("Abbrechen", role: .cancel) { }
+        } message: { expense in
+            let belege = expense.sortedDocuments.count
+            Text(belege == 0
+                 ? "„\(expense.recipient ?? "")“ wird unwiderruflich gelöscht."
+                 : "„\(expense.recipient ?? "")“ wird unwiderruflich gelöscht. Zugeordnete Belege bleiben erhalten, solange sie noch zu einer anderen Ausgabe gehören – sonst werden sie mit entfernt.")
         }
     }
 

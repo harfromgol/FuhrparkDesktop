@@ -14,7 +14,25 @@ struct DocumentRow: View {
     let workingDirectoryRevision: Int
 
     let onDelete: () -> Void
+    let onReassign: () -> Void
     let onError: (String) -> Void
+
+    /// Empfänger der zugeordneten Ausgaben, auf eine Zeile eingedampft.
+    /// Bei mehreren steht hinter dem ersten die Zahl der übrigen; die
+    /// vollständige Liste liefert der Tooltip.
+    private var empfaengerKurz: String? {
+        let namen = document.sortedExpenses.compactMap { $0.recipient }.filter { !$0.isEmpty }
+        guard let erster = namen.first else { return nil }
+        return namen.count > 1 ? "\(erster) +\(namen.count - 1)" : erster
+    }
+
+    private var empfaengerVollstaendig: String {
+        let ausgaben = document.sortedExpenses
+        guard !ausgaben.isEmpty else { return "Keiner Ausgabe zugeordnet" }
+        return ausgaben
+            .map { "\($0.recipient ?? "") – \($0.purpose ?? "")" }
+            .joined(separator: "\n")
+    }
 
     /// Hinweis, falls die Datei gerade nicht erreichbar ist – sonst `nil`.
     ///
@@ -50,12 +68,13 @@ struct DocumentRow: View {
                         if let vehicle = document.vehicle {
                             Text(vehicle.licensePlate ?? "")
                         }
-                        if let expense = document.expense {
-                            Text("· \(expense.recipient ?? "")")
+                        if let empfaengerKurz {
+                            Text("· \(empfaengerKurz)")
                         }
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .help(empfaengerVollstaendig)
                     if let problemHinweis {
                         Label(problemHinweis, systemImage: "exclamationmark.triangle.fill")
                             .font(.caption2)
@@ -81,6 +100,7 @@ struct DocumentRow: View {
         .buttonStyle(.plain)
         .pointerStyle(.link)
         .contextMenu {
+            Button("Ausgaben zuordnen…", action: onReassign)
             Button("Im Finder anzeigen") {
                 do {
                     try document.reveal()

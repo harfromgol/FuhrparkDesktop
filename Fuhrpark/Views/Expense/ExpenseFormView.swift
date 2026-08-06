@@ -334,7 +334,7 @@ struct ExpenseFormView: View {
             document.id = pending.id
             document.path = relativePath
             document.createdAt = Date()
-            document.expense = expense
+            document.link(to: expense)
         }
 
         vehicle.touch()

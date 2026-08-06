@@ -48,10 +48,14 @@ struct DocumentsView: View {
     /// Präsentations-Modifiern zuverlässig nur der zuletzt deklarierte.
     private enum SheetKind: Identifiable {
         case assignment
+        case reassignment
         case migrationFailures
         var id: Self { self }
     }
     @State private var activeSheet: SheetKind?
+
+    /// Beleg, dessen Zuordnung nachträglich geändert wird.
+    @State private var documentToReassign: Dokument?
 
     /// Auswahldialog für die Dokument-Datei selbst. Der Ordner-Dialog für
     /// das Arbeitsverzeichnis läuft bewusst NICHT über `.fileImporter`,
@@ -133,13 +137,23 @@ struct DocumentsView: View {
             switch kind {
             case .assignment:
                 if let pendingPath, let pendingBookmark {
-                    NewDocumentAssignmentView(path: pendingPath, bookmarkData: pendingBookmark) {
-                        activeSheet = nil
-                        self.pendingPath = nil
-                        self.pendingBookmark = nil
-                    } onError: { message in
-                        errorMessage = message
-                    }
+                    NewDocumentAssignmentView(
+                        path: pendingPath,
+                        bookmarkData: pendingBookmark,
+                        onSaved: closeAssignmentSheet,
+                        onCancel: closeAssignmentSheet,
+                        onError: { errorMessage = $0 }
+                    )
+                }
+            case .reassignment:
+                if let documentToReassign {
+                    NewDocumentAssignmentView(
+                        path: documentToReassign.filename,
+                        existingDocument: documentToReassign,
+                        onSaved: closeAssignmentSheet,
+                        onCancel: closeAssignmentSheet,
+                        onError: { errorMessage = $0 }
+                    )
                 }
             case .migrationFailures:
                 migrationFailuresSheet
@@ -166,15 +180,15 @@ struct DocumentsView: View {
             presenting: pendingDeletion
         ) { document in
             Button("Entfernen", role: .destructive) {
-                if let path = document.path {
-                    DocumentStorage.delete(relativePath: path)
-                }
                 viewContext.delete(document)
-                PersistenceController.shared.save(context: viewContext)
+                DocumentCleanup.finishDeletion(in: viewContext)
             }
             Button("Abbrechen", role: .cancel) { }
         } message: { document in
-            Text("„\(document.filename)“ und die zugehörige Kopie im Arbeitsverzeichnis werden entfernt. Ein eventuell noch vorhandenes Original bleibt unberührt.")
+            let anzahl = document.sortedExpenses.count
+            Text(anzahl > 1
+                 ? "„\(document.filename)“ wird von allen \(anzahl) zugeordneten Ausgaben entfernt, zusammen mit der Kopie im Arbeitsverzeichnis. Ein eventuell noch vorhandenes Original bleibt unberührt."
+                 : "„\(document.filename)“ und die zugehörige Kopie im Arbeitsverzeichnis werden entfernt. Ein eventuell noch vorhandenes Original bleibt unberührt.")
         }
     }
 
@@ -331,12 +345,25 @@ struct DocumentsView: View {
                             document: document,
                             workingDirectoryRevision: workingDirectoryRevision,
                             onDelete: { pendingDeletion = document },
+                            onReassign: {
+                                documentToReassign = document
+                                activeSheet = .reassignment
+                            },
                             onError: { message in errorMessage = message }
                         )
                     }
                 }
             }
         }
+    }
+
+    /// Räumt nach dem Zuordnungs-Sheet auf – gleich, ob gespeichert oder
+    /// abgebrochen wurde.
+    private func closeAssignmentSheet() {
+        activeSheet = nil
+        pendingPath = nil
+        pendingBookmark = nil
+        documentToReassign = nil
     }
 
     private func addDocumentTapped() {

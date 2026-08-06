@@ -1,54 +1,68 @@
 import SwiftUI
+import CoreData
 
-/// Zweiter Schritt beim Anlegen eines Dokuments: erst Fahrzeug, dann die
-/// zugehörige sonstige Ausgabe auswählen. Die Datei selbst wurde bereits
-/// über den Datei-öffnen-Dialog gewählt (siehe `DocumentsView`).
+/// Ordnet einen Beleg einer oder mehreren sonstigen Ausgaben zu.
+///
+/// Zwei Betriebsarten:
+/// - **Neu anlegen**: Die Datei wurde über den Öffnen-Dialog gewählt und liegt
+///   noch am Ursprungsort; kopiert wird sie erst beim Bestätigen. Bricht der
+///   Nutzer ab, bleiben keine Spuren zurück.
+/// - **Nachträglich zuordnen**: Der Beleg existiert bereits, es ändert sich
+///   nur die Auswahl der Ausgaben. Es wird nichts kopiert.
+///
+/// In beiden Fällen gilt: Ein Beleg gehört zu genau **einem** Fahrzeug. Die
+/// Ausgabenliste ist deshalb nach Fahrzeug gefiltert, und ein Fahrzeugwechsel
+/// leert die Auswahl – so kann gar keine gemischte Zuordnung entstehen.
 struct NewDocumentAssignmentView: View {
     @Environment(\.managedObjectContext) private var viewContext
-    @Environment(\.dismiss) private var dismiss
 
+    /// Anzeigename der Datei (beim Anlegen der Ursprungspfad, sonst der Beleg).
     let path: String
-    let bookmarkData: Data
+    /// Security-Scoped Bookmark der noch nicht kopierten Datei – nur beim Anlegen.
+    let bookmarkData: Data?
+    /// Bereits vorhandener Beleg – nur beim nachträglichen Zuordnen.
+    let existingDocument: Dokument?
     let onSaved: () -> Void
+    let onCancel: () -> Void
     let onError: (String) -> Void
 
     @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Vehicle.licensePlate, ascending: true)])
     private var vehicles: FetchedResults<Vehicle>
 
     @State private var selectedVehicle: Vehicle?
+    @State private var selectedExpenses: Set<Expense>
+
+    init(
+        path: String,
+        bookmarkData: Data? = nil,
+        existingDocument: Dokument? = nil,
+        onSaved: @escaping () -> Void,
+        onCancel: @escaping () -> Void,
+        onError: @escaping (String) -> Void
+    ) {
+        self.path = path
+        self.bookmarkData = bookmarkData
+        self.existingDocument = existingDocument
+        self.onSaved = onSaved
+        self.onCancel = onCancel
+        self.onError = onError
+        _selectedVehicle = State(initialValue: existingDocument?.vehicle)
+        _selectedExpenses = State(initialValue: Set(existingDocument?.sortedExpenses ?? []))
+    }
+
+    private var isEditingExisting: Bool { existingDocument != nil }
 
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
                 GlassEffectContainer {
                     VStack(alignment: .leading, spacing: 16) {
-                        GlassCard(title: "Datei") {
-                            Text((path as NSString).lastPathComponent)
-                                .font(.headline)
-                            Text(path)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                        }
-
-                        GlassCard(title: "Fahrzeug") {
-                            Picker("Fahrzeug", selection: $selectedVehicle) {
-                                Text("Bitte wählen").tag(Vehicle?.none)
-                                ForEach(vehicles) { vehicle in
-                                    Text(vehicle.licensePlate ?? "").tag(Vehicle?.some(vehicle))
-                                }
-                            }
-                            .labelsHidden()
-                        }
-
+                        fileCard
+                        vehicleCard
                         if let selectedVehicle {
                             ExpensePickerSection(
                                 vehicle: selectedVehicle,
-                                path: path,
-                                bookmarkData: bookmarkData,
-                                onSaved: onSaved,
-                                onError: onError
+                                selection: $selectedExpenses
                             )
                         }
                     }
@@ -59,34 +73,129 @@ struct NewDocumentAssignmentView: View {
             Divider()
 
             HStack {
-                Button("Abbrechen", role: .cancel) { onSaved() }
+                Button("Abbrechen", role: .cancel) { onCancel() }
                     .pointerStyle(.link)
                 Spacer()
+                Button(selectedExpenses.isEmpty ? "Zuordnen" : "Zuordnen (\(selectedExpenses.count))") {
+                    save()
+                }
+                .buttonStyle(.glassProminent)
+                .disabled(selectedExpenses.isEmpty)
+                .pointerStyle(selectedExpenses.isEmpty ? nil : .link)
             }
             .padding(16)
         }
         .frame(width: 460, height: 620)
     }
+
+    // MARK: - Karten
+
+    private var fileCard: some View {
+        GlassCard(title: "Datei") {
+            Text((path as NSString).lastPathComponent)
+                .font(.headline)
+            Text(path)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+        }
+    }
+
+    private var vehicleCard: some View {
+        GlassCard(title: "Fahrzeug") {
+            if isEditingExisting {
+                // Beim nachträglichen Zuordnen liegt das Fahrzeug fest – ein
+                // Wechsel würde die bestehenden Zuordnungen ungültig machen.
+                Text(selectedVehicle?.licensePlate ?? "—")
+                    .font(.subheadline.bold())
+            } else {
+                Picker("Fahrzeug", selection: $selectedVehicle) {
+                    Text("Bitte wählen").tag(Vehicle?.none)
+                    ForEach(vehicles) { vehicle in
+                        Text(vehicle.licensePlate ?? "").tag(Vehicle?.some(vehicle))
+                    }
+                }
+                .labelsHidden()
+                .onChange(of: selectedVehicle) {
+                    selectedExpenses.removeAll()
+                }
+            }
+
+            Text("Ein Beleg gehört zu genau einem Fahrzeug. Du kannst ihm mehrere Ausgaben dieses Fahrzeugs zuordnen.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    // MARK: - Speichern
+
+    private func save() {
+        guard !selectedExpenses.isEmpty else { return }
+
+        if let existingDocument {
+            existingDocument.setExpenses(selectedExpenses)
+            PersistenceController.shared.save(context: viewContext)
+            onSaved()
+            return
+        }
+
+        guard let bookmarkData else {
+            onError("Zu dieser Datei liegt kein Zugriff mehr vor.")
+            return
+        }
+
+        let documentID = UUID()
+        var isStale = false
+        guard let sourceURL = try? URL(
+            resolvingBookmarkData: bookmarkData,
+            options: [.withSecurityScope],
+            relativeTo: nil,
+            bookmarkDataIsStale: &isStale
+        ), sourceURL.startAccessingSecurityScopedResource() else {
+            onError("Auf die ausgewählte Datei konnte nicht mehr zugegriffen werden.")
+            return
+        }
+        defer { sourceURL.stopAccessingSecurityScopedResource() }
+
+        let relativePath: String
+        do {
+            relativePath = try DocumentStorage.copyIntoWorkingDirectory(from: sourceURL, documentID: documentID)
+        } catch {
+            onError(error.localizedDescription)
+            return
+        }
+
+        let document = Dokument(context: viewContext)
+        document.id = documentID
+        document.path = relativePath
+        document.createdAt = Date()
+        document.setExpenses(selectedExpenses)
+
+        do {
+            try viewContext.save()
+        } catch {
+            // Die Kopie liegt schon im Arbeitsverzeichnis, der Eintrag fehlt –
+            // ohne Aufräumen bliebe ein herrenloser Ordner zurück.
+            viewContext.rollback()
+            DocumentStorage.delete(documentID: documentID)
+            onError(error.localizedDescription)
+            return
+        }
+        onSaved()
+    }
 }
 
-/// Liste der sonstigen Ausgaben eines Fahrzeugs zum Auswählen; Klick auf eine
-/// Zeile legt sofort das Dokument an (analog zum bestehenden Button-statt-
-/// List-Selektionsmuster in diesem Projekt).
+/// Ausgabenliste eines Fahrzeugs zum An- und Abwählen. Die Auswahl gehört
+/// bewusst der übergeordneten Ansicht – diese hier hat nur den `FetchRequest`.
 private struct ExpensePickerSection: View {
-    @Environment(\.managedObjectContext) private var viewContext
-
-    let path: String
-    let bookmarkData: Data
-    let onSaved: () -> Void
-    let onError: (String) -> Void
+    @Binding var selection: Set<Expense>
 
     @FetchRequest private var expenses: FetchedResults<Expense>
 
-    init(vehicle: Vehicle, path: String, bookmarkData: Data, onSaved: @escaping () -> Void, onError: @escaping (String) -> Void) {
-        self.path = path
-        self.bookmarkData = bookmarkData
-        self.onSaved = onSaved
-        self.onError = onError
+    init(vehicle: Vehicle, selection: Binding<Set<Expense>>) {
+        _selection = selection
         _expenses = FetchRequest(
             sortDescriptors: [NSSortDescriptor(keyPath: \Expense.date, ascending: false)],
             predicate: NSPredicate(format: "vehicle == %@", vehicle),
@@ -95,7 +204,7 @@ private struct ExpensePickerSection: View {
     }
 
     var body: some View {
-        GlassCard(title: "Sonstige Ausgabe") {
+        GlassCard(title: "Sonstige Ausgaben (\(selection.count) ausgewählt)") {
             if expenses.isEmpty {
                 Text("Für dieses Fahrzeug sind noch keine sonstigen Ausgaben erfasst.")
                     .font(.caption)
@@ -104,9 +213,11 @@ private struct ExpensePickerSection: View {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(expenses) { expense in
                         Button {
-                            assign(to: expense)
+                            toggle(expense)
                         } label: {
-                            HStack(alignment: .top) {
+                            HStack(alignment: .top, spacing: 10) {
+                                Image(systemName: selection.contains(expense) ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(selection.contains(expense) ? Color.accentColor : .secondary)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(expense.recipient ?? "")
                                         .font(.subheadline.bold())
@@ -142,37 +253,11 @@ private struct ExpensePickerSection: View {
         }
     }
 
-    /// Löst die per Bookmark referenzierte Quelldatei erneut auf und kopiert
-    /// sie erst jetzt (beim tatsächlichen Zuordnen) ins Arbeitsverzeichnis –
-    /// bricht der Nutzer vorher ab, bleiben keine Spuren zurück.
-    private func assign(to expense: Expense) {
-        let documentID = UUID()
-        var isStale = false
-        guard let sourceURL = try? URL(
-            resolvingBookmarkData: bookmarkData,
-            options: [.withSecurityScope],
-            relativeTo: nil,
-            bookmarkDataIsStale: &isStale
-        ), sourceURL.startAccessingSecurityScopedResource() else {
-            onError("Auf die ausgewählte Datei konnte nicht mehr zugegriffen werden.")
-            return
+    private func toggle(_ expense: Expense) {
+        if selection.contains(expense) {
+            selection.remove(expense)
+        } else {
+            selection.insert(expense)
         }
-        defer { sourceURL.stopAccessingSecurityScopedResource() }
-
-        let relativePath: String
-        do {
-            relativePath = try DocumentStorage.copyIntoWorkingDirectory(from: sourceURL, documentID: documentID)
-        } catch {
-            onError(error.localizedDescription)
-            return
-        }
-
-        let document = Dokument(context: viewContext)
-        document.id = documentID
-        document.path = relativePath
-        document.createdAt = Date()
-        document.expense = expense
-        PersistenceController.shared.save(context: viewContext)
-        onSaved()
     }
 }

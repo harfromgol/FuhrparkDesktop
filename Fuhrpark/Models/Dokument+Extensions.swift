@@ -26,19 +26,58 @@ extension Dokument {
         (path as NSString?)?.lastPathComponent ?? ""
     }
 
-    /// Fahrzeug, zu dem die verknüpfte Ausgabe gehört.
-    var vehicle: Vehicle? {
-        expense?.vehicle
+    /// Zugeordnete Ausgaben, neueste zuerst. Ein Beleg kann mehrere Ausgaben
+    /// belegen (etwa eine Rechnung, die in zwei Buchungen aufgeteilt wurde).
+    ///
+    /// Die Beziehung heißt im Datenmodell aus einem handfesten Grund weiterhin
+    /// `expense` im Singular: Core Data überträgt beim Umstellen von einer auf
+    /// mehrere Ausgaben die vorhandenen Verknüpfungen **nur dann**, wenn dabei
+    /// nicht gleichzeitig umbenannt wird — mit Umbenennung läuft die Migration
+    /// zwar durch, lässt die Zuordnungen aber stillschweigend fallen (auf einer
+    /// Kopie des echten Datenbestands nachgemessen). Ein zweistufiger Weg hilft
+    /// nicht, weil Core Data stets direkt vom gespeicherten Modell zur
+    /// aktuellen Fassung überträgt und damit wieder beide Änderungen zugleich
+    /// sähe. Deshalb: schiefer Name im Modell, sprechender Name hier.
+    var sortedExpenses: [Expense] {
+        let set = (expense as? Set<Expense>) ?? []
+        return set.sorted { ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }
     }
 
-    /// Kategorien der verknüpften Ausgabe, nach Name sortiert (das Dokument
-    /// übernimmt die Kategorie(n) der Ausgabe, statt sie doppelt zu pflegen).
+    /// Setzt die Zuordnung auf genau diese Ausgaben.
+    func setExpenses(_ expenses: Set<Expense>) {
+        expense = NSSet(set: expenses)
+    }
+
+    /// Ergänzt eine weitere Ausgabe.
+    func link(to expenseToAdd: Expense) {
+        addToExpense(expenseToAdd)
+    }
+
+    /// Fahrzeug des Belegs.
+    ///
+    /// Eindeutig, weil alle zugeordneten Ausgaben zum selben Fahrzeug gehören
+    /// müssen – die Zuordnungsansicht setzt das durch. Die erste Ausgabe
+    /// genügt daher als Auskunft.
+    var vehicle: Vehicle? {
+        sortedExpenses.first?.vehicle
+    }
+
+    /// Kategorien aller zugeordneten Ausgaben, ohne Duplikate und alphabetisch
+    /// (das Dokument übernimmt die Kategorien der Ausgaben, statt sie doppelt
+    /// zu pflegen).
     var categoryNames: [String] {
-        expense?.categoryNames ?? []
+        var seen = Set<String>()
+        var result: [String] = []
+        for expense in sortedExpenses {
+            for name in expense.categoryNames where seen.insert(name).inserted {
+                result.append(name)
+            }
+        }
+        return result.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
     var categoriesDisplay: String {
-        expense?.categoriesDisplay ?? ""
+        categoryNames.joined(separator: ", ")
     }
 
     /// Führt `body` mit der aufgelösten Datei-URL aus, während der

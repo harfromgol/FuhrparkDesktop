@@ -195,7 +195,7 @@ enum DataTransfer {
         request.sortDescriptors = [NSSortDescriptor(keyPath: \Vehicle.createdAt, ascending: true)]
         let vehicles = try context.fetch(request)
         let root = ExportRoot(
-            schemaVersion: 6,
+            schemaVersion: 7,
             exportedAt: Date(),
             vehicles: vehicles.map(VehicleDTO.init(vehicle:)),
             windowFrames: WindowFrameStore.all()
@@ -211,7 +211,20 @@ enum DataTransfer {
         let controller = PersistenceController.shared
         let context = controller.container.viewContext
 
-        controller.deleteAllData()
+        // Bewusst OHNE Dateien anzufassen: Bis hierher würde sonst der
+        // Belegordner geleert – und gleich darauf entstünden Einträge, die
+        // genau auf diese eben gelöschten Dateien zeigen. Der Abgleich mit
+        // dem Arbeitsverzeichnis passiert erst ganz am Schluss, gegen den
+        // dann gültigen Datenbankstand.
+        controller.deleteAllData(sweepingFiles: false)
+
+        // Belege liegen im JSON unter der jeweiligen Ausgabe. Ein Beleg, der
+        // mehrere Ausgaben belegt, taucht deshalb mehrfach auf – mit
+        // derselben ID. Über diesen Zwischenspeicher wird daraus wieder ein
+        // einziger Datensatz. Er liegt außerhalb der Fahrzeugschleife, weil
+        // dieselbe ID in mehreren Ausgaben vorkommen kann (anders als
+        // `categoriesByID`, das fahrzeuggebunden bleibt).
+        var documentsByID: [UUID: Dokument] = [:]
 
         for dto in root.vehicles {
             let vehicle = Vehicle(context: context)
@@ -266,11 +279,23 @@ enum DataTransfer {
                 expense.vehicle = vehicle
 
                 for d in e.documents ?? [] {
+                    if let bekannt = documentsByID[d.id] {
+                        // Ein Beleg gehört zu genau einem Fahrzeug. Taucht
+                        // dieselbe ID unter einem zweiten auf, wäre der
+                        // Datenbestand widersprüchlich – dann lieber die
+                        // Verknüpfung auslassen als das Fahrzeug des Belegs
+                        // mehrdeutig machen.
+                        if bekannt.vehicle == nil || bekannt.vehicle == vehicle {
+                            bekannt.link(to: expense)
+                        }
+                        continue
+                    }
                     let document = Dokument(context: context)
                     document.id = d.id
                     document.path = d.path
                     document.createdAt = d.createdAt
-                    document.expense = expense
+                    document.link(to: expense)
+                    documentsByID[d.id] = document
                 }
             }
 
@@ -289,6 +314,13 @@ enum DataTransfer {
         }
 
         controller.save(context: context)
+
+        // Jetzt erst den Belegordner an den neuen Stand angleichen. Beim
+        // Wiedereinlesen des eigenen Exports stehen alle Beleg-IDs wieder in
+        // der Datenbank, ihre Ordner überleben also; beim Import eines
+        // fremden Exports kennt die Datenbank sie nicht mehr und die alten
+        // Ordner fallen weg – ohne Karteileichen zu hinterlassen.
+        DocumentCleanup.sweepWorkingDirectory(in: context)
 
         // Fenster-Frames übernehmen. Fehlt das Feld (ältere Exporte), bleiben die
         // aktuell gespeicherten Frames unangetastet.
