@@ -1,7 +1,20 @@
 # Versionshistorie
 
 Alle nennenswerten Änderungen an FuhrparkDesktop, gruppiert nach Release.
-Die Versionen sind als Git-Tags (`v1.1`, `v1.2`, `v1.3`) markiert.
+Die Versionen sind als Git-Tags (`v1.1`, `v1.2`, `v1.3`, `v1.4`) markiert.
+
+## [v1.4](https://github.com/harfromgol/FuhrparkDesktop/releases/tag/v1.4) – 2026-08-06
+
+### Geändert
+- **Dokumente**: Dateien werden beim Hinzufügen jetzt in ein
+  konfigurierbares Arbeitsverzeichnis kopiert statt nur per Verknüpfung auf
+  den Originalspeicherort referenziert – Dokumente bleiben dadurch auch
+  auffindbar, wenn sich der Ablageort der Originaldatei ändert. Der
+  Leer-Zustand weist darauf hin, wenn zuerst ein Arbeitsverzeichnis
+  eingerichtet werden muss.
+- Der Ordner-Auswahldialog für das Arbeitsverzeichnis lässt sich jetzt frei
+  auf dem Bildschirm verschieben.
+- Sidebar: Sektion "Allgemein" ist jetzt ebenfalls ein-/ausklappbar.
 
 ## [v1.3](https://github.com/harfromgol/FuhrparkDesktop/releases/tag/v1.3) – 2026-07-27
 
