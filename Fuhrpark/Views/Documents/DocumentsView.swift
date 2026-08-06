@@ -36,6 +36,12 @@ struct DocumentsView: View {
     /// SwiftUI-State ändert.
     @State private var isWorkingDirectoryConfigured = WorkingDirectoryStore.isConfigured
 
+    /// Wird bei jedem Wechsel des Arbeitsverzeichnisses hochgezählt und an die
+    /// Zeilen durchgereicht, damit diese ihren Zustand neu bestimmen. Ohne das
+    /// zeigten sie weiter das Ergebnis von vor dem Wechsel – aus demselben
+    /// Grund wie beim Spiegel oben: UserDefaults ist für SwiftUI unsichtbar.
+    @State private var workingDirectoryRevision = 0
+
     /// Welches Sheet gerade angezeigt wird. Bewusst ein einziges `.sheet`
     /// für beide Fälle (statt zwei separater Modifier) – auf diesem
     /// SDK-Stand funktioniert bei mehreren gleichzeitig deklarierten
@@ -323,6 +329,7 @@ struct DocumentsView: View {
                     ForEach(filteredDocuments) { document in
                         DocumentRow(
                             document: document,
+                            workingDirectoryRevision: workingDirectoryRevision,
                             onDelete: { pendingDeletion = document },
                             onError: { message in errorMessage = message }
                         )
@@ -379,6 +386,7 @@ struct DocumentsView: View {
         do {
             try WorkingDirectoryStore.set(url: url)
             isWorkingDirectoryConfigured = true
+            workingDirectoryRevision += 1
             let failures = DocumentMigration.migrateLegacyDocuments(using: PersistenceController.shared)
             if !failures.isEmpty {
                 migrationFailures = failures

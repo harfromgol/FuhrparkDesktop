@@ -4,17 +4,34 @@ import SwiftUI
 /// Standard-App; das Kontextmenü bietet „Im Finder anzeigen“ und „Entfernen“.
 struct DocumentRow: View {
     @ObservedObject var document: Dokument
+
+    /// Wird hochgezählt, sobald sich das Arbeitsverzeichnis geändert hat.
+    ///
+    /// Nötig, weil `WorkingDirectoryStore` auf UserDefaults sitzt und SwiftUI
+    /// Änderungen daran nicht von selbst bemerkt: Ohne diesen Wert behielte die
+    /// Zeile ihren alten Zustand, bis die Ansicht aus einem anderen Grund neu
+    /// gezeichnet wird.
+    let workingDirectoryRevision: Int
+
     let onDelete: () -> Void
     let onError: (String) -> Void
 
-    /// Aufgelöster Pfad im Arbeitsverzeichnis zur Anzeige, oder ein
-    /// verständlicher Hinweis, falls die Datei (noch) nicht auffindbar ist.
-    private var locationDisplay: String {
-        guard let path = document.path else { return "" }
-        if let url = try? DocumentStorage.resolvedURL(forRelativePath: path) {
-            return url.path
+    /// Hinweis, falls die Datei gerade nicht erreichbar ist – sonst `nil`.
+    ///
+    /// Der Ablagepfad wird bewusst nicht mehr angezeigt: Seit alle Belege im
+    /// selben Arbeitsverzeichnis liegen, stand in jeder Zeile derselbe lange
+    /// Pfad, ergänzt um den technischen Unterordner. Wo die Dateien liegen,
+    /// zeigt das Zahnrad-Menü; hier zählt nur noch, ob etwas fehlt.
+    private var problemHinweis: String? {
+        guard WorkingDirectoryStore.isConfigured else {
+            return "Kein Arbeitsverzeichnis festgelegt"
         }
-        return "Datei nicht gefunden"
+        guard let path = document.path,
+              (try? DocumentStorage.resolvedURL(forRelativePath: path)) != nil
+        else {
+            return "Datei nicht gefunden"
+        }
+        return nil
     }
 
     var body: some View {
@@ -39,11 +56,11 @@ struct DocumentRow: View {
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    Text(locationDisplay)
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                    if let problemHinweis {
+                        Label(problemHinweis, systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                    }
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 4) {
