@@ -1,6 +1,6 @@
 # FuhrparkDesktop für macOS
 
-[![GitHub](https://img.shields.io/badge/Lizenz-MIT-orange)](https://github.com/harfromgol/FuhrparkDesktop/blob/main/LICENSE) [![GitHub](https://img.shields.io/badge/Version-v1%2E3-blue)](https://github.com/harfromgol/FuhrparkDesktop/releases)
+[![GitHub](https://img.shields.io/badge/Lizenz-MIT-orange)](https://github.com/harfromgol/FuhrparkDesktop/blob/main/LICENSE) [![GitHub](https://img.shields.io/badge/Version-v1%2E5-blue)](https://github.com/harfromgol/FuhrparkDesktop/releases)
 
 Native macOS-App (SwiftUI + Core Data) zur Verwaltung eines kleinen Fuhrparks:
 Fahrzeuge, Betankungen, sonstige Ausgaben, Belege und Spritpreise an einem Ort.
@@ -29,6 +29,8 @@ Fahrzeuge, Betankungen, sonstige Ausgaben, Belege und Spritpreise an einem Ort.
 - **Datenexport/-import** – vollständiges JSON-Backup aller Fahrzeuge,
   Betankungen, Ausgaben, Kategorien und Dokumente (`Tools → Daten exportieren
   / importieren`).
+- **KI-Zugriff (MCP)** – die Daten lassen sich einer KI wie Claude über das
+  Model Context Protocol zum Lesen bereitstellen, siehe unten.
 
 ## Voraussetzungen
 
@@ -36,11 +38,36 @@ Fahrzeuge, Betankungen, sonstige Ausgaben, Belege und Spritpreise an einem Ort.
 - Xcode (aktuelle Version)
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`)
 
+## KI-Zugriff (MCP)
+
+Die App kann ihre Daten über das
+[Model Context Protocol](https://modelcontextprotocol.io) für eine KI wie Claude
+lesbar machen. Damit lassen sich Fragen wie „Was kostet mich der Wagen pro
+Kilometer?" oder „Was wird demnächst fällig?" direkt im Chat beantworten.
+
+Dazu läuft dasselbe App-Binary wahlweise als GUI oder – mit `--mcp-stdio`
+gestartet – als MCP-Server. Weil dieser Prozess die App selbst ist, liest er
+die Daten direkt aus deren Datenbank: **ohne Kopie, ohne Zwischendatei und
+immer auf aktuellem Stand.** Die App muss dafür nicht laufen.
+
+Einrichtung: in der App auf **KI-Zugriff** in der Seitenleiste gehen. Dort
+stehen die fertigen Konfigurationsangaben für Claude Desktop und Claude Code
+zum Kopieren, dazu ein Selbsttest, der die Verbindung sofort prüft.
+
+Angeboten werden neun **ausschließlich lesende** Werkzeuge: Flottenübersicht,
+Fahrzeugdetails, Listen für Betankungen, Ausgaben, Erinnerungen und Belege,
+Kostenauswertung, Volltextsuche und eine Diagnose. Es gibt keinen Weg, über
+den die KI Daten anlegen, ändern oder löschen könnte.
+
 ## Datenschutz
 
 Alle eingegebenen Daten bleiben auf deinem Rechner. Es werden keinerlei Daten in die Cloud gesendet.
 
 Ausnahme: der Tankerkönig-API Key - falls eingegeben - muss natürlich an den Tankerkönig Server gesendet werden, sonst funktioniert die Tankstellen Umkreissuche nicht.
+
+Zum KI-Zugriff: Er ist nur aktiv, wenn Du ihn selbst in Deinem MCP-Client
+einträgst, und überträgt nichts von sich aus. Was Du fragst, entscheidet,
+welche Daten an die KI gehen – und damit an deren Anbieter.
 
 ## Projekt einrichten & starten
 
@@ -62,8 +89,9 @@ xcodebuild -project FuhrparkDesktop.xcodeproj -scheme FuhrparkDesktop -configura
 
 ```
 Fuhrpark/
-  App/           Einstiegspunkt, Menüleiste, ContentView
+  App/           Einstiegspunkt (main.swift), Menüleiste, ContentView
   Models/        Core-Data-Modell (Fuhrpark.xcdatamodeld) + Extensions
+  MCP/           MCP-Server: Transport, Protokoll, Werkzeuge, Einrichtung
   Persistence/    Core-Data-Stack, Export/Import, Key/Value-Stores
   Services/       Standort, Tankerkönig-API
   Views/          SwiftUI-Views, gegliedert nach Fahrzeug/Betankung/Ausgabe/…

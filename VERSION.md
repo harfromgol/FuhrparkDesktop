@@ -1,7 +1,34 @@
 # Versionshistorie
 
 Alle nennenswerten Änderungen an FuhrparkDesktop, gruppiert nach Release.
-Die Versionen sind als Git-Tags (`v1.1`, `v1.2`, `v1.3`, `v1.4`) markiert.
+Die Versionen sind als Git-Tags (`v1.1` … `v1.5`) markiert.
+
+## [v1.5](https://github.com/harfromgol/FuhrparkDesktop/releases/tag/v1.5) – 2026-08-06
+
+### Neu
+- **KI-Zugriff (MCP)**: Die Fuhrparkdaten lassen sich einer KI wie Claude über
+  das Model Context Protocol zum Lesen bereitstellen. Dasselbe App-Binary läuft
+  dafür wahlweise als GUI oder – mit `--mcp-stdio` gestartet – als MCP-Server.
+  Neun ausschließlich lesende Werkzeuge: Flottenübersicht, Fahrzeugdetails,
+  Listen für Betankungen, Ausgaben, Erinnerungen und Belege, Kostenauswertung,
+  Volltextsuche und Diagnose.
+- Neuer Bereich **„KI-Zugriff"** in der Seitenleiste mit fertigen
+  Konfigurationsangaben für Claude Desktop und Claude Code zum Kopieren sowie
+  einem Selbsttest, der die Verbindung prüft.
+
+### Geändert
+- Der Programmeinstieg wandert von `@main` nach `main.swift`, damit die Weiche
+  zwischen GUI- und Serverbetrieb vor der AppKit-Initialisierung greift.
+
+### Hinweise zur Umsetzung
+- Der Server liest **direkt aus der Datenbank der App** – ohne Kopie, ohne
+  Zwischendatei und ohne Zwischenspeicher, der veralten könnte. Verworfen wurde
+  die Alternative, eine JSON-Momentaufnahme in einen Nutzerordner zu schreiben:
+  Sie hätte ein unverschlüsseltes Duplikat aller Daten außerhalb der Sandbox
+  bedeutet und wäre nie ganz aktuell gewesen.
+- Der Protokollstrom ist strukturell abgesichert: Beim Start wird der echte
+  stdout dupliziert und Deskriptor 1 auf stderr umgebogen. Fremdausgaben können
+  die Rahmung der Nachrichten damit nicht mehr zerstören.
 
 ## [v1.4](https://github.com/harfromgol/FuhrparkDesktop/releases/tag/v1.4) – 2026-08-06
 
