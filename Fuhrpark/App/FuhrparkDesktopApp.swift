@@ -1,7 +1,9 @@
 import SwiftUI
 import AppKit
 
-@main
+/// Kein `@main`: Der Programmeinstieg liegt in `main.swift`, weil dasselbe
+/// Binary auch als MCP-Server laufen kann und die Weiche vor der
+/// AppKit-Initialisierung greifen muss.
 struct FuhrparkDesktopApp: App {
     /// Feste ID des Hauptfensters – für „Neues Fenster“ / „Fenster schließen“.
     static let mainWindowID = "main"
