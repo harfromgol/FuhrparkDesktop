@@ -7,6 +7,7 @@ enum SidebarSelection: Hashable {
     case fuelPrices
     case documents
     case reminders
+    case mcp
     case vehicle(Vehicle)
 }
 
@@ -31,6 +32,8 @@ struct ContentView: View {
                 DocumentsView()
             case .reminders:
                 RemindersView()
+            case .mcp:
+                MCPSettingsView()
             case .vehicle(let vehicle):
                 VehicleDetailView(vehicle: vehicle, onDelete: { selection = .statistics })
                     .id(vehicle.objectID)

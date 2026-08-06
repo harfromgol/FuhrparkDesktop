@@ -118,6 +118,15 @@ struct SidebarView: View {
                 .buttonStyle(.plain)
                 .pointerStyle(.link)
                 .listRowBackground(rowBackground(for: .fuelPrices))
+
+                Button {
+                    selection = .mcp
+                } label: {
+                    Label("KI-Zugriff", systemImage: "sparkles")
+                }
+                .buttonStyle(.plain)
+                .pointerStyle(.link)
+                .listRowBackground(rowBackground(for: .mcp))
             } header: {
                 Text("Allgemein")
             }
