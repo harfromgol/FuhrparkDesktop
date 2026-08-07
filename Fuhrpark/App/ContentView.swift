@@ -16,6 +16,12 @@ struct ContentView: View {
     @Environment(FuelPricesViewModel.self) private var fuelPricesViewModel
     @State private var selection: SidebarSelection = .statistics
 
+    /// Wird beim Start gesetzt, wenn sich der Datenspeicher nicht öffnen ließ
+    /// (etwa weil eine Modellmigration fehlgeschlagen ist). Ohne diesen
+    /// Hinweis stünde die App mit leeren Listen da und der Nutzer müsste
+    /// glauben, seine Daten seien weg.
+    @State private var showsStoreError = PersistenceController.shared.loadError != nil
+
     var body: some View {
         @Bindable var appCommands = appCommands
 
@@ -38,6 +44,19 @@ struct ContentView: View {
                 VehicleDetailView(vehicle: vehicle, onDelete: { selection = .statistics })
                     .id(vehicle.objectID)
             }
+        }
+        .alert("Datenbank konnte nicht geöffnet werden", isPresented: $showsStoreError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("""
+                \(PersistenceController.shared.loadError ?? "")
+
+                Deine Daten sind dadurch nicht verloren – sie wurden nur nicht \
+                geladen. Bitte nichts eingeben und nichts löschen, solange \
+                dieser Hinweis erscheint, sonst überschreibst du den bisherigen \
+                Stand. Am besten die App beenden und die vorige Version wieder \
+                installieren oder ein Backup einspielen.
+                """)
         }
         .confirmationDialog(
             "Wirklich alle Daten löschen?",

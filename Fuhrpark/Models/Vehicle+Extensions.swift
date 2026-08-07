@@ -118,7 +118,9 @@ extension Vehicle {
             StatisticsCardVisibilityStore.removeEnabledCards(for: id)
         }
         context.delete(self)
-        PersistenceController.shared.save(context: context)
+        // Räumt die Belege der gelöschten Ausgaben mit ab – samt ihrer
+        // Dateien, die früher als Karteileichen zurückblieben.
+        DocumentCleanup.finishDeletion(in: context)
     }
 
     /// Markiert das Fahrzeug als stillgelegt. Endgültig: eine Reaktivierung

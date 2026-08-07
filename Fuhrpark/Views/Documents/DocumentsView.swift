@@ -21,8 +21,6 @@ struct DocumentsView: View {
     @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Vehicle.licensePlate, ascending: true)])
     private var vehicles: FetchedResults<Vehicle>
 
-    @State private var pendingPath: String?
-    @State private var pendingBookmark: Data?
     @State private var errorMessage: String?
     @State private var pendingDeletion: Dokument?
 
@@ -46,10 +44,25 @@ struct DocumentsView: View {
     /// für beide Fälle (statt zwei separater Modifier) – auf diesem
     /// SDK-Stand funktioniert bei mehreren gleichzeitig deklarierten
     /// Präsentations-Modifiern zuverlässig nur der zuletzt deklarierte.
+    ///
+    /// Die Nutzdaten hängen bewusst am Fall selbst statt in eigenen
+    /// `@State`-Feldern: Wird das Sheet aus einem Kontextmenü heraus
+    /// geöffnet, präsentiert SwiftUI es noch mit der Inhalts-Closure aus
+    /// dem Render *vor* der Zustandsänderung. Ein daneben gesetztes Feld
+    /// wäre dort noch `nil`, das Sheet erschiene leer. Über den Parameter
+    /// der Closure kommen die Daten dagegen immer vollständig an.
     private enum SheetKind: Identifiable {
-        case assignment
+        case assignment(path: String, bookmark: Data)
+        case reassignment(Dokument)
         case migrationFailures
-        var id: Self { self }
+
+        var id: String {
+            switch self {
+            case .assignment(let path, _): "assignment:\(path)"
+            case .reassignment(let document): "reassignment:\(document.objectID.uriRepresentation())"
+            case .migrationFailures: "migrationFailures"
+            }
+        }
     }
     @State private var activeSheet: SheetKind?
 
@@ -131,16 +144,22 @@ struct DocumentsView: View {
         }
         .sheet(item: $activeSheet) { kind in
             switch kind {
-            case .assignment:
-                if let pendingPath, let pendingBookmark {
-                    NewDocumentAssignmentView(path: pendingPath, bookmarkData: pendingBookmark) {
-                        activeSheet = nil
-                        self.pendingPath = nil
-                        self.pendingBookmark = nil
-                    } onError: { message in
-                        errorMessage = message
-                    }
-                }
+            case .assignment(let path, let bookmark):
+                NewDocumentAssignmentView(
+                    path: path,
+                    bookmarkData: bookmark,
+                    onSaved: closeAssignmentSheet,
+                    onCancel: closeAssignmentSheet,
+                    onError: { errorMessage = $0 }
+                )
+            case .reassignment(let document):
+                NewDocumentAssignmentView(
+                    path: document.filename,
+                    existingDocument: document,
+                    onSaved: closeAssignmentSheet,
+                    onCancel: closeAssignmentSheet,
+                    onError: { errorMessage = $0 }
+                )
             case .migrationFailures:
                 migrationFailuresSheet
             }
@@ -166,15 +185,15 @@ struct DocumentsView: View {
             presenting: pendingDeletion
         ) { document in
             Button("Entfernen", role: .destructive) {
-                if let path = document.path {
-                    DocumentStorage.delete(relativePath: path)
-                }
                 viewContext.delete(document)
-                PersistenceController.shared.save(context: viewContext)
+                DocumentCleanup.finishDeletion(in: viewContext)
             }
             Button("Abbrechen", role: .cancel) { }
         } message: { document in
-            Text("„\(document.filename)“ und die zugehörige Kopie im Arbeitsverzeichnis werden entfernt. Ein eventuell noch vorhandenes Original bleibt unberührt.")
+            let anzahl = document.sortedExpenses.count
+            Text(anzahl > 1
+                 ? "„\(document.filename)“ wird von allen \(anzahl) zugeordneten Ausgaben entfernt, zusammen mit der Kopie im Arbeitsverzeichnis. Ein eventuell noch vorhandenes Original bleibt unberührt."
+                 : "„\(document.filename)“ und die zugehörige Kopie im Arbeitsverzeichnis werden entfernt. Ein eventuell noch vorhandenes Original bleibt unberührt.")
         }
     }
 
@@ -331,12 +350,20 @@ struct DocumentsView: View {
                             document: document,
                             workingDirectoryRevision: workingDirectoryRevision,
                             onDelete: { pendingDeletion = document },
+                            onReassign: { activeSheet = .reassignment(document) },
                             onError: { message in errorMessage = message }
                         )
                     }
                 }
             }
         }
+    }
+
+    /// Schließt das Zuordnungs-Sheet – gleich, ob gespeichert oder
+    /// abgebrochen wurde. Die Nutzdaten hängen am Fall und verschwinden
+    /// mit ihm, es bleibt also nichts aufzuräumen.
+    private func closeAssignmentSheet() {
+        activeSheet = nil
     }
 
     private func addDocumentTapped() {
@@ -376,9 +403,7 @@ struct DocumentsView: View {
             errorMessage = "Für „\(url.lastPathComponent)“ konnte kein dauerhafter Zugriff gespeichert werden."
             return
         }
-        pendingPath = url.path
-        pendingBookmark = bookmark
-        activeSheet = .assignment
+        activeSheet = .assignment(path: url.path, bookmark: bookmark)
     }
 
     private func handleFolderSelection(_ result: Result<URL, Error>) {

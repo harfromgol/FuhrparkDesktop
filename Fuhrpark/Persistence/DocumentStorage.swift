@@ -52,15 +52,44 @@ enum DocumentStorage {
         }
     }
 
-    /// Löscht den kompletten Unterordner (nicht nur die Datei) im
-    /// Arbeitsverzeichnis. Best-effort – Fehler werden ignoriert, damit sie
-    /// nie das Löschen des zugehörigen Core-Data-Eintrags blockieren.
-    static func delete(relativePath: String) {
+    /// Löscht den Ablageordner eines Belegs. Best-effort – Fehler werden
+    /// ignoriert, damit sie nie das Löschen des Core-Data-Eintrags blockieren.
+    ///
+    /// Nimmt bewusst die Dokument-ID und nicht mehr den relativen Pfad: Die
+    /// frühere Fassung leitete den Ordner per `deletingLastPathComponent()`
+    /// aus dem Pfad ab. Enthielt der keinen Schrägstrich – über eine
+    /// importierte JSON-Datei erreichbar –, zeigte das Ergebnis auf das
+    /// Arbeitsverzeichnis selbst und hätte dessen kompletten Inhalt gelöscht.
+    static func delete(documentID: UUID) {
         try? WorkingDirectoryStore.withAccess { workingDirURL in
-            let folder = workingDirURL
-                .appendingPathComponent(relativePath)
-                .deletingLastPathComponent()
+            let folder = workingDirURL.appendingPathComponent(documentID.uuidString, isDirectory: true)
             try FileManager.default.removeItem(at: folder)
+        }
+    }
+
+    /// Entfernt aus dem Arbeitsverzeichnis alle Belegordner, die nicht in
+    /// `keeping` stehen – gleicht den Ordner also an den Datenbankstand an.
+    ///
+    /// Drei Schutzgitter, weil das Arbeitsverzeichnis ein ganz normaler
+    /// Nutzerordner ist und hier als einziger Code Nutzerdateien löscht:
+    /// Es wird nur angefasst, was ein Verzeichnis ist, dessen Name sich als
+    /// UUID lesen lässt. Alles andere – `.DS_Store`, eigene Unterordner,
+    /// versehentlich dort abgelegte Dateien – bleibt unberührt.
+    static func removeFolders(keeping ids: Set<UUID>) {
+        try? WorkingDirectoryStore.withAccess { workingDirURL in
+            let inhalt = try FileManager.default.contentsOfDirectory(
+                at: workingDirURL,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles]
+            )
+            for eintrag in inhalt {
+                guard
+                    (try? eintrag.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true,
+                    let id = UUID(uuidString: eintrag.lastPathComponent),
+                    !ids.contains(id)
+                else { continue }
+                try? FileManager.default.removeItem(at: eintrag)
+            }
         }
     }
 }

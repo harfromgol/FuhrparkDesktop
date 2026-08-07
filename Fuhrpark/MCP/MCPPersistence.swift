@@ -45,6 +45,19 @@ enum MCPPersistence {
     static func loadContainer() throws -> NSPersistentContainer {
         let container = NSPersistentContainer(name: "Fuhrpark")
 
+        // Migration hier ausdrücklich abschalten.
+        //
+        // Der MCP-Server wird vom Client als Kindprozess gestartet – ohne
+        // Fenster und ohne Fehlerdialog. Mit den Voreinstellungen könnte
+        // eine beiläufige KI-Anfrage eine Modellmigration der echten Daten
+        // anstoßen, die niemand sieht und niemand bestätigt hat. Eine
+        // Migration gehört in die sichtbare App; hier wird stattdessen ein
+        // verständlicher Fehler gemeldet.
+        for description in container.persistentStoreDescriptions {
+            description.shouldMigrateStoreAutomatically = false
+            description.shouldInferMappingModelAutomatically = false
+        }
+
         var loadError: Error?
         container.loadPersistentStores { _, error in
             loadError = error

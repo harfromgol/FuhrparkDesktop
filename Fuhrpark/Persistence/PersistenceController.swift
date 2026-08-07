@@ -5,6 +5,18 @@ struct PersistenceController {
 
     let container: NSPersistentContainer
 
+    /// Fehler beim Öffnen des Speichers, sonst `nil`.
+    ///
+    /// Früher stand hier ein `fatalError`. Das war akzeptabel, solange
+    /// Modelländerungen den Versions-Hash nicht berührten; seit der
+    /// Umstellung der Belege auf mehrere Ausgaben findet beim Start eine
+    /// echte Migration statt. Scheitert die, wäre ein Absturz das
+    /// Schlechteste: Die Daten sind dann unversehrt – Core Data verwirft bei
+    /// misslungener Migration nichts –, aber ohne Oberfläche käme man nicht
+    /// mehr an sie heran. Stattdessen läuft die App weiter und zeigt den
+    /// Fehler an.
+    let loadError: String?
+
     init(inMemory: Bool = false) {
         container = NSPersistentContainer(name: "Fuhrpark")
 
@@ -12,16 +24,21 @@ struct PersistenceController {
             container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
         }
 
+        var failure: String?
         container.loadPersistentStores { _, error in
             if let error = error as NSError? {
-                fatalError("Unresolved Core Data error \(error), \(error.userInfo)")
+                failure = error.localizedDescription
             }
         }
+        loadError = failure
 
         container.viewContext.automaticallyMergesChangesFromParent = true
         container.viewContext.mergePolicy = NSMergePolicy.mergeByPropertyObjectTrump
 
-        if !inMemory {
+        // Beide Startschritte schreiben. Bei ungeöffnetem Speicher würden sie
+        // ins Leere laufen oder – schlimmer – auf einem halb migrierten Stand
+        // arbeiten. Deshalb nur bei fehlerfreiem Start.
+        if !inMemory, failure == nil {
             backfillVehicleTimestamps()
             if WorkingDirectoryStore.isConfigured {
                 DocumentMigration.migrateLegacyDocuments(using: self)
@@ -93,17 +110,12 @@ struct PersistenceController {
     /// Betankungen und Ausgaben zwar bereits per Cascade-Regel; die übrigen
     /// Entitäten werden dennoch explizit abgeräumt, um verwaiste Datensätze
     /// (z. B. eigenständige Kategorien) sicher mitzunehmen.
-    func deleteAllData() {
+    /// - Parameter sweepingFiles: Ob die Belegdateien im Arbeitsverzeichnis
+    ///   mit entfernt werden. Der Import setzt das auf `false`, weil er die
+    ///   gleich wieder benötigten Dateien sonst löschen würde; er gleicht den
+    ///   Ordner am Ende selbst ab.
+    func deleteAllData(sweepingFiles: Bool = true) {
         let context = container.viewContext
-
-        let documentRequest = NSFetchRequest<Dokument>(entityName: "Dokument")
-        if let documents = try? context.fetch(documentRequest) {
-            for document in documents {
-                if let path = document.path {
-                    DocumentStorage.delete(relativePath: path)
-                }
-            }
-        }
 
         let entityNames = ["Vehicle", "FuelEntry", "Expense", "Category", "Dokument", "Erinnerung"]
         for name in entityNames {
@@ -115,5 +127,9 @@ struct PersistenceController {
             }
         }
         save(context: context)
+
+        if sweepingFiles {
+            DocumentCleanup.sweepWorkingDirectory(in: context)
+        }
     }
 }

@@ -342,13 +342,18 @@ enum MCPQueries {
             "absoluterPfad": absolute.map { $0 as Any } ?? NSNull(),
             "abgelegtAm": MCPValue.localDay(document.createdAt),
             "kennzeichen": MCPValue.text(document.vehicle?.licensePlate),
-            "ausgabe": [
-                "id": document.expense?.id?.uuidString ?? "",
-                "empfaenger": MCPValue.text(document.expense?.recipient),
-                "verwendungszweck": MCPValue.text(document.expense?.purpose),
-                "betrag": MCPValue.number(document.expense?.amount?.decimalValue),
-                "datumLocal": MCPValue.localDay(document.expense?.date)
-            ],
+            // Ein Beleg kann mehrere Ausgaben belegen – deshalb eine Liste.
+            // Alle gehören zum selben Fahrzeug, „kennzeichen“ bleibt eindeutig.
+            "anzahlAusgaben": document.sortedExpenses.count,
+            "ausgaben": document.sortedExpenses.map { expense in
+                [
+                    "id": expense.id?.uuidString ?? "",
+                    "empfaenger": MCPValue.text(expense.recipient),
+                    "verwendungszweck": MCPValue.text(expense.purpose),
+                    "betrag": MCPValue.number(expense.amount?.decimalValue),
+                    "datumLocal": MCPValue.localDay(expense.date)
+                ]
+            },
             "kategorien": document.categoryNames
         ]
     }
