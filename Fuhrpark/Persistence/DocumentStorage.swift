@@ -67,28 +67,43 @@ enum DocumentStorage {
         }
     }
 
-    /// Entfernt aus dem Arbeitsverzeichnis alle Belegordner, die nicht in
-    /// `keeping` stehen – gleicht den Ordner also an den Datenbankstand an.
+    /// IDs aller Belegordner, die im Arbeitsverzeichnis liegen.
     ///
-    /// Drei Schutzgitter, weil das Arbeitsverzeichnis ein ganz normaler
-    /// Nutzerordner ist und hier als einziger Code Nutzerdateien löscht:
-    /// Es wird nur angefasst, was ein Verzeichnis ist, dessen Name sich als
-    /// UUID lesen lässt. Alles andere – `.DS_Store`, eigene Unterordner,
-    /// versehentlich dort abgelegte Dateien – bleibt unberührt.
-    static func removeFolders(keeping ids: Set<UUID>) {
-        try? WorkingDirectoryStore.withAccess { workingDirURL in
+    /// Hier sitzen die Schutzgitter, weil das Arbeitsverzeichnis ein ganz
+    /// normaler Nutzerordner ist: Aufgenommen wird nur, was ein Verzeichnis
+    /// ist **und** dessen Name sich als UUID lesen lässt. Alles andere –
+    /// `.DS_Store`, eigene Unterordner, versehentlich dort abgelegte Dateien –
+    /// kommt gar nicht erst in die Menge und kann damit auch nicht gelöscht
+    /// werden.
+    static func documentFolderIDs() throws -> Set<UUID> {
+        try WorkingDirectoryStore.withAccess { workingDirURL in
             let inhalt = try FileManager.default.contentsOfDirectory(
                 at: workingDirURL,
                 includingPropertiesForKeys: [.isDirectoryKey],
                 options: [.skipsHiddenFiles]
             )
-            for eintrag in inhalt {
-                guard
-                    (try? eintrag.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true,
-                    let id = UUID(uuidString: eintrag.lastPathComponent),
-                    !ids.contains(id)
-                else { continue }
-                try? FileManager.default.removeItem(at: eintrag)
+            return Set(inhalt.compactMap { eintrag -> UUID? in
+                guard (try? eintrag.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true
+                else { return nil }
+                return UUID(uuidString: eintrag.lastPathComponent)
+            })
+        }
+    }
+
+    /// Entfernt genau die angegebenen Belegordner.
+    ///
+    /// Nimmt bewusst die zu **löschende** Menge entgegen und nicht die zu
+    /// behaltende: So ist derselbe Satz IDs, den `DocumentCleanup` ermittelt
+    /// und den der Nutzer beim Festlegen des Arbeitsverzeichnisses als Hinweis
+    /// zu sehen bekommt, auch wirklich der gelöschte. Eine zweite,
+    /// eigenständige Auswahllogik könnte davon abweichen – und ein Hinweis,
+    /// der nicht zur Tat passt, ist schlimmer als keiner.
+    static func removeFolders(withIDs ids: Set<UUID>) {
+        guard !ids.isEmpty else { return }
+        try? WorkingDirectoryStore.withAccess { workingDirURL in
+            for id in ids {
+                let folder = workingDirURL.appendingPathComponent(id.uuidString, isDirectory: true)
+                try? FileManager.default.removeItem(at: folder)
             }
         }
     }

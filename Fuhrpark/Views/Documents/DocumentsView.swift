@@ -21,7 +21,24 @@ struct DocumentsView: View {
     @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Vehicle.licensePlate, ascending: true)])
     private var vehicles: FetchedResults<Vehicle>
 
-    @State private var errorMessage: String?
+    /// Einzeiler-Meldung mit eigenem Titel.
+    ///
+    /// Nicht bloß ein `String?` mit festem Titel „Fehler“, weil beim
+    /// Festlegen des Arbeitsverzeichnisses auch ein reiner Hinweis erscheint,
+    /// der kein Fehler ist. Bewusst **ein** Zustand für beides: Auf diesem
+    /// SDK-Stand arbeitet von mehreren gleichzeitig deklarierten
+    /// Präsentations-Modifiern zuverlässig nur der zuletzt deklarierte, ein
+    /// zweiter `.alert` wäre also nicht verlässlich.
+    private struct Hinweis {
+        let titel: String
+        let text: String
+
+        static func fehler(_ text: String) -> Hinweis {
+            Hinweis(titel: "Fehler", text: text)
+        }
+    }
+
+    @State private var hinweis: Hinweis?
     @State private var pendingDeletion: Dokument?
 
     @State private var isPresentingWorkingDirectoryPopover = false
@@ -150,7 +167,7 @@ struct DocumentsView: View {
                     bookmarkData: bookmark,
                     onSaved: closeAssignmentSheet,
                     onCancel: closeAssignmentSheet,
-                    onError: { errorMessage = $0 }
+                    onError: { hinweis = .fehler($0) }
                 )
             case .reassignment(let document):
                 NewDocumentAssignmentView(
@@ -158,23 +175,23 @@ struct DocumentsView: View {
                     existingDocument: document,
                     onSaved: closeAssignmentSheet,
                     onCancel: closeAssignmentSheet,
-                    onError: { errorMessage = $0 }
+                    onError: { hinweis = .fehler($0) }
                 )
             case .migrationFailures:
                 migrationFailuresSheet
             }
         }
         .alert(
-            "Fehler",
+            hinweis?.titel ?? "",
             isPresented: Binding(
-                get: { errorMessage != nil },
-                set: { if !$0 { errorMessage = nil } }
+                get: { hinweis != nil },
+                set: { if !$0 { hinweis = nil } }
             ),
-            presenting: errorMessage
+            presenting: hinweis
         ) { _ in
             Button("OK", role: .cancel) { }
-        } message: { message in
-            Text(message)
+        } message: { hinweis in
+            Text(hinweis.text)
         }
         .confirmationDialog(
             "Dokument wirklich entfernen?",
@@ -351,7 +368,7 @@ struct DocumentsView: View {
                             workingDirectoryRevision: workingDirectoryRevision,
                             onDelete: { pendingDeletion = document },
                             onReassign: { activeSheet = .reassignment(document) },
-                            onError: { message in errorMessage = message }
+                            onError: { message in hinweis = .fehler(message) }
                         )
                     }
                 }
@@ -368,7 +385,7 @@ struct DocumentsView: View {
 
     private func addDocumentTapped() {
         guard isWorkingDirectoryConfigured else {
-            errorMessage = "Bevor du Dokumente hinzufügen kannst, lege über das Zahnrad-Symbol ein Arbeitsverzeichnis fest."
+            hinweis = .fehler("Bevor du Dokumente hinzufügen kannst, lege über das Zahnrad-Symbol ein Arbeitsverzeichnis fest.")
             return
         }
         isPresentingDocumentImporter = true
@@ -391,7 +408,7 @@ struct DocumentsView: View {
     private func handleFileSelection(_ result: Result<URL, Error>) {
         guard case .success(let url) = result else { return }
         guard url.startAccessingSecurityScopedResource() else {
-            errorMessage = "Zugriff auf die Datei wurde verweigert."
+            hinweis = .fehler("Zugriff auf die Datei wurde verweigert.")
             return
         }
         defer { url.stopAccessingSecurityScopedResource() }
@@ -400,7 +417,7 @@ struct DocumentsView: View {
             includingResourceValuesForKeys: nil,
             relativeTo: nil
         ) else {
-            errorMessage = "Für „\(url.lastPathComponent)“ konnte kein dauerhafter Zugriff gespeichert werden."
+            hinweis = .fehler("Für „\(url.lastPathComponent)“ konnte kein dauerhafter Zugriff gespeichert werden.")
             return
         }
         activeSheet = .assignment(path: url.path, bookmark: bookmark)
@@ -416,9 +433,33 @@ struct DocumentsView: View {
             if !failures.isEmpty {
                 migrationFailures = failures
                 activeSheet = .migrationFailures
+            } else {
+                warnAboutForeignFolders()
             }
         } catch {
-            errorMessage = error.localizedDescription
+            hinweis = .fehler(error.localizedDescription)
         }
+    }
+
+    /// Warnt, wenn im frisch gewählten Verzeichnis Belegordner liegen, die
+    /// dieser Datenbestand nicht kennt.
+    ///
+    /// Hintergrund: `DocumentCleanup` hält die Invariante „das
+    /// Arbeitsverzeichnis enthält genau die Ordner, die die Datenbank kennt“
+    /// aufrecht und räumt beim nächsten Löschvorgang alles Übrige weg. Zeigt
+    /// man versehentlich auf das Belegverzeichnis eines anderen Bestands –
+    /// etwa mit dem Testbau auf das der produktiven App, die seit der
+    /// Container-Trennung nebeneinander laufen –, wäre das ein stiller
+    /// Datenverlust. Der Hinweis löscht selbst nichts; er nennt nur, was
+    /// betroffen wäre, solange noch umgestellt werden kann.
+    private func warnAboutForeignFolders() {
+        let fremde = DocumentCleanup.unknownFolderIDs(in: viewContext).count
+        guard fremde > 0 else { return }
+        hinweis = Hinweis(
+            titel: "Fremde Belegordner im Verzeichnis",
+            text: fremde == 1
+                ? "In diesem Ordner liegt ein Belegordner, der nicht zu diesem Datenbestand gehört. Er wird beim nächsten Löschvorgang entfernt. Wähle ein anderes Verzeichnis, falls er zu einer anderen Installation gehört."
+                : "In diesem Ordner liegen \(fremde) Belegordner, die nicht zu diesem Datenbestand gehören. Sie werden beim nächsten Löschvorgang entfernt. Wähle ein anderes Verzeichnis, falls sie zu einer anderen Installation gehören."
+        )
     }
 }

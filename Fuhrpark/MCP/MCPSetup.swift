@@ -6,11 +6,17 @@ import Foundation
 /// hinterlegt: Wird die App verschoben, stimmt der angezeigte Schnipsel sofort
 /// wieder – die bereits eingetragene Client-Konfiguration allerdings nicht mehr
 /// und muss dann neu übernommen werden.
+///
+/// Auch der Servername kommt aus `AppVariant`: Trüge der Testbau denselben
+/// Namen wie die produktive App, überschriebe sein Schnipsel im Client deren
+/// Eintrag – und die KI läse ab dann die Testdaten.
 enum MCPSetup {
 
     static var executablePath: String {
         Bundle.main.executableURL?.path ?? "(unbekannt)"
     }
+
+    static var serverName: String { AppVariant.mcpServerName }
 
     static var claudeDesktopConfigPath: String {
         "~/Library/Application Support/Claude/claude_desktop_config.json"
@@ -21,7 +27,7 @@ enum MCPSetup {
         """
         {
           "mcpServers": {
-            "fuhrpark": {
+            "\(serverName)": {
               "command": "\(executablePath)",
               "args": ["--mcp-stdio"]
             }
@@ -32,7 +38,7 @@ enum MCPSetup {
 
     /// Fertige Kommandozeile für Claude Code.
     static var claudeCodeCommand: String {
-        "claude mcp add fuhrpark --scope user -- \"\(executablePath)\" --mcp-stdio"
+        "claude mcp add \(serverName) --scope user -- \"\(executablePath)\" --mcp-stdio"
     }
 
     // MARK: - Selbsttest

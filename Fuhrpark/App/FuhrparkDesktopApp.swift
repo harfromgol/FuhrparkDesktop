@@ -14,8 +14,10 @@ struct FuhrparkDesktopApp: App {
     @State private var fuelPricesViewModel = FuelPricesViewModel()
 
     var body: some Scene {
-        // Einzelfenster-Szene: kann per Menü geschlossen und wieder geöffnet werden.
-        Window("FuhrparkDesktop", id: Self.mainWindowID) {
+        // Einzelfenster-Szene: kann per Menü geschlossen und wieder geöffnet
+        // werden. Der Titel nennt beim Testbau den Container mit, damit man
+        // ihm nicht versehentlich echte Daten anvertraut.
+        Window(AppVariant.windowTitle, id: Self.mainWindowID) {
             ContentView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
                 .environment(appCommands)

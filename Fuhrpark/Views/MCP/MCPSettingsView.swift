@@ -20,6 +20,7 @@ struct MCPSettingsView: View {
             GlassEffectContainer {
                 VStack(alignment: .leading, spacing: 20) {
                     introCard
+                    containerCard
                     claudeDesktopCard
                     claudeCodeCard
                     selfTestCard
@@ -62,6 +63,41 @@ struct MCPSettingsView: View {
             Text(text)
                 .font(.callout)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    // MARK: - Welcher Datenbestand
+
+    /// Zeigt an, welchen Bestand dieser Build bedient. Debug- und
+    /// Release-Ausgabe haben getrennte Container; ohne diese Karte wäre am
+    /// Einrichtungs-Schnipsel allein schwer zu erkennen, welcher davon
+    /// gleich an die KI geht.
+    private var containerCard: some View {
+        GlassCard(title: "Dieser Datenbestand") {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Image(systemName: AppVariant.isTestContainer ? "hammer.fill" : "checkmark.seal.fill")
+                    .foregroundStyle(AppVariant.isTestContainer ? Color.orange : Color.accentColor)
+                    .frame(width: 18)
+                Text(AppVariant.containerLabel)
+                    .font(.callout.bold())
+                Spacer()
+                Text("Servername: \(MCPSetup.serverName)")
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.secondary)
+            }
+
+            codeBlock(AppVariant.storeDirectory.path)
+
+            if AppVariant.isTestContainer {
+                Text("""
+                    Das ist der Testbau. Er arbeitet auf einem eigenen Container \
+                    und trägt sich unter einem eigenen Servernamen ein – die \
+                    Einrichtung der produktiven App bleibt davon unberührt.
+                    """)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 

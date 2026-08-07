@@ -76,7 +76,7 @@ final class MCPServer {
         return [
             "protocolVersion": version,
             "capabilities": ["tools": [String: Any]()],
-            "serverInfo": ["name": "fuhrpark", "version": appVersion],
+            "serverInfo": ["name": AppVariant.mcpServerName, "version": appVersion],
             "instructions": MCPToolCatalog.serverInstructions
         ]
     }
