@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import AppKit
 
 struct ExpenseFormView: View {
     @Environment(\.managedObjectContext) private var viewContext
@@ -22,7 +23,6 @@ struct ExpenseFormView: View {
     @State private var selectedCategories: Set<Category> = []
     @State private var newCategoryName = ""
     @State private var pendingDocuments: [PendingDocument] = []
-    @State private var isPresentingFilePicker = false
     @State private var errorMessage: String?
     @State private var hasSavedExpense = false
 
@@ -134,13 +134,6 @@ struct ExpenseFormView: View {
             .padding(16)
         }
         .frame(width: 440, height: 700)
-        .fileImporter(
-            isPresented: $isPresentingFilePicker,
-            allowedContentTypes: [.item],
-            allowsMultipleSelection: true
-        ) { result in
-            handleFileSelection(result)
-        }
         .alert(
             "Fehler",
             isPresented: Binding(
@@ -236,7 +229,20 @@ struct ExpenseFormView: View {
             errorMessage = "Bevor du Dokumente hinzufügen kannst, lege im Bereich „Dokumente“ über das Zahnrad-Symbol ein Arbeitsverzeichnis fest."
             return
         }
-        isPresentingFilePicker = true
+        presentDocumentFilePicker()
+    }
+
+    /// Direktes `NSOpenPanel` statt `.fileImporter`: Letzteres zeigt den
+    /// Dialog als Sheet an, das am Fenster verankert und nicht frei
+    /// verschiebbar ist (siehe auch `DocumentsView.presentFolderPicker`).
+    private func presentDocumentFilePicker() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = true
+        panel.prompt = "Öffnen"
+        guard panel.runModal() == .OK else { return }
+        handleFileSelection(.success(panel.urls))
     }
 
     /// Sichert für jede ausgewählte Datei ein Security-Scoped Bookmark (die

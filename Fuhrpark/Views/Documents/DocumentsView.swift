@@ -83,13 +83,6 @@ struct DocumentsView: View {
     }
     @State private var activeSheet: SheetKind?
 
-    /// Auswahldialog für die Dokument-Datei selbst. Der Ordner-Dialog für
-    /// das Arbeitsverzeichnis läuft bewusst NICHT über `.fileImporter`,
-    /// sondern über ein direktes `NSOpenPanel` (siehe `presentFolderPicker`),
-    /// da `.fileImporter` den Dialog als Sheet zeigt, das am Fenster
-    /// verankert und nicht frei verschiebbar ist.
-    @State private var isPresentingDocumentImporter = false
-
     @State private var selectedVehicleFilter: Set<Vehicle> = []
     @State private var selectedCategoryFilter: Set<String> = []
 
@@ -153,12 +146,6 @@ struct DocumentsView: View {
             }
         }
         .navigationTitle("Dokumente")
-        .fileImporter(
-            isPresented: $isPresentingDocumentImporter,
-            allowedContentTypes: [.item]
-        ) { result in
-            handleFileSelection(result)
-        }
         .sheet(item: $activeSheet) { kind in
             switch kind {
             case .assignment(let path, let bookmark):
@@ -388,7 +375,7 @@ struct DocumentsView: View {
             hinweis = .fehler("Bevor du Dokumente hinzufügen kannst, lege über das Zahnrad-Symbol ein Arbeitsverzeichnis fest.")
             return
         }
-        isPresentingDocumentImporter = true
+        presentDocumentFilePicker()
     }
 
     /// Öffnet den Ordner-Auswahldialog direkt über AppKit statt über
@@ -403,6 +390,18 @@ struct DocumentsView: View {
         panel.prompt = "Wählen"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         handleFolderSelection(.success(url))
+    }
+
+    /// Dieselbe Begründung wie bei `presentFolderPicker`, hier für die
+    /// Dokument-Datei selbst.
+    private func presentDocumentFilePicker() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Öffnen"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        handleFileSelection(.success(url))
     }
 
     private func handleFileSelection(_ result: Result<URL, Error>) {

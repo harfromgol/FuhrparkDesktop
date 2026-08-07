@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import AppKit
 
 /// Auswahl in der Seitenleiste: allgemeine Statistik oder ein Fahrzeug.
 enum SidebarSelection: Hashable {
@@ -77,26 +78,20 @@ struct ContentView: View {
         } message: {
             Text("Alle Fahrzeuge, Betankungen, sonstigen Ausgaben, Kategorien und Erinnerungen sowie der gespeicherte Tankerkönig-API-Schlüssel werden unwiderruflich gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden.")
         }
-        .fileExporter(
-            isPresented: $appCommands.showExportDialog,
-            document: exportDocument,
-            contentType: .json,
-            defaultFilename: exportFilename
-        ) { result in
-            if case .failure(let error) = result {
-                appCommands.transferError = error.localizedDescription
-            }
+        // Export/Import laufen bewusst NICHT über `.fileExporter`/`.fileImporter`,
+        // sondern über direkte `NSSavePanel`/`NSOpenPanel` (siehe
+        // `presentExportPanel`/`presentImportPanel`): Beide SwiftUI-Modifier
+        // zeigen den Dialog als Sheet, das am Fenster verankert und nicht frei
+        // verschiebbar ist (siehe auch `DocumentsView.presentFolderPicker`).
+        .onChange(of: appCommands.showExportDialog) { _, isShown in
+            guard isShown else { return }
+            appCommands.showExportDialog = false
+            presentExportPanel()
         }
-        .fileImporter(
-            isPresented: $appCommands.showImportDialog,
-            allowedContentTypes: [.json]
-        ) { result in
-            switch result {
-            case .success(let url):
-                importData(from: url)
-            case .failure(let error):
-                appCommands.transferError = error.localizedDescription
-            }
+        .onChange(of: appCommands.showImportDialog) { _, isShown in
+            guard isShown else { return }
+            appCommands.showImportDialog = false
+            presentImportPanel()
         }
         .alert(
             "Datenübertragung fehlgeschlagen",
@@ -119,10 +114,28 @@ struct ContentView: View {
         return "FuhrparkDesktop_\(formatter.string(from: Date()))"
     }
 
-    /// Serialisiert die Daten nur, wenn der Export-Dialog tatsächlich aktiv ist.
-    private var exportDocument: JSONDocument {
-        guard appCommands.showExportDialog else { return JSONDocument(data: Data()) }
-        return JSONDocument(data: (try? DataTransfer.exportData()) ?? Data())
+    private func presentExportPanel() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.nameFieldStringValue = "\(exportFilename).json"
+        panel.prompt = "Sichern"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try DataTransfer.exportData().write(to: url, options: .atomic)
+        } catch {
+            appCommands.transferError = error.localizedDescription
+        }
+    }
+
+    private func presentImportPanel() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.json]
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Importieren"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        importData(from: url)
     }
 
     private func importData(from url: URL) {
