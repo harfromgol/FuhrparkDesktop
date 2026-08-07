@@ -4,13 +4,40 @@
 // Aufruf (vom Repo-Wurzelverzeichnis):
 //   swift Scripts/generate_app_icon.swift \
 //     FuhrparkDesktop/Assets.xcassets/AppIcon.appiconset
+//   swift Scripts/generate_app_icon.swift \
+//     FuhrparkDesktop/Assets.xcassets/AppIconDebug.appiconset debug
 //
-// Motiv: oranger macOS-Squircle mit dezentem Glass-Glanz und weichem Schatten,
-// darauf das SF-Symbol „car.2.fill" (Fuhrpark = Fahrzeugflotte).
+// Motiv: macOS-Squircle mit dezentem Glass-Glanz und weichem Schatten, darauf
+// das SF-Symbol „car.2.fill" (Fuhrpark = Fahrzeugflotte).
+//
+// Zwei Varianten, weil Debug- und Release-Build getrennte Datenbestände haben
+// (siehe project.yml) und im Dock auf einen Blick unterscheidbar sein müssen:
+// produktiv orange, Testbau blaugrau. Beide entstehen aus diesem Skript, damit
+// sie nicht auseinanderdriften.
 
 import AppKit
 
 let outDir = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "."
+
+enum Variante: String {
+    case produktiv
+    case debug
+
+    /// Farben des Hintergrundverlaufs, oben nach unten.
+    var verlauf: (oben: NSColor, unten: NSColor) {
+        switch self {
+        case .produktiv:
+            (NSColor(srgbRed: 1.00, green: 0.72, blue: 0.30, alpha: 1),
+             NSColor(srgbRed: 0.93, green: 0.47, blue: 0.06, alpha: 1))
+        case .debug:
+            (NSColor(srgbRed: 0.55, green: 0.64, blue: 0.75, alpha: 1),
+             NSColor(srgbRed: 0.20, green: 0.29, blue: 0.42, alpha: 1))
+        }
+    }
+}
+
+let variante = Variante(rawValue: CommandLine.arguments.count > 2 ? CommandLine.arguments[2] : "")
+    ?? .produktiv
 
 func draw(size: Int) -> Data {
     let s = CGFloat(size)
@@ -44,10 +71,10 @@ func draw(size: Int) -> Data {
     path.fill()
     cg.restoreGState()
 
-    // Orange-Verlauf als Hintergrund
+    // Farbverlauf als Hintergrund – die einzige Stelle, an der sich die
+    // beiden Varianten unterscheiden.
     path.addClip()
-    let top = NSColor(srgbRed: 1.00, green: 0.72, blue: 0.30, alpha: 1)
-    let bottom = NSColor(srgbRed: 0.93, green: 0.47, blue: 0.06, alpha: 1)
+    let (top, bottom) = variante.verlauf
     NSGradient(starting: top, ending: bottom)!.draw(in: rect, angle: -90)
 
     // dezenter Glass-Glanz oben

@@ -42,19 +42,38 @@ enum DocumentCleanup {
         return entfernt
     }
 
-    /// Gleicht das Arbeitsverzeichnis an den Datenbankstand an.
+    /// Belegordner im Arbeitsverzeichnis, zu denen dieser Datenbestand keinen
+    /// Beleg kennt – also genau das, was `sweepWorkingDirectory` beim nächsten
+    /// Löschvorgang entfernt.
+    ///
+    /// Dieselbe Quelle für Hinweis und Löschung: Beim Festlegen des
+    /// Arbeitsverzeichnisses zeigt `DocumentsView` das Ergebnis an, damit
+    /// niemand versehentlich das Belegverzeichnis eines anderen Datenbestands
+    /// wählt (Debug- und Release-Ausgabe haben getrennte Datenbanken, siehe
+    /// `AppVariant`). Eine eigene Zählung für die Anzeige könnte beruhigen, wo
+    /// tatsächlich gelöscht wird.
     ///
     /// Der Fetch muss **erfolgreich** sein: Ein Fehlschlag darf niemals als
     /// „null Belege“ durchgehen, sonst kostet ein beliebiger Störfall den
-    /// gesamten Belegbestand. Ein leeres Ergebnis ist dagegen legitim – etwa
-    /// nach „Alle Daten löschen“.
-    static func sweepWorkingDirectory(in context: NSManagedObjectContext) {
-        guard WorkingDirectoryStore.isConfigured else { return }
+    /// gesamten Belegbestand. Deshalb liefert er im Fehlerfall die leere
+    /// Menge, es wird also nichts entfernt. Ein leeres Ergebnis der Datenbank
+    /// ist dagegen legitim – etwa nach „Alle Daten löschen“.
+    static func unknownFolderIDs(in context: NSManagedObjectContext) -> Set<UUID> {
+        guard
+            WorkingDirectoryStore.isConfigured,
+            let ordnerIDs = try? DocumentStorage.documentFolderIDs(),
+            !ordnerIDs.isEmpty
+        else { return [] }
 
         let request = NSFetchRequest<Dokument>(entityName: "Dokument")
-        guard let documents = try? context.fetch(request) else { return }
+        guard let documents = try? context.fetch(request) else { return [] }
 
         let bekannteIDs = Set(documents.compactMap { $0.isDeleted ? nil : $0.id })
-        DocumentStorage.removeFolders(keeping: bekannteIDs)
+        return ordnerIDs.subtracting(bekannteIDs)
+    }
+
+    /// Gleicht das Arbeitsverzeichnis an den Datenbankstand an.
+    static func sweepWorkingDirectory(in context: NSManagedObjectContext) {
+        DocumentStorage.removeFolders(withIDs: unknownFolderIDs(in: context))
     }
 }

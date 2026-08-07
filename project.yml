@@ -9,8 +9,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    MARKETING_VERSION: "1.5"
-    CURRENT_PROJECT_VERSION: "6"
+    MARKETING_VERSION: "1.6"
+    CURRENT_PROJECT_VERSION: "7"
 
 targets:
   FuhrparkDesktop:
@@ -22,16 +22,38 @@ targets:
       - FuhrparkDesktop
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: de.gerdklaus.FuhrparkDesktop
         PRODUCT_NAME: FuhrparkDesktop
         INFOPLIST_KEY_NSHumanReadableCopyright: ""
         ENABLE_HARDENED_RUNTIME: YES
         ENABLE_APP_SANDBOX: YES
         CODE_SIGN_STYLE: Automatic
+      # Debug und Release bekommen eigene Bundle-IDs. Da die App sandboxed
+      # ist, hängt der Container-Pfad daran – und damit alles, was darin
+      # liegt: die Core-Data-Datenbank, die UserDefaults (also auch das
+      # Lesezeichen aufs Arbeitsverzeichnis) und die erteilten
+      # Systemberechtigungen. Ohne diese Trennung arbeitet der Debug-Build
+      # auf den echten Daten, und der Abgleich in DocumentCleanup löscht
+      # dort Belegordner, die die jeweils andere Datenbank angelegt hat.
+      #
+      # PRODUCT_NAME bleibt in beiden Konfigurationen gleich, damit Build-,
+      # Skript- und DMG-Pfade stabil bleiben; unterschieden wird über
+      # CFBundleName/CFBundleDisplayName und das App-Icon.
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: de.gerdklaus.FuhrparkDesktop.debug
+          APP_DISPLAY_NAME: FuhrparkDesktop Debug
+          ASSETCATALOG_COMPILER_APPICON_NAME: AppIconDebug
+        Release:
+          PRODUCT_BUNDLE_IDENTIFIER: de.gerdklaus.FuhrparkDesktop
+          APP_DISPLAY_NAME: FuhrparkDesktop
+          ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     info:
       path: FuhrparkDesktop/Info.plist
       properties:
-        CFBundleDisplayName: FuhrparkDesktop
+        # Beide aus derselben Quelle: CFBundleName trägt den Namen in der
+        # Menüleiste, CFBundleDisplayName den im Finder.
+        CFBundleDisplayName: "$(APP_DISPLAY_NAME)"
+        CFBundleName: "$(APP_DISPLAY_NAME)"
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         NSPrincipalClass: NSApplication

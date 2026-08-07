@@ -45,6 +45,13 @@ struct ContentView: View {
                     .id(vehicle.objectID)
             }
         }
+        // Der Titel in der Fensterleiste kommt von der `.navigationTitle` der
+        // gerade gewählten Ansicht und überschreibt den Titel der Szene; der
+        // Zusatz aus `Window(AppVariant.windowTitle, …)` wirkt nur im
+        // „Fenster“-Menü. Beim Testbau kommt deshalb hier ein Untertitel dazu,
+        // damit auch am Fenster selbst erkennbar ist, welcher Datenbestand
+        // offen ist. Die produktive App bleibt unverändert.
+        .navigationSubtitle(AppVariant.isTestContainer ? "Testdaten" : "")
         .alert("Datenbank konnte nicht geöffnet werden", isPresented: $showsStoreError) {
             Button("OK", role: .cancel) { }
         } message: {
