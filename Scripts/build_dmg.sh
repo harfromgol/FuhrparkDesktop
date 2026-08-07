@@ -28,6 +28,18 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
   -derivedDataPath "$DERIVED_DATA" build
 
 BUILT_APP="$DERIVED_DATA/Build/Products/Release/$APP_NAME.app"
+
+# Debug- und Release-Build tragen verschiedene Bundle-IDs (siehe project.yml).
+# Käme versehentlich die Debug-ID ins DMG, legte die App beim Nutzer einen
+# zweiten, leeren Sandbox-Container an, statt seine vorhandenen Daten zu
+# öffnen – ein Fehler, der wie Datenverlust aussieht. Deshalb hart prüfen.
+ERWARTETE_ID="de.gerdklaus.FuhrparkDesktop"
+GEBAUTE_ID=$(plutil -extract CFBundleIdentifier raw "$BUILT_APP/Contents/Info.plist")
+if [ "$GEBAUTE_ID" != "$ERWARTETE_ID" ]; then
+  echo "ABBRUCH: gebaute Bundle-ID ist '$GEBAUTE_ID', erwartet '$ERWARTETE_ID'." >&2
+  exit 1
+fi
+
 VERSION=$(plutil -extract CFBundleShortVersionString raw "$BUILT_APP/Contents/Info.plist")
 DMG_FINAL="$DIST_DIR/$APP_NAME-$VERSION.dmg"
 DMG_TMP="$DIST_DIR/pack.temp.dmg"

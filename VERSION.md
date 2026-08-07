@@ -1,7 +1,70 @@
 # Versionshistorie
 
 Alle nennenswerten Änderungen an FuhrparkDesktop, gruppiert nach Release.
-Die Versionen sind als Git-Tags (`v1.1` … `v1.5`) markiert.
+Die Versionen sind als Git-Tags (`v1.1` … `v1.6`) markiert.
+
+## [v1.6](https://github.com/harfromgol/FuhrparkDesktop/releases/tag/v1.6) – 2026-08-07
+
+### Neu
+- **Ein Beleg kann mehrere sonstige Ausgaben belegen.** Wird eine Rechnung auf
+  zwei Ausgaben aufgeteilt, hängt sie jetzt an beiden – als **eine** Zeile in
+  der Dokumentenliste und mit **einer** Dateikopie. Der Zuordnungsdialog ist
+  dafür eine Mehrfachauswahl geworden; die Zuordnung lässt sich über das
+  Kontextmenü einer Belegzeile auch nachträglich ändern.
+- Beim Festlegen des Arbeitsverzeichnisses wird gemeldet, wenn dort
+  Belegordner liegen, die nicht zum geöffneten Datenbestand gehören – bevor
+  der nächste Löschvorgang sie entfernt.
+
+### Behoben
+- **Import zerstörte die Belegdateien**: Der Import löschte erst das
+  Arbeitsverzeichnis und legte danach Einträge an, die genau auf die gerade
+  gelöschten Dateien zeigten. Ein Reimport des eigenen Exports zeigte
+  anschließend überall „Datei nicht gefunden“.
+- **Verwaiste Dateien**: Das Löschen einer Ausgabe oder eines Fahrzeugs
+  entfernte die Einträge, ließ die Dateien aber liegen.
+- **Nachträgliches Zuordnen öffnete ein leeres Fenster**: Aus einem
+  Kontextmenü heraus präsentiert SwiftUI ein Sheet noch mit dem Stand vor der
+  Zustandsänderung; der Beleg fehlte dadurch im Inhalt.
+- **Löschen eines Belegs konnte das gesamte Arbeitsverzeichnis leeren**: Der
+  Ablageordner wurde aus dem gespeicherten Pfad abgeleitet. Enthielt der
+  keinen Schrägstrich – über eine importierte JSON-Datei erreichbar –, zeigte
+  das Ergebnis auf das Arbeitsverzeichnis selbst.
+
+### Geändert
+- **Debug- und Release-Build arbeiten auf getrennten Datenbeständen.** Beide
+  tragen eigene Bundle-IDs und damit eigene Sandbox-Container: eigene
+  Datenbank, eigene Einstellungen, eigenes Arbeitsverzeichnis. Sie lassen sich
+  gleichzeitig betreiben und sind am Icon, am Namen in der Menüleiste und am
+  Untertitel „Testdaten“ in der Fensterleiste zu unterscheiden. Für installierte
+  Fassungen ändert sich nichts – die Bundle-ID der Release-Ausgabe bleibt
+  gleich.
+- Der MCP-Server des Testbaus meldet und registriert sich als
+  `fuhrpark-debug` und überschreibt die Einrichtung der produktiven App damit
+  nicht. `list_documents` liefert statt `ausgabe` nun `ausgaben` als Liste,
+  dazu `anzahlAusgaben`.
+- **Exportschema 6 → 7.** Das Format bleibt verschachtelt: Ein geteilter Beleg
+  erscheint bei jeder seiner Ausgaben mit derselben `id` und wird beim Import
+  wieder zu einem Eintrag zusammengeführt. **FuhrparkWeb bleibt dadurch ohne
+  Änderung kompatibel.**
+
+### Hinweise zur Umsetzung
+- Erstmals findet beim Start eine echte **Core-Data-Modellmigration** statt
+  (Modellversion 2). Bisherige Modelländerungen berührten den Versions-Hash
+  nicht – Optionalität geht dort nicht ein, die Kardinalität einer Beziehung
+  sehr wohl. Die alte Version bleibt deshalb unverändert als Quellmodell
+  liegen.
+- Beim Entwurf zeigte ein Testlauf auf einer Store-Kopie, dass die abgeleitete
+  Migration die Verknüpfung **stillschweigend fallen ließ**, wenn die
+  Beziehung gleichzeitig umbenannt und auf „zu vielen“ umgestellt wird. Die
+  Beziehung heißt deshalb weiterhin `expense`; geändert wurde nur die
+  Kardinalität.
+- Scheitert das Öffnen der Datenbank, stürzt die App nicht mehr ab, sondern
+  meldet den Fehler. Der MCP-Server migriert grundsätzlich nicht: Eine
+  Migration gehört in die sichtbare App, nicht in einen Prozess ohne Fenster.
+- Alle vier Löschpfade stellen jetzt dieselbe Invariante wieder her – *das
+  Arbeitsverzeichnis enthält genau die Ordner, die die Datenbank kennt*.
+  Derselbe Mengenvergleich speist auch den Hinweis beim Verzeichniswechsel,
+  damit Anzeige und Löschung nicht auseinanderlaufen können.
 
 ## [v1.5](https://github.com/harfromgol/FuhrparkDesktop/releases/tag/v1.5) – 2026-08-06
 

@@ -20,8 +20,9 @@ Fahrzeuge, Betankungen, sonstige Ausgaben, Belege und Spritpreise an einem Ort.
   mit Verlaufs-Charts.
 - **Sonstige Ausgaben/Einnahmen** – mit frei definierbaren Kategorien und
   Empfänger-Autovervollständigung.
-- **Dokumente** – Belege (PDF, Fotos, …) einer Ausgabe zuordnen, zentrale
-  Dokumenten-Übersicht mit Filter nach Fahrzeug/Kategorie.
+- **Dokumente** – Belege (PDF, Fotos, …) einer oder mehreren sonstigen Ausgaben
+  desselben Fahrzeugs zuordnen, auch nachträglich; zentrale Dokumenten-Übersicht
+  mit Filter nach Fahrzeug/Kategorie. Die Datei wird dabei nur einmal abgelegt.
 - **Erinnerungen** - laß Dich an den nächsten TÜV Termin oder an die fällige Versicherung/Steuer erinnern
 - **Statistik** – Kosten pro Kategorie, pro Jahr, pro Fahrzeug.
 - **Spritpreise** – Umkreissuche über die Tankerkönig-API (eigener API-Key
@@ -84,6 +85,28 @@ Alternativ per Kommandozeile bauen:
 xcodegen generate
 xcodebuild -project FuhrparkDesktop.xcodeproj -scheme FuhrparkDesktop -configuration Debug build
 ```
+
+### Getrennte Datenbestände
+
+Debug- und Release-Build tragen unterschiedliche Bundle-IDs. Da die App
+sandboxed ist, hängt der gesamte Container daran – Datenbank, Einstellungen,
+Arbeitsverzeichnis und erteilte Berechtigungen sind damit getrennt, und beide
+Ausgaben lassen sich gleichzeitig betreiben:
+
+| | Bundle-ID | Datenbank |
+|---|---|---|
+| Release | `de.gerdklaus.FuhrparkDesktop` | `~/Library/Containers/de.gerdklaus.FuhrparkDesktop/Data/Library/Application Support/FuhrparkDesktop/` |
+| Debug | `de.gerdklaus.FuhrparkDesktop.debug` | `~/Library/Containers/de.gerdklaus.FuhrparkDesktop.debug/Data/…` |
+
+Der Testbau ist am blaugrauen Icon, am Namen „FuhrparkDesktop Debug“ in der
+Menüleiste und am Untertitel „Testdaten“ in der Fensterleiste zu erkennen. Sein
+MCP-Server trägt sich als `fuhrpark-debug` ein.
+
+Beide Prozesse heißen `FuhrparkDesktop`; zum gezielten Beenden am Pfad
+unterscheiden (`pgrep -f "Debug/FuhrparkDesktop.app"`). Gib dem Testbau ein
+**eigenes** Arbeitsverzeichnis – zeigen beide auf denselben Ordner, räumt der
+Abgleich beim Löschen die Belege des jeweils anderen weg. Die App weist beim
+Festlegen darauf hin.
 
 ## Projektstruktur
 
