@@ -7,6 +7,7 @@ import AppKit
 /// Umkreissuche → Karte mit Preis-Markierungen.
 struct FuelPricesView: View {
     @Environment(FuelPricesViewModel.self) private var vm
+    @Environment(\.openWindow) private var openWindow
     @State private var camera: MapCameraPosition = .automatic
 
     var body: some View {
@@ -129,11 +130,18 @@ struct FuelPricesView: View {
             HStack {
                 FuelTypeFilterView(enabled: $vm.enabledFuelKinds)
                 Spacer()
+                if !vm.stations.isEmpty {
+                    Button("Liste anzeigen", systemImage: "list.bullet") {
+                        openWindow(id: "gas-station-list")
+                    }
+                    .buttonStyle(.glass)
+                    .pointerStyle(.link)
+                }
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     let remaining = vm.secondsRemaining(asOf: context.date)
                     HStack(spacing: 8) {
                         if let remaining {
-                            Text("Nächste Abfrage in \(formattedCountdown(remaining))")
+                            Text("Nächste Abfrage in \(DisplayFormatter.countdownString(remaining))")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .monospacedDigit()
@@ -164,29 +172,14 @@ struct FuelPricesView: View {
             .frame(maxHeight: .infinity)
             .clipShape(RoundedRectangle(cornerRadius: 12))
 
-            attribution
+            TankerkoenigAttributionView()
         }
-    }
-
-    private var attribution: some View {
-        HStack(spacing: 4) {
-            Text("Preisdaten:")
-            Link("Tankerkönig", destination: URL(string: "https://creativecommons.tankerkoenig.de")!)
-            Text("(CC BY 4.0)")
-        }
-        .font(.caption2)
-        .foregroundStyle(.secondary)
     }
 
     private func openLocationSettings() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices") {
             NSWorkspace.shared.open(url)
         }
-    }
-
-    /// Verbleibende Sekunden als „m:ss", z. B. 9:47.
-    private func formattedCountdown(_ seconds: Int) -> String {
-        String(format: "%d:%02d", seconds / 60, seconds % 60)
     }
 }
 

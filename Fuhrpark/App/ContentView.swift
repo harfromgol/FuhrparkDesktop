@@ -15,6 +15,7 @@ enum SidebarSelection: Hashable {
 struct ContentView: View {
     @Environment(AppCommands.self) private var appCommands
     @Environment(FuelPricesViewModel.self) private var fuelPricesViewModel
+    @Environment(PinnedFuelPricesViewModel.self) private var pinnedFuelPricesViewModel
     @State private var selection: SidebarSelection = .statistics
 
     /// Wird beim Start gesetzt, wenn sich der Datenspeicher nicht öffnen ließ
@@ -76,7 +77,7 @@ struct ContentView: View {
             }
             Button("Abbrechen", role: .cancel) { }
         } message: {
-            Text("Alle Fahrzeuge, Betankungen, sonstigen Ausgaben, Kategorien und Erinnerungen sowie der gespeicherte Tankerkönig-API-Schlüssel werden unwiderruflich gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden.")
+            Text("Alle Fahrzeuge, Betankungen, sonstigen Ausgaben, Kategorien und Erinnerungen sowie der gespeicherte Tankerkönig-API-Schlüssel und die angepinnten Spritpreise werden unwiderruflich gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden.")
         }
         // Export/Import laufen bewusst NICHT über `.fileExporter`/`.fileImporter`,
         // sondern über direkte `NSSavePanel`/`NSOpenPanel` (siehe
@@ -157,6 +158,7 @@ struct ContentView: View {
         selection = .statistics
         PersistenceController.shared.deleteAllData()
         fuelPricesViewModel.resetAPIKey()
+        pinnedFuelPricesViewModel.resetPinnedSelections()
     }
 }
 
@@ -165,4 +167,5 @@ struct ContentView: View {
         .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
         .environment(AppCommands())
         .environment(FuelPricesViewModel())
+        .environment(PinnedFuelPricesViewModel())
 }

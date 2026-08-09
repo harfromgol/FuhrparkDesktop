@@ -30,7 +30,7 @@ struct TankerkoenigListResponse: Decodable, Sendable {
 }
 
 /// Die drei über Tankerkönig abfragbaren Kraftstoffsorten.
-enum FuelKind: String, CaseIterable, Identifiable, Sendable {
+enum FuelKind: String, Codable, CaseIterable, Identifiable, Sendable {
     case diesel
     case e5
     case e10
