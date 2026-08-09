@@ -70,9 +70,12 @@ final class PinnedFuelPricesViewModel {
         pinnedSelections.contains { $0.stationId == stationId && $0.fuelKind == fuelKind }
     }
 
-    /// Pinnt eine Kombination an, falls noch nicht vorhanden. Stößt bei
-    /// erlaubtem Cooldown sofort einen Refresh an, damit die neue Zeile
-    /// nicht bis zum nächsten planmäßigen Intervall-Tick leer dasteht.
+    /// Pinnt eine Kombination an, falls noch nicht vorhanden. Übernimmt
+    /// sofort den aus der Umkreissuche bereits bekannten Preis – die Station
+    /// steht ja nur deshalb zur Auswahl, weil die Suche ihn gerade geliefert
+    /// hat, ein Strich bis zur ersten gezielten Abfrage wäre unnötig. Stößt
+    /// zusätzlich bei erlaubtem Cooldown sofort einen echten Refresh an, der
+    /// diesen Anfangswert dann ersetzt.
     func pin(_ station: GasStation, fuelKind: FuelKind) {
         let selection = PinnedFuelSelection(station: station, fuelKind: fuelKind)
         guard !isPinned(stationId: station.id, fuelKind: fuelKind) else { return }
@@ -80,6 +83,14 @@ final class PinnedFuelPricesViewModel {
         let wasEmpty = pinnedSelections.isEmpty
         pinnedSelections.append(selection)
         PinnedFuelSelectionStore.set(pinnedSelections)
+
+        snapshots[selection.id] = FuelPriceSnapshot(
+            stationId: station.id,
+            fuelKind: fuelKind,
+            price: fuelKind.price(for: station),
+            status: station.isOpen ? "open" : "closed"
+        )
+        persistCache()
 
         if wasEmpty {
             isMenuBarVisible = true
