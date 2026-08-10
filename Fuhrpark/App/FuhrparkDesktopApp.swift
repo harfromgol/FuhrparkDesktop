@@ -49,11 +49,15 @@ struct FuhrparkDesktopApp: App {
         // Tankstelle/Sorte angepinnt ist (`isMenuBarVisible`) – siehe
         // Doc-Kommentar dort für den Grund, warum das ein echtes,
         // schreibbares Binding auf dem View-Model ist statt eines rein aus
-        // `pinnedSelections` berechneten.
-        MenuBarExtra("Spritpreise", systemImage: "fuelpump.fill", isInserted: Binding(
-            get: { pinnedFuelPricesViewModel.isMenuBarVisible },
-            set: { pinnedFuelPricesViewModel.isMenuBarVisible = $0 }
-        )) {
+        // `pinnedSelections` berechneten. Bewusst `@Bindable` statt eines von
+        // Hand gebauten `Binding(get:set:)`: Nur ein über `@Bindable`
+        // erzeugtes Binding liest/schreibt wirklich live auf die
+        // `@Observable`-Speicherung – ein händisches Binding wurde von
+        // SwiftUI bei dieser Szene nicht zuverlässig neu ausgewertet, sodass
+        // ein `isMenuBarVisible = false` (z. B. bei „Alle Daten löschen")
+        // das Icon nicht entfernte.
+        @Bindable var pinnedFuelPricesBindable = pinnedFuelPricesViewModel
+        MenuBarExtra("Spritpreise", systemImage: "fuelpump.fill", isInserted: $pinnedFuelPricesBindable.isMenuBarVisible) {
             PinnedFuelPricesMenuView()
                 .environment(pinnedFuelPricesViewModel)
         }
