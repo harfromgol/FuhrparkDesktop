@@ -126,53 +126,54 @@ struct FuelPricesView: View {
 
     private func mapArea(vm: FuelPricesViewModel) -> some View {
         @Bindable var vm = vm
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                FuelTypeFilterView(enabled: $vm.enabledFuelKinds)
-                Spacer()
-                if !vm.stations.isEmpty {
-                    Button("Liste anzeigen", systemImage: "list.bullet") {
-                        openWindow(id: "gas-station-list")
-                    }
-                    .buttonStyle(.glass)
-                    .pointerStyle(.link)
-                }
-                TimelineView(.periodic(from: .now, by: 1)) { context in
-                    let remaining = vm.secondsRemaining(asOf: context.date)
-                    HStack(spacing: 8) {
-                        if let remaining {
-                            Text("Nächste Abfrage in \(DisplayFormatter.countdownString(remaining))")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                        }
-                        Button("Aktualisieren", systemImage: "arrow.clockwise") {
-                            vm.refresh()
+        return TimelineView(.periodic(from: .now, by: 1)) { context in
+            let remaining = vm.secondsRemaining(asOf: context.date)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    FuelTypeFilterView(enabled: $vm.enabledFuelKinds)
+                    Spacer()
+                    if !vm.stations.isEmpty {
+                        Button("Liste anzeigen", systemImage: "list.bullet") {
+                            openWindow(id: "gas-station-list")
                         }
                         .buttonStyle(.glass)
-                        .disabled(remaining != nil)
-                        .pointerStyle(remaining == nil ? .link : nil)
+                        .pointerStyle(.link)
+                    }
+                    Button("Aktualisieren", systemImage: "arrow.clockwise") {
+                        vm.refresh()
+                    }
+                    .buttonStyle(.glass)
+                    .disabled(remaining != nil)
+                    .pointerStyle(remaining == nil ? .link : nil)
+                }
+
+                Map(position: $camera) {
+                    UserAnnotation()
+                    ForEach(vm.visibleStations) { station in
+                        Annotation(station.name, coordinate: station.coordinate) {
+                            StationAnnotationView(station: station, enabled: vm.enabledFuelKinds)
+                        }
+                    }
+                }
+                .mapStyle(.standard(pointsOfInterest: .excludingAll))
+                .mapControls {
+                    MapUserLocationButton()
+                    MapCompass()
+                }
+                .frame(maxHeight: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                HStack {
+                    TankerkoenigAttributionView()
+                    Spacer()
+                    if let remaining {
+                        Text("Nächste Abfrage in \(DisplayFormatter.countdownString(remaining))")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
                     }
                 }
             }
-
-            Map(position: $camera) {
-                UserAnnotation()
-                ForEach(vm.visibleStations) { station in
-                    Annotation(station.name, coordinate: station.coordinate) {
-                        StationAnnotationView(station: station, enabled: vm.enabledFuelKinds)
-                    }
-                }
-            }
-            .mapStyle(.standard(pointsOfInterest: .excludingAll))
-            .mapControls {
-                MapUserLocationButton()
-                MapCompass()
-            }
-            .frame(maxHeight: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-
-            TankerkoenigAttributionView()
         }
     }
 
