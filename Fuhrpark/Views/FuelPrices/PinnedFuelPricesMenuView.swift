@@ -30,8 +30,6 @@ struct PinnedFuelPricesMenuView: View {
 
                 Divider()
 
-                Text("Aktualisierung:")
-
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     let remaining = vm.secondsRemaining(asOf: context.date)
                     VStack(spacing: 4) {
