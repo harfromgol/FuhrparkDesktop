@@ -6,11 +6,9 @@ import Foundation
 enum FuelPriceRefreshIntervalStore {
     private static let defaultsKey = "fuelPriceRefreshInterval"
 
-    /// Automatische Aktualisierung ist der naheliegende Standard für dieses
-    /// Feature, deshalb `.min60` statt „Manuell" als Vorbelegung.
     static func get() -> FuelPriceRefreshInterval {
         let raw = UserDefaults.standard.object(forKey: defaultsKey) as? Int
-        return raw.flatMap(FuelPriceRefreshInterval.init(rawValue:)) ?? .min60
+        return raw.flatMap(FuelPriceRefreshInterval.init(rawValue:)) ?? .manual
     }
 
     static func set(_ interval: FuelPriceRefreshInterval) {
