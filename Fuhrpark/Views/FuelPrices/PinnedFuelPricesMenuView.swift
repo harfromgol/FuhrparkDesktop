@@ -30,17 +30,22 @@ struct PinnedFuelPricesMenuView: View {
 
                 Divider()
 
-                Picker("Aktualisierung", selection: $vm.refreshInterval) {
-                    ForEach(FuelPriceRefreshInterval.allCases) { interval in
-                        Text(interval.displayName).tag(interval)
-                    }
-                }
+                Text("Aktualisierung:")
 
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     let remaining = vm.secondsRemaining(asOf: context.date)
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(spacing: 4) {
                         HStack {
+                            Picker("Aktualisierung", selection: $vm.refreshInterval) {
+                                ForEach(FuelPriceRefreshInterval.allCases) { interval in
+                                    Text(interval.displayName).tag(interval)
+                                }
+                            }
+                            .labelsHidden()
+                            .fixedSize()
+
                             Spacer()
+
                             Button("Aktualisieren", systemImage: "arrow.clockwise") {
                                 Task { await vm.refresh() }
                             }
@@ -53,6 +58,7 @@ struct PinnedFuelPricesMenuView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .monospacedDigit()
+                                .frame(maxWidth: .infinity, alignment: .center)
                         }
                     }
                 }
