@@ -38,20 +38,22 @@ struct PinnedFuelPricesMenuView: View {
 
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     let remaining = vm.secondsRemaining(asOf: context.date)
-                    HStack(spacing: 8) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Spacer()
+                            Button("Aktualisieren", systemImage: "arrow.clockwise") {
+                                Task { await vm.refresh() }
+                            }
+                            .buttonStyle(.glass)
+                            .disabled(remaining != nil || vm.isRefreshing)
+                            .pointerStyle(remaining == nil && !vm.isRefreshing ? .link : nil)
+                        }
                         if let remaining {
                             Text("Nächste Abfrage in \(DisplayFormatter.countdownString(remaining))")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .monospacedDigit()
                         }
-                        Spacer()
-                        Button("Aktualisieren", systemImage: "arrow.clockwise") {
-                            Task { await vm.refresh() }
-                        }
-                        .buttonStyle(.glass)
-                        .disabled(remaining != nil || vm.isRefreshing)
-                        .pointerStyle(remaining == nil && !vm.isRefreshing ? .link : nil)
                     }
                 }
 
