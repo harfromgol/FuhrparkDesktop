@@ -84,4 +84,9 @@ enum DisplayFormatter {
     static func percentString(_ fraction: Decimal) -> String {
         string(from: fraction, formatter: percent)
     }
+
+    /// Verbleibende Sekunden eines Cooldowns als „m:ss", z. B. 9:47.
+    static func countdownString(_ seconds: Int) -> String {
+        String(format: "%d:%02d", seconds / 60, seconds % 60)
+    }
 }
