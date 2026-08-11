@@ -11,6 +11,8 @@ struct ExpenseListWindow: View {
     @FetchRequest private var categories: FetchedResults<Category>
     @State private var selectedCategories: Set<Category> = []
     @State private var pendingDeletion: Expense?
+    @State private var pageSize = ExpensePageSizeStore.get()
+    @State private var currentPage = 0
 
     init(vehicleRef: VehicleRef) {
         self.vehicleRef = vehicleRef
@@ -36,6 +38,16 @@ struct ExpenseListWindow: View {
         }
     }
 
+    private var totalPages: Int {
+        max(1, Int(ceil(Double(filteredExpenses.count) / Double(pageSize))))
+    }
+
+    private var pagedExpenses: [Expense] {
+        let start = currentPage * pageSize
+        guard start < filteredExpenses.count else { return [] }
+        return Array(filteredExpenses[start..<min(start + pageSize, filteredExpenses.count)])
+    }
+
     var body: some View {
         ScrollView {
             GlassEffectContainer {
@@ -48,6 +60,8 @@ struct ExpenseListWindow: View {
                         )
                         .padding(.top, 60)
                     } else {
+                        displayOptions
+
                         if !categories.isEmpty {
                             filterSection
                         }
@@ -59,13 +73,17 @@ struct ExpenseListWindow: View {
                                 .padding(.top, 24)
                                 .frame(maxWidth: .infinity, alignment: .center)
                         } else {
-                            ForEach(filteredExpenses) { expense in
+                            ForEach(pagedExpenses) { expense in
                                 ExpenseRow(expense: expense)
                                     .contextMenu {
                                         Button("Löschen", role: .destructive) {
                                             pendingDeletion = expense
                                         }
                                     }
+                            }
+
+                            if totalPages > 1 {
+                                PaginationControls(currentPage: $currentPage, totalPages: totalPages)
                             }
                         }
                     }
@@ -76,6 +94,14 @@ struct ExpenseListWindow: View {
         }
         .frame(minWidth: 340, minHeight: 400)
         .navigationTitle("Sonstige Ausgaben – \(vehicleRef.licensePlate)")
+        .onChange(of: selectedCategories) { _, _ in currentPage = 0 }
+        .onChange(of: pageSize) { _, newValue in
+            ExpensePageSizeStore.set(newValue)
+            currentPage = 0
+        }
+        .onChange(of: totalPages) { _, newValue in
+            currentPage = min(currentPage, newValue - 1)
+        }
         .confirmationDialog(
             "Ausgabe löschen?",
             isPresented: Binding(
@@ -94,6 +120,16 @@ struct ExpenseListWindow: View {
             Text(belege == 0
                  ? "„\(expense.recipient ?? "")“ wird unwiderruflich gelöscht."
                  : "„\(expense.recipient ?? "")“ wird unwiderruflich gelöscht. Zugeordnete Belege bleiben erhalten, solange sie noch zu einer anderen Ausgabe gehören – sonst werden sie mit entfernt.")
+        }
+    }
+
+    private var displayOptions: some View {
+        GlassCard {
+            HStack {
+                Spacer()
+                Stepper("Anzahl: \(pageSize)", value: $pageSize, in: 5...15)
+                    .fixedSize()
+            }
         }
     }
 

@@ -82,7 +82,7 @@ struct FuelEntryListWindow: View {
                         }
 
                         if totalPages > 1 {
-                            pagination
+                            PaginationControls(currentPage: $currentPage, totalPages: totalPages)
                         }
                     }
                 }
@@ -144,32 +144,5 @@ struct FuelEntryListWindow: View {
                     .fixedSize()
             }
         }
-    }
-
-    private var pagination: some View {
-        HStack {
-            Button("Zurück", systemImage: "chevron.left") {
-                currentPage -= 1
-            }
-            .buttonStyle(.glass)
-            .disabled(currentPage == 0)
-            .pointerStyle(currentPage == 0 ? nil : .link)
-
-            Spacer()
-
-            Text("Seite \(currentPage + 1) von \(totalPages)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Spacer()
-
-            Button("Weiter", systemImage: "chevron.right") {
-                currentPage += 1
-            }
-            .buttonStyle(.glass)
-            .disabled(currentPage >= totalPages - 1)
-            .pointerStyle(currentPage >= totalPages - 1 ? nil : .link)
-        }
-        .frame(maxWidth: .infinity)
     }
 }
