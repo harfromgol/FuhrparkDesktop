@@ -82,7 +82,7 @@ struct FuelEntryListWindow: View {
                         }
 
                         if totalPages > 1 {
-                            pagination
+                            PaginationControls(currentPage: $currentPage, totalPages: totalPages)
                         }
                     }
                 }
@@ -128,48 +128,30 @@ struct FuelEntryListWindow: View {
 
     private var displayOptions: some View {
         GlassCard {
-            HStack {
-                Picker("Jahr", selection: $selectedYear) {
-                    Text("Alle").tag(Int?.none)
-                    ForEach(availableYears, id: \.self) { year in
-                        Text(String(year)).tag(Int?.some(year))
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Nach Jahr filtern")
+                    Spacer()
+                    Picker("Jahr", selection: $selectedYear) {
+                        Text("Alle").tag(Int?.none)
+                        ForEach(availableYears, id: \.self) { year in
+                            Text(String(year)).tag(Int?.some(year))
+                        }
                     }
-                }
-                .pickerStyle(.menu)
-                .fixedSize()
-
-                Spacer()
-
-                Stepper("Anzahl: \(pageSize)", value: $pageSize, in: 5...15)
+                    .labelsHidden()
+                    .pickerStyle(.menu)
                     .fixedSize()
+                }
+
+                Divider()
+
+                HStack {
+                    Text("Einträge pro Seite")
+                    Spacer()
+                    Stepper("\(pageSize)", value: $pageSize, in: 5...15)
+                        .fixedSize()
+                }
             }
         }
-    }
-
-    private var pagination: some View {
-        HStack {
-            Button("Zurück", systemImage: "chevron.left") {
-                currentPage -= 1
-            }
-            .buttonStyle(.glass)
-            .disabled(currentPage == 0)
-            .pointerStyle(currentPage == 0 ? nil : .link)
-
-            Spacer()
-
-            Text("Seite \(currentPage + 1) von \(totalPages)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Spacer()
-
-            Button("Weiter", systemImage: "chevron.right") {
-                currentPage += 1
-            }
-            .buttonStyle(.glass)
-            .disabled(currentPage >= totalPages - 1)
-            .pointerStyle(currentPage >= totalPages - 1 ? nil : .link)
-        }
-        .frame(maxWidth: .infinity)
     }
 }

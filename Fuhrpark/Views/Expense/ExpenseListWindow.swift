@@ -11,6 +11,8 @@ struct ExpenseListWindow: View {
     @FetchRequest private var categories: FetchedResults<Category>
     @State private var selectedCategories: Set<Category> = []
     @State private var pendingDeletion: Expense?
+    @State private var pageSize = ExpensePageSizeStore.get()
+    @State private var currentPage = 0
 
     init(vehicleRef: VehicleRef) {
         self.vehicleRef = vehicleRef
@@ -36,6 +38,16 @@ struct ExpenseListWindow: View {
         }
     }
 
+    private var totalPages: Int {
+        max(1, Int(ceil(Double(filteredExpenses.count) / Double(pageSize))))
+    }
+
+    private var pagedExpenses: [Expense] {
+        let start = currentPage * pageSize
+        guard start < filteredExpenses.count else { return [] }
+        return Array(filteredExpenses[start..<min(start + pageSize, filteredExpenses.count)])
+    }
+
     var body: some View {
         ScrollView {
             GlassEffectContainer {
@@ -48,9 +60,7 @@ struct ExpenseListWindow: View {
                         )
                         .padding(.top, 60)
                     } else {
-                        if !categories.isEmpty {
-                            filterSection
-                        }
+                        displayOptions
 
                         if filteredExpenses.isEmpty {
                             Text("Keine Ausgaben in den gewählten Kategorien.")
@@ -59,13 +69,17 @@ struct ExpenseListWindow: View {
                                 .padding(.top, 24)
                                 .frame(maxWidth: .infinity, alignment: .center)
                         } else {
-                            ForEach(filteredExpenses) { expense in
+                            ForEach(pagedExpenses) { expense in
                                 ExpenseRow(expense: expense)
                                     .contextMenu {
                                         Button("Löschen", role: .destructive) {
                                             pendingDeletion = expense
                                         }
                                     }
+                            }
+
+                            if totalPages > 1 {
+                                PaginationControls(currentPage: $currentPage, totalPages: totalPages)
                             }
                         }
                     }
@@ -76,6 +90,14 @@ struct ExpenseListWindow: View {
         }
         .frame(minWidth: 340, minHeight: 400)
         .navigationTitle("Sonstige Ausgaben – \(vehicleRef.licensePlate)")
+        .onChange(of: selectedCategories) { _, _ in currentPage = 0 }
+        .onChange(of: pageSize) { _, newValue in
+            ExpensePageSizeStore.set(newValue)
+            currentPage = 0
+        }
+        .onChange(of: totalPages) { _, newValue in
+            currentPage = min(currentPage, newValue - 1)
+        }
         .confirmationDialog(
             "Ausgabe löschen?",
             isPresented: Binding(
@@ -97,27 +119,41 @@ struct ExpenseListWindow: View {
         }
     }
 
-    private var filterSection: some View {
-        GlassCard(title: "Nach Kategorie filtern") {
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 90), spacing: 8, alignment: .leading)],
-                alignment: .leading,
-                spacing: 8
-            ) {
-                filterChip(title: "Alle", selected: selectedCategories.isEmpty) {
-                    selectedCategories.removeAll()
-                }
-                ForEach(categories) { category in
-                    filterChip(
-                        title: category.name ?? "",
-                        selected: selectedCategories.contains(category)
+    private var displayOptions: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                if !categories.isEmpty {
+                    Text("Nach Kategorie filtern")
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 90), spacing: 8, alignment: .leading)],
+                        alignment: .leading,
+                        spacing: 8
                     ) {
-                        if selectedCategories.contains(category) {
-                            selectedCategories.remove(category)
-                        } else {
-                            selectedCategories.insert(category)
+                        filterChip(title: "Alle", selected: selectedCategories.isEmpty) {
+                            selectedCategories.removeAll()
+                        }
+                        ForEach(categories) { category in
+                            filterChip(
+                                title: category.name ?? "",
+                                selected: selectedCategories.contains(category)
+                            ) {
+                                if selectedCategories.contains(category) {
+                                    selectedCategories.remove(category)
+                                } else {
+                                    selectedCategories.insert(category)
+                                }
+                            }
                         }
                     }
+
+                    Divider()
+                }
+
+                HStack {
+                    Text("Einträge pro Seite")
+                    Spacer()
+                    Stepper("\(pageSize)", value: $pageSize, in: 5...15)
+                        .fixedSize()
                 }
             }
         }
