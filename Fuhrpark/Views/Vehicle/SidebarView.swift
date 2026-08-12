@@ -137,7 +137,7 @@ struct SidebarView: View {
                 Button {
                     selection = .statistics
                 } label: {
-                    Label("Statistik", systemImage: "chart.bar.xaxis")
+                    sidebarLabel("Statistik", systemImage: "chart.bar.xaxis")
                 }
                 .buttonStyle(.plain)
                 .pointerStyle(.link)
@@ -147,7 +147,7 @@ struct SidebarView: View {
                     Button {
                         selection = .documents
                     } label: {
-                        Label("Dokumente", systemImage: "folder.fill")
+                        sidebarLabel("Dokumente", systemImage: "folder.fill")
                     }
                     .buttonStyle(.plain)
                     .pointerStyle(.link)
@@ -159,7 +159,7 @@ struct SidebarView: View {
                         selection = .reminders
                     } label: {
                         HStack {
-                            Label("Erinnerungen", systemImage: "bell.fill")
+                            sidebarLabel("Erinnerungen", systemImage: "bell.fill")
                             Spacer()
                             if dueReminderCount > 0 {
                                 ReminderCountBadge(count: dueReminderCount)
@@ -175,7 +175,7 @@ struct SidebarView: View {
                     Button {
                         selection = .fuelPrices
                     } label: {
-                        Label("Spritpreise", systemImage: "fuelpump.circle")
+                        sidebarLabel("Spritpreise", systemImage: "fuelpump.circle")
                     }
                     .buttonStyle(.plain)
                     .pointerStyle(.link)
@@ -186,7 +186,7 @@ struct SidebarView: View {
                     Button {
                         selection = .mcp
                     } label: {
-                        Label("KI-Zugriff", systemImage: "sparkles")
+                        sidebarLabel("KI-Zugriff", systemImage: "sparkles")
                     }
                     .buttonStyle(.plain)
                     .pointerStyle(.link)
@@ -223,6 +223,16 @@ struct SidebarView: View {
                     sectionHeader("Stillgelegte Fahrzeuge", count: decommissionedVehicles.count)
                 }
             }
+        }
+    }
+
+    /// Zeilen-Label für die „Allgemein"-Einträge mit blauem Icon.
+    private func sidebarLabel(_ title: String, systemImage: String) -> some View {
+        Label {
+            Text(title)
+        } icon: {
+            Image(systemName: systemImage)
+                .foregroundStyle(.blue)
         }
     }
 
