@@ -23,10 +23,14 @@ struct SidebarView: View {
     private var openReminders: FetchedResults<Erinnerung>
 
     @State private var isPresentingNewVehicle = false
+    @State private var isPresentingSectionConfig = false
     @State private var vehiclePendingDeletion: Vehicle?
     @State private var isGeneralExpanded = true
     @State private var isVehiclesExpanded = true
     @State private var isDecommissionedExpanded = true
+    /// Welche der optionalen „Allgemein"-Zeilen sichtbar sind, aus den
+    /// UserDefaults vorbelegt (siehe `SidebarSectionVisibilityStore`).
+    @State private var enabledSections = SidebarSectionVisibilityStore.enabledSections()
 
     /// Anzahl offener Erinnerungen, die bereits fällig sind (siehe `Erinnerung.isDue`).
     /// Liest `dailyDueCheckTick` mit, damit der Badge auch ohne Klick oder
@@ -48,6 +52,43 @@ struct SidebarView: View {
             .sorted { ($0.licensePlate ?? "") < ($1.licensePlate ?? "") }
     }
 
+    /// Die zur aktuellen Auswahl gehörende ausblendbare Zeile, oder `nil` bei
+    /// „Statistik" oder einem Fahrzeug – beide sind nicht Teil der
+    /// Konfiguration.
+    private var sectionOfSelection: SidebarSection? {
+        switch selection {
+        case .documents: return .documents
+        case .reminders: return .reminders
+        case .fuelPrices: return .fuelPrices
+        case .mcp: return .mcp
+        case .statistics, .vehicle: return nil
+        }
+    }
+
+    /// Ein-/Ausblenden einer Zeile, sofort persistiert.
+    private func sectionBinding(_ section: SidebarSection) -> Binding<Bool> {
+        Binding(
+            get: { enabledSections.contains(section) },
+            set: { isOn in
+                if isOn { enabledSections.insert(section) } else { enabledSections.remove(section) }
+                SidebarSectionVisibilityStore.setEnabledSections(enabledSections)
+            }
+        )
+    }
+
+    private var sectionVisibilityPopover: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Sichtbare Menüpunkte")
+                .font(.headline)
+            ForEach(SidebarSection.allCases) { section in
+                Toggle(section.title, isOn: sectionBinding(section))
+                    .toggleStyle(.checkbox)
+            }
+        }
+        .padding(16)
+        .frame(width: 220, alignment: .leading)
+    }
+
     var body: some View {
         list
             .navigationTitle("Fuhrpark")
@@ -60,9 +101,25 @@ struct SidebarView: View {
                     }
                     .pointerStyle(.link)
                 }
+                ToolbarItem {
+                    Button {
+                        isPresentingSectionConfig = true
+                    } label: {
+                        Label("Menüpunkte konfigurieren", systemImage: "gearshape")
+                    }
+                    .pointerStyle(.link)
+                    .popover(isPresented: $isPresentingSectionConfig) {
+                        sectionVisibilityPopover
+                    }
+                }
             }
             .sheet(isPresented: $isPresentingNewVehicle) {
                 VehicleFormView()
+            }
+            .onChange(of: enabledSections) { _, newValue in
+                if let sectionOfSelection, !newValue.contains(sectionOfSelection) {
+                    selection = .statistics
+                }
             }
             .modifier(VehicleConfirmationModifier(
                 pending: $vehiclePendingDeletion,
@@ -86,47 +143,55 @@ struct SidebarView: View {
                 .pointerStyle(.link)
                 .listRowBackground(rowBackground(for: .statistics))
 
-                Button {
-                    selection = .documents
-                } label: {
-                    Label("Dokumente", systemImage: "folder.fill")
+                if enabledSections.contains(.documents) {
+                    Button {
+                        selection = .documents
+                    } label: {
+                        Label("Dokumente", systemImage: "folder.fill")
+                    }
+                    .buttonStyle(.plain)
+                    .pointerStyle(.link)
+                    .listRowBackground(rowBackground(for: .documents))
                 }
-                .buttonStyle(.plain)
-                .pointerStyle(.link)
-                .listRowBackground(rowBackground(for: .documents))
 
-                Button {
-                    selection = .reminders
-                } label: {
-                    HStack {
-                        Label("Erinnerungen", systemImage: "bell.fill")
-                        Spacer()
-                        if dueReminderCount > 0 {
-                            ReminderCountBadge(count: dueReminderCount)
+                if enabledSections.contains(.reminders) {
+                    Button {
+                        selection = .reminders
+                    } label: {
+                        HStack {
+                            Label("Erinnerungen", systemImage: "bell.fill")
+                            Spacer()
+                            if dueReminderCount > 0 {
+                                ReminderCountBadge(count: dueReminderCount)
+                            }
                         }
                     }
+                    .buttonStyle(.plain)
+                    .pointerStyle(.link)
+                    .listRowBackground(rowBackground(for: .reminders))
                 }
-                .buttonStyle(.plain)
-                .pointerStyle(.link)
-                .listRowBackground(rowBackground(for: .reminders))
 
-                Button {
-                    selection = .fuelPrices
-                } label: {
-                    Label("Spritpreise", systemImage: "fuelpump.circle")
+                if enabledSections.contains(.fuelPrices) {
+                    Button {
+                        selection = .fuelPrices
+                    } label: {
+                        Label("Spritpreise", systemImage: "fuelpump.circle")
+                    }
+                    .buttonStyle(.plain)
+                    .pointerStyle(.link)
+                    .listRowBackground(rowBackground(for: .fuelPrices))
                 }
-                .buttonStyle(.plain)
-                .pointerStyle(.link)
-                .listRowBackground(rowBackground(for: .fuelPrices))
 
-                Button {
-                    selection = .mcp
-                } label: {
-                    Label("KI-Zugriff", systemImage: "sparkles")
+                if enabledSections.contains(.mcp) {
+                    Button {
+                        selection = .mcp
+                    } label: {
+                        Label("KI-Zugriff", systemImage: "sparkles")
+                    }
+                    .buttonStyle(.plain)
+                    .pointerStyle(.link)
+                    .listRowBackground(rowBackground(for: .mcp))
                 }
-                .buttonStyle(.plain)
-                .pointerStyle(.link)
-                .listRowBackground(rowBackground(for: .mcp))
             } header: {
                 Text("Allgemein")
             }
