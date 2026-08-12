@@ -62,10 +62,6 @@ struct ExpenseListWindow: View {
                     } else {
                         displayOptions
 
-                        if !categories.isEmpty {
-                            filterSection
-                        }
-
                         if filteredExpenses.isEmpty {
                             Text("Keine Ausgaben in den gewählten Kategorien.")
                                 .font(.callout)
@@ -125,35 +121,39 @@ struct ExpenseListWindow: View {
 
     private var displayOptions: some View {
         GlassCard {
-            HStack {
-                Spacer()
-                Stepper("Anzahl: \(pageSize)", value: $pageSize, in: 5...15)
-                    .fixedSize()
-            }
-        }
-    }
-
-    private var filterSection: some View {
-        GlassCard(title: "Nach Kategorie filtern") {
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 90), spacing: 8, alignment: .leading)],
-                alignment: .leading,
-                spacing: 8
-            ) {
-                filterChip(title: "Alle", selected: selectedCategories.isEmpty) {
-                    selectedCategories.removeAll()
-                }
-                ForEach(categories) { category in
-                    filterChip(
-                        title: category.name ?? "",
-                        selected: selectedCategories.contains(category)
+            VStack(alignment: .leading, spacing: 12) {
+                if !categories.isEmpty {
+                    Text("Nach Kategorie filtern")
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 90), spacing: 8, alignment: .leading)],
+                        alignment: .leading,
+                        spacing: 8
                     ) {
-                        if selectedCategories.contains(category) {
-                            selectedCategories.remove(category)
-                        } else {
-                            selectedCategories.insert(category)
+                        filterChip(title: "Alle", selected: selectedCategories.isEmpty) {
+                            selectedCategories.removeAll()
+                        }
+                        ForEach(categories) { category in
+                            filterChip(
+                                title: category.name ?? "",
+                                selected: selectedCategories.contains(category)
+                            ) {
+                                if selectedCategories.contains(category) {
+                                    selectedCategories.remove(category)
+                                } else {
+                                    selectedCategories.insert(category)
+                                }
+                            }
                         }
                     }
+
+                    Divider()
+                }
+
+                HStack {
+                    Text("Einträge pro Seite")
+                    Spacer()
+                    Stepper("\(pageSize)", value: $pageSize, in: 5...15)
+                        .fixedSize()
                 }
             }
         }
