@@ -23,6 +23,9 @@ enum VehicleReportPDFGenerator {
     @MainActor
     static func generate(vehicle: Vehicle, enabledCards: Set<StatisticsCard>) throws -> URL {
         let reportView = VehiclePDFReportView(vehicle: vehicle, enabledCards: enabledCards)
+        let pageStarts = pageStartOffsets(for: reportView.sections)
+        let totalHeight = pageStarts.totalHeight
+
         let renderer = ImageRenderer(content: reportView)
 
         let filename = "\(vehicle.licensePlate ?? "Fahrzeug")_\(timestamp()).pdf"
@@ -33,38 +36,48 @@ enum VehicleReportPDFGenerator {
         }
 
         var thrown: Error?
-        renderer.render { size, drawContent in
+        renderer.render { _, drawContent in
             var mediaBox = CGRect(origin: .zero, size: pageSize)
             guard let context = CGContext(consumer: consumer, mediaBox: &mediaBox, nil) else {
                 thrown = ExportError.contextCreationFailed
                 return
             }
 
-            // Naive Paginierung ohne Seitenumbruch-Vermeidung: eine Karte kann
-            // dabei mitten auf einer Seitengrenze zerschnitten werden – wie bei
-            // einem normal ausgedruckten Dokument.
-            //
             // SwiftUI zeichnet über diese API in den unveränderten (nicht
-            // gespiegelten) Koordinaten des CGContext – Inhalt-y=0 landet also
-            // am UNTEREN Rand des Gesamtinhalts, nicht am oberen. Ohne
-            // Berücksichtigung der vollen Inhaltshöhe (`size.height`) würde
-            // Seite 1 daher das Seitenende zeigen. Die Verschiebung bezieht
-            // sich deshalb auf `size.height`, nicht nur auf den Seitenindex,
-            // und auf `contentAreaHeight` statt der vollen Seitenhöhe, damit
-            // pro Seite Platz für Kopf-/Fußrand bleibt.
-            let pageCount = max(1, Int(ceil(size.height / contentAreaHeight)))
-            let contentArea = CGRect(x: 0, y: bottomMargin, width: pageSize.width, height: contentAreaHeight)
-            for page in 0..<pageCount {
+            // gespiegelten) Koordinaten des CGContext – Inhalt-Offset 0 landet
+            // also am UNTEREN Rand des Gesamtinhalts, nicht am oberen. Ohne
+            // Berücksichtigung von `totalHeight` würde Seite 1 daher das
+            // Seitenende zeigen.
+            let pageCount = pageStarts.offsets.count
+            for (page, pageTop) in pageStarts.offsets.enumerated() {
+                // Wie weit reicht der Inhalt auf DIESER Seite tatsächlich?
+                // `contentAreaHeight` ist nur die Obergrenze – beginnt die
+                // nächste Seite (wegen eines nicht mehr passenden Abschnitts)
+                // früher, muss die Seite hier ebenso früh enden, sonst
+                // schneidet der feste Rahmen trotz korrekt berechnetem
+                // Umbruch weiterhin mitten in den nächsten Abschnitt.
+                // 1pt Sicherheitsabstand, sonst schneidet der Clip exakt auf
+                // Höhe der (0.5pt breiten) Rahmenlinie des nächsten
+                // Abschnitts und lässt einen Haarriss durchscheinen.
+                let nextTop = page + 1 < pageStarts.offsets.count ? pageStarts.offsets[page + 1] - 1 : pageTop + contentAreaHeight
+                let visibleHeight = min(contentAreaHeight, nextTop - pageTop)
+                let contentArea = CGRect(
+                    x: 0,
+                    y: bottomMargin + contentAreaHeight - visibleHeight,
+                    width: pageSize.width,
+                    height: visibleHeight
+                )
+
                 context.beginPDFPage(nil)
                 context.saveGState()
-                // Ohne diesen Clip zeichnet SwiftUI den kompletten (nur um
-                // `size.height` verschobenen) Inhalt weiter bis zum Seitenrand
-                // – eine Karte, die bis in den unteren Rand reicht, würde sich
-                // sonst mit der Fußzeile überlappen.
+                // Ohne diesen Clip zeichnet SwiftUI den kompletten (nur
+                // verschobenen) Inhalt weiter bis zum Seitenrand – eine Karte,
+                // die bis in den unteren Rand reicht, würde sich sonst mit der
+                // Fußzeile überlappen.
                 context.clip(to: contentArea)
                 context.translateBy(
                     x: 0,
-                    y: CGFloat(page + 1) * contentAreaHeight - size.height + bottomMargin
+                    y: pageTop - totalHeight + bottomMargin + contentAreaHeight
                 )
                 drawContent(context)
                 context.restoreGState()
@@ -75,6 +88,46 @@ enum VehicleReportPDFGenerator {
         }
         if let thrown { throw thrown }
         return url
+    }
+
+    /// Ermittelt, an welchem Inhalts-Offset (von oben gemessen) jede Seite
+    /// beginnt – und zwar an Abschnittsgrenzen, nicht in gleichmäßigen
+    /// `contentAreaHeight`-Schritten wie in der ersten Version. Jeder
+    /// Abschnitt (Karte) wird dafür einzeln über einen eigenen
+    /// `ImageRenderer` (`.nsImage?.size`) vermessen; passt der nächste
+    /// Abschnitt nicht mehr auf die aktuelle
+    /// Seite, beginnt er auf einer neuen Seite, statt mitten in einer
+    /// Karte/Zeile zerschnitten zu werden. Ein einzelner Abschnitt, der
+    /// bereits für sich allein höher als eine Seite ist, wird davon
+    /// ausgenommen (bekannte Einschränkung, in dieser App praktisch nicht
+    /// relevant, da alle Karten deutlich kleiner als eine Seite sind).
+    @MainActor
+    private static func pageStartOffsets(for sections: [AnyView]) -> (offsets: [CGFloat], totalHeight: CGFloat) {
+        let heights = sections.map { section in
+            ImageRenderer(content: section.frame(width: VehiclePDFReportView.contentWidth)).nsImage?.size.height ?? 0
+        }
+        guard !heights.isEmpty else { return ([0], 0) }
+
+        let spacing = VehiclePDFReportView.sectionSpacing
+        var tops: [CGFloat] = []
+        var cursor: CGFloat = 0
+        for height in heights {
+            tops.append(cursor)
+            cursor += height + spacing
+        }
+        let totalHeight = cursor - spacing
+
+        var offsets: [CGFloat] = [0]
+        var currentPageStart: CGFloat = 0
+        for (index, top) in tops.enumerated() {
+            let bottom = top + heights[index]
+            if bottom - currentPageStart > contentAreaHeight, top > currentPageStart {
+                currentPageStart = top
+                offsets.append(top)
+            }
+        }
+
+        return (offsets, totalHeight)
     }
 
     /// Zeichnet „Seite X von Y" mittig in den unteren Rand – bewusst NICHT

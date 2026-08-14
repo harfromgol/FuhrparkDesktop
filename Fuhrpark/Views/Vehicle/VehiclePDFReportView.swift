@@ -11,39 +11,55 @@ struct VehiclePDFReportView: View {
     let vehicle: Vehicle
     let enabledCards: Set<StatisticsCard>
 
-    private static let pageWidth: CGFloat = 595.28 // A4 bei 72dpi
+    static let pageWidth: CGFloat = 595.28 // A4 bei 72dpi
+    private static let horizontalPadding: CGFloat = 24
+    /// Breite, mit der `VehicleReportPDFGenerator` jeden Abschnitt einzeln
+    /// vermisst – muss der tatsächlichen Breite innerhalb der Padding-VStack
+    /// entsprechen, sonst weichen Einzel- und Gesamtmessung voneinander ab.
+    static let contentWidth = pageWidth - horizontalPadding * 2
+    /// Muss mit dem `spacing` der VStack unten übereinstimmen – wird für die
+    /// Seitenumbruch-Berechnung in `VehicleReportPDFGenerator` gebraucht.
+    static let sectionSpacing: CGFloat = 16
+
+    /// Alle sichtbaren Abschnitte in Reihenfolge. Als eigene, von außen
+    /// lesbare Liste (statt eines direkt in `body` verschachtelten
+    /// `if`-Blocks), damit `VehicleReportPDFGenerator` jeden Abschnitt
+    /// einzeln vermessen und Seitenumbrüche an Abschnittsgrenzen setzen kann
+    /// statt mitten in einer Karte/Zeile.
+    var sections: [AnyView] {
+        var result: [AnyView] = [AnyView(reportHeader), AnyView(headerStatsSection)]
+        if !vehicle.sortedFuelEntries.isEmpty {
+            result.append(AnyView(fuelStatsSection))
+        }
+        if !vehicle.sortedExpenses.isEmpty {
+            result.append(AnyView(expenseStatsSection))
+        }
+        if enabledCards.contains(.consumption), !vehicle.sortedFuelEntries.isEmpty {
+            result.append(AnyView(consumptionSection))
+        }
+        if enabledCards.contains(.price), !vehicle.sortedFuelEntries.isEmpty {
+            result.append(AnyView(priceSection))
+        }
+        if enabledCards.contains(.expenseCategory), !vehicle.sortedExpenses.isEmpty {
+            result.append(AnyView(expenseCategorySection))
+        }
+        if enabledCards.contains(.yearlyCost), !vehicle.costsByYear.isEmpty {
+            result.append(AnyView(yearlyCostSection))
+        }
+        if enabledCards.contains(.yearlyDistance), !vehicle.kilometersByYear.isEmpty {
+            result.append(AnyView(kilometersByYearSection))
+        }
+        return result
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            reportHeader
-            headerStatsSection
-
-            if !vehicle.sortedFuelEntries.isEmpty {
-                fuelStatsSection
-            }
-            if !vehicle.sortedExpenses.isEmpty {
-                expenseStatsSection
-            }
-            if enabledCards.contains(.consumption), !vehicle.sortedFuelEntries.isEmpty {
-                consumptionSection
-            }
-            if enabledCards.contains(.price), !vehicle.sortedFuelEntries.isEmpty {
-                priceSection
-            }
-            if enabledCards.contains(.expenseCategory), !vehicle.sortedExpenses.isEmpty {
-                expenseCategorySection
-            }
-            if enabledCards.contains(.yearlyCost), !vehicle.costsByYear.isEmpty {
-                yearlyCostSection
-            }
-            if enabledCards.contains(.yearlyDistance), !vehicle.kilometersByYear.isEmpty {
-                kilometersByYearSection
-            }
+        VStack(alignment: .leading, spacing: Self.sectionSpacing) {
+            ForEach(sections.indices, id: \.self) { sections[$0] }
         }
         // Nur horizontal – oben/unten übernimmt `VehicleReportPDFGenerator`
         // den Rand einheitlich auf JEDER Seite (siehe dort), nicht nur am
         // Anfang/Ende des Gesamtinhalts.
-        .padding(.horizontal, 24)
+        .padding(.horizontal, Self.horizontalPadding)
         .frame(width: Self.pageWidth, alignment: .leading)
         .foregroundStyle(.black)
         .background(Color.white)
