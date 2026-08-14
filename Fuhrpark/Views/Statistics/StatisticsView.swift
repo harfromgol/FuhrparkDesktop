@@ -13,6 +13,7 @@ struct StatisticsView: View {
     @State private var isPresentingVehicleCostFilter = false
     @State private var yearlyCostCountOverride = YearlyCostCountStore.get()
     @State private var isPresentingYearlyCostConfig = false
+    @State private var pdfExportErrorMessage: String?
 
     private var totalCost: Decimal { vehicles.reduce(.zero) { $0 + $1.totalCost } }
     private var totalFuelCost: Decimal { vehicles.reduce(.zero) { $0 + $1.totalFuelCost } }
@@ -122,6 +123,31 @@ struct StatisticsView: View {
         .frame(width: 220, alignment: .leading)
     }
 
+    private func exportPDF() {
+        do {
+            let reportView = StatisticsPDFReportView(
+                vehicleCount: vehicles.count,
+                totalCost: totalCost,
+                costPerVehicleList: costPerVehicleList,
+                costsByYear: limitedCostsByYear
+            )
+            let url = try ReportPDFGenerator.generate(
+                reportView,
+                sections: reportView.sections,
+                filenamePrefix: "Statistik"
+            )
+            Task {
+                do {
+                    try await ReportPDFGenerator.openInPreview(url)
+                } catch {
+                    pdfExportErrorMessage = error.localizedDescription
+                }
+            }
+        } catch {
+            pdfExportErrorMessage = error.localizedDescription
+        }
+    }
+
     var body: some View {
         ScrollView {
             GlassEffectContainer {
@@ -134,7 +160,23 @@ struct StatisticsView: View {
                         )
                         .padding(.top, 60)
                     } else {
-                        GlassCard(title: "Übersicht") {
+                        GlassCard {
+                            HStack {
+                                Text("Übersicht")
+                                    .font(.headline)
+                                Spacer()
+                                Menu {
+                                    Button("PDF") { exportPDF() }
+                                } label: {
+                                    Image(systemName: "ellipsis.circle")
+                                }
+                                .menuStyle(.borderlessButton)
+                                .menuIndicator(.hidden)
+                                .fixedSize()
+                                .pointerStyle(.link)
+                                .help("Weitere Aktionen")
+                            }
+
                             HStack(alignment: .top, spacing: 16) {
                                 StatTile(
                                     title: "Fahrzeuge",
@@ -241,5 +283,17 @@ struct StatisticsView: View {
             }
         }
         .navigationTitle("Statistik")
+        .alert(
+            "PDF-Erstellung fehlgeschlagen",
+            isPresented: Binding(
+                get: { pdfExportErrorMessage != nil },
+                set: { if !$0 { pdfExportErrorMessage = nil } }
+            ),
+            presenting: pdfExportErrorMessage
+        ) { _ in
+            Button("OK", role: .cancel) { }
+        } message: { message in
+            Text(message)
+        }
     }
 }
