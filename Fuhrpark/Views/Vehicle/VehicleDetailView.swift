@@ -258,20 +258,14 @@ struct VehicleDetailView: View {
                 if vehicle.decommissioned {
                     DecommissionedBadge(showsIcon: true)
                 }
-                Button {
-                    exportPDF()
-                } label: {
-                    Image(systemName: "doc.richtext")
-                }
-                .buttonStyle(.borderless)
-                .pointerStyle(.link)
-                .help("Als PDF exportieren und in Vorschau öffnen")
                 Menu {
                     Button("Stilllegen") { vehiclePendingDecommission = vehicle }
                         .disabled(vehicle.decommissioned)
                     Divider()
                     Button("Bearbeiten") { isPresentingEditVehicle = true }
                     Button("Löschen", role: .destructive) { vehiclePendingDeletion = vehicle }
+                    Divider()
+                    Button("PDF") { exportPDF() }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
