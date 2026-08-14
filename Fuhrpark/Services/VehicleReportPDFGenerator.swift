@@ -91,39 +91,100 @@ enum VehicleReportPDFGenerator {
     }
 
     /// Ermittelt, an welchem Inhalts-Offset (von oben gemessen) jede Seite
-    /// beginnt – und zwar an Abschnittsgrenzen, nicht in gleichmäßigen
-    /// `contentAreaHeight`-Schritten wie in der ersten Version. Jeder
-    /// Abschnitt (Karte) wird dafür einzeln über einen eigenen
-    /// `ImageRenderer` (`.nsImage?.size`) vermessen; passt der nächste
-    /// Abschnitt nicht mehr auf die aktuelle
-    /// Seite, beginnt er auf einer neuen Seite, statt mitten in einer
-    /// Karte/Zeile zerschnitten zu werden. Ein einzelner Abschnitt, der
-    /// bereits für sich allein höher als eine Seite ist, wird davon
-    /// ausgenommen (bekannte Einschränkung, in dieser App praktisch nicht
-    /// relevant, da alle Karten deutlich kleiner als eine Seite sind).
+    /// beginnt. Umbrüche liegen an Abschnittsgrenzen (Kartenanfang) UND –
+    /// bei Tabellen-Karten mit unterschiedlich vielen Zeilen (Kategorien/
+    /// Jahre) – zusätzlich an jeder Zeilengrenze innerhalb einer Karte, die
+    /// für sich allein nicht mehr auf eine Seite passt. Eine solche Karte
+    /// wird dann komplett auf mehrere Seiten verteilt, ohne dass eine
+    /// einzelne Zeile mittendrin zerschnitten wird (ihr Rahmen schließt
+    /// dabei allerdings nicht sauber ab – kosmetischer Kompromiss für einen
+    /// in der Praxis sehr seltenen Fall).
     @MainActor
-    private static func pageStartOffsets(for sections: [AnyView]) -> (offsets: [CGFloat], totalHeight: CGFloat) {
-        let heights = sections.map { section in
-            ImageRenderer(content: section.frame(width: VehiclePDFReportView.contentWidth)).nsImage?.size.height ?? 0
+    private static func pageStartOffsets(
+        for sections: [VehiclePDFReportView.ReportSection]
+    ) -> (offsets: [CGFloat], totalHeight: CGFloat) {
+        func measure(_ view: AnyView) -> CGFloat {
+            ImageRenderer(content: view.frame(width: VehiclePDFReportView.contentWidth)).nsImage?.size.height ?? 0
         }
-        guard !heights.isEmpty else { return ([0], 0) }
+
+        struct Measured {
+            let height: CGFloat
+            /// Offsets ab dem Abschnittsanfang, an denen (zusätzlich zum
+            /// Abschnittsanfang selbst) umgebrochen werden darf, ohne eine
+            /// Zeile zu zerschneiden – leer bei Abschnitten ohne Zeilen.
+            let rowBreaks: [CGFloat]
+        }
+
+        let measured: [Measured] = sections.map { section in
+            let height = measure(section.view)
+            guard let rowInfo = section.rowInfo, rowInfo.rowCount > 1 else {
+                return Measured(height: height, rowBreaks: [])
+            }
+            // Kopf- (Titel/Spaltenköpfe) und Zeilenhöhe lassen sich aus einer
+            // Karte nicht direkt auslesen – deshalb dieselbe Karte einmal
+            // ohne Zeilen vermessen; die Differenz zur vollen Höhe, geteilt
+            // durch die Zeilenanzahl, ergibt die (bei gleich hohen Zeilen
+            // exakte) Höhe einer einzelnen Zeile.
+            //
+            // `chromeHeight` misst dabei eine EIGENSTÄNDIGE, vollständige
+            // Karte mit 0 Zeilen – ihr unteres `cardPadding` sitzt also
+            // direkt hinter Titel/Spaltenköpfen. In der echten Karte mit
+            // Zeilen sitzt dasselbe Padding aber erst hinter der LETZTEN
+            // Zeile. Ohne den Abzug von `cardPadding` würde jeder
+            // Zeilenumbruch-Kandidat um dieses Padding zu weit in den
+            // Inhalt hineinragen und die jeweils nächste Zeile anschneiden.
+            let chromeHeight = measure(rowInfo.chromeOnly) - VehiclePDFReportView.cardPadding
+            let rowHeight = (height - VehiclePDFReportView.cardPadding - chromeHeight) / CGFloat(rowInfo.rowCount)
+            guard rowHeight > 0 else { return Measured(height: height, rowBreaks: []) }
+            let rowBreaks = (1..<rowInfo.rowCount).map { chromeHeight + CGFloat($0) * rowHeight }
+            return Measured(height: height, rowBreaks: rowBreaks)
+        }
+        guard !measured.isEmpty else { return ([0], 0) }
 
         let spacing = VehiclePDFReportView.sectionSpacing
         var tops: [CGFloat] = []
         var cursor: CGFloat = 0
-        for height in heights {
+        for m in measured {
             tops.append(cursor)
-            cursor += height + spacing
+            cursor += m.height + spacing
         }
         let totalHeight = cursor - spacing
 
+        // Alle Umbruch-Kandidaten sammeln (aufsteigend, da abschnittsweise
+        // bereits aufsteigend erzeugt und Abschnitte selbst aufsteigend
+        // sind): Zeilengrenzen innerhalb einer Karte, gefolgt vom Anfang des
+        // jeweils nächsten Abschnitts.
+        var candidates: [CGFloat] = []
+        for (index, m) in measured.enumerated() {
+            for rowBreak in m.rowBreaks {
+                candidates.append(tops[index] + rowBreak)
+            }
+            if index + 1 < measured.count {
+                candidates.append(tops[index + 1])
+            }
+        }
+
+        // Klassischer Greedy-Umbruch (wie Zeilenumbruch in einem Textsatz):
+        // den am weitesten entfernten, noch passenden Kandidaten je Seite
+        // suchen; passt nicht einmal der erste, wird trotzdem umgebrochen
+        // (Karte bzw. Zeile größer als eine Seite – siehe oben).
         var offsets: [CGFloat] = [0]
         var currentPageStart: CGFloat = 0
-        for (index, top) in tops.enumerated() {
-            let bottom = top + heights[index]
-            if bottom - currentPageStart > contentAreaHeight, top > currentPageStart {
-                currentPageStart = top
-                offsets.append(top)
+        var lastFitting: CGFloat = 0
+        var index = 0
+        while index < candidates.count {
+            let candidate = candidates[index]
+            if candidate - currentPageStart <= contentAreaHeight {
+                lastFitting = candidate
+                index += 1
+            } else if lastFitting > currentPageStart {
+                currentPageStart = lastFitting
+                offsets.append(lastFitting)
+            } else {
+                currentPageStart = candidate
+                offsets.append(candidate)
+                lastFitting = candidate
+                index += 1
             }
         }
 
