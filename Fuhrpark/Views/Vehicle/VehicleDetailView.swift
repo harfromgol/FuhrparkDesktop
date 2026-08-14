@@ -307,7 +307,7 @@ struct VehicleDetailView: View {
     }
 
     private var fuelStatistics: some View {
-        GlassCard(title: "\(vehicle.engineType.refuelNounPlural) – Statistik") {
+        GlassCard {
             HStack(alignment: .top, spacing: 16) {
                 StatTile(
                     title: "Anzahl",
@@ -427,7 +427,7 @@ struct VehicleDetailView: View {
     }
 
     private var expenseStatistics: some View {
-        GlassCard(title: "Sonstige Ausgaben – Statistik") {
+        GlassCard {
             HStack(alignment: .top, spacing: 16) {
                 StatTile(
                     title: "Anzahl",
