@@ -15,6 +15,7 @@ struct VehicleDetailView: View {
     @State private var isPresentingEditVehicle = false
     @State private var vehiclePendingDeletion: Vehicle?
     @State private var vehiclePendingDecommission: Vehicle?
+    @State private var pdfExportErrorMessage: String?
     /// Welche der optionalen Statistik-Karten sichtbar sind, aus den
     /// UserDefaults vorbelegt (siehe `StatisticsCardVisibilityStore`). Wird
     /// je Fahrzeug separat gespeichert; da diese View pro Fahrzeug neu
@@ -187,6 +188,18 @@ struct VehicleDetailView: View {
         .sheet(isPresented: $isPresentingEditVehicle) {
             VehicleFormView(vehicleToEdit: vehicle)
         }
+        .alert(
+            "PDF-Erstellung fehlgeschlagen",
+            isPresented: Binding(
+                get: { pdfExportErrorMessage != nil },
+                set: { if !$0 { pdfExportErrorMessage = nil } }
+            ),
+            presenting: pdfExportErrorMessage
+        ) { _ in
+            Button("OK", role: .cancel) { }
+        } message: { message in
+            Text(message)
+        }
         .modifier(VehicleConfirmationModifier(
             pending: $vehiclePendingDeletion,
             title: "Fahrzeug wirklich löschen?",
@@ -203,6 +216,21 @@ struct VehicleDetailView: View {
             message: { "„\($0.licensePlate ?? "")“ wird als stillgelegt (verschrottet oder verkauft) markiert. Danach können keine \($0.engineType.refuelNounPlural) mehr erfasst werden. Dieser Schritt ist endgültig, eine Reaktivierung ist nicht möglich." },
             action: decommission
         ))
+    }
+
+    private func exportPDF() {
+        do {
+            let url = try VehicleReportPDFGenerator.generate(vehicle: vehicle, enabledCards: enabledCards)
+            Task {
+                do {
+                    try await VehicleReportPDFGenerator.openInPreview(url)
+                } catch {
+                    pdfExportErrorMessage = error.localizedDescription
+                }
+            }
+        } catch {
+            pdfExportErrorMessage = error.localizedDescription
+        }
     }
 
     private func delete(_ vehicle: Vehicle) {
@@ -230,6 +258,14 @@ struct VehicleDetailView: View {
                 if vehicle.decommissioned {
                     DecommissionedBadge(showsIcon: true)
                 }
+                Button {
+                    exportPDF()
+                } label: {
+                    Image(systemName: "doc.richtext")
+                }
+                .buttonStyle(.borderless)
+                .pointerStyle(.link)
+                .help("Als PDF exportieren und in Vorschau öffnen")
                 Menu {
                     Button("Stilllegen") { vehiclePendingDecommission = vehicle }
                         .disabled(vehicle.decommissioned)
