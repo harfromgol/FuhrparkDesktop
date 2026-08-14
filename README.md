@@ -1,6 +1,6 @@
 # FuhrparkDesktop für macOS
 
-[![GitHub](https://img.shields.io/badge/Lizenz-MIT-orange)](https://github.com/harfromgol/FuhrparkDesktop/blob/main/LICENSE) [![GitHub](https://img.shields.io/badge/Version-v1%2E5-blue)](https://github.com/harfromgol/FuhrparkDesktop/releases)
+[![GitHub](https://img.shields.io/badge/Lizenz-MIT-orange)](https://github.com/harfromgol/FuhrparkDesktop/blob/main/LICENSE) [![GitHub](https://img.shields.io/badge/Version-v1%2E7-blue)](https://github.com/harfromgol/FuhrparkDesktop/releases)
 
 Native macOS-App (SwiftUI + Core Data) zur Verwaltung eines kleinen Fuhrparks:
 Fahrzeuge, Betankungen, sonstige Ausgaben, Belege und Spritpreise an einem Ort.
@@ -25,8 +25,14 @@ Fahrzeuge, Betankungen, sonstige Ausgaben, Belege und Spritpreise an einem Ort.
   mit Filter nach Fahrzeug/Kategorie. Die Datei wird dabei nur einmal abgelegt.
 - **Erinnerungen** - laß Dich an den nächsten TÜV Termin oder an die fällige Versicherung/Steuer erinnern
 - **Statistik** – Kosten pro Kategorie, pro Jahr, pro Fahrzeug.
+- **PDF-Export** – Fahrzeugbericht und Statistikübersicht als mehrseitiges
+  PDF mit Kopf-/Fußzeile und sauberen Seitenumbrüchen, direkt aus dem
+  jeweiligen Aktionsmenü.
 - **Spritpreise** – Umkreissuche über die Tankerkönig-API (eigener API-Key
-  erforderlich, wird lokal gespeichert und nicht mit exportiert).
+  erforderlich, wird lokal gespeichert und nicht mit exportiert). Angepinnte
+  Tankstellen/Sorten lassen sich zusätzlich per Menüleisten-Icon verfolgen.
+- **Konfigurierbare Seitenleiste** – Dokumente, Erinnerungen, Spritpreise und
+  KI-Zugriff lassen sich einzeln aus der Seitenleiste ausblenden.
 - **Datenexport/-import** – vollständiges JSON-Backup aller Fahrzeuge,
   Betankungen, Ausgaben, Kategorien und Dokumente (`Tools → Daten exportieren
   / importieren`).

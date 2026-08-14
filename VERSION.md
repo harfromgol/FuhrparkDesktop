@@ -1,7 +1,46 @@
 # Versionshistorie
 
 Alle nennenswerten Änderungen an FuhrparkDesktop, gruppiert nach Release.
-Die Versionen sind als Git-Tags (`v1.1` … `v1.6`) markiert.
+Die Versionen sind als Git-Tags (`v1.1` … `v1.7`) markiert.
+
+## [v1.7](https://github.com/harfromgol/FuhrparkDesktop/releases/tag/v1.7) – 2026-08-14
+
+### Neu
+- **Spritpreise in der Menüleiste**: angepinnte Tankstellen/Sorten lassen
+  sich gezielt und unabhängig von der Umkreissuche abfragen. Auswahl,
+  Aktualisierungsintervall und zuletzt geladene Preise überstehen einen
+  Neustart der App.
+- **Betankungsliste**: Jahresfilter (nur Jahre mit Betankungen) und
+  einstellbare Paginierung (5–15 Einträge je Seite, mit Vor/Zurück und
+  Seitenanzeige).
+- **Ausgabenliste**: dieselbe Paginierung jetzt auch hier, über eine mit der
+  Betankungsliste gemeinsam genutzte Komponente.
+- **PDF-Export für Fahrzeugberichte**: In der Fahrzeug-Detailansicht erzeugt
+  „PDF" im Aktionsmenü ein mehrseitiges PDF mit genau den Kennzahlen-Karten,
+  die gerade eingeblendet sind, und öffnet es direkt in Vorschau.app. Jede
+  Seite trägt einheitlichen Kopf-/Fußrand und eine „Seite X von Y"-Fußzeile;
+  die Paginierung bricht nie mitten in einer Karte oder Tabellenzeile um –
+  auch nicht, wenn eine Tabellen-Karte durch viele Jahre/Kategorien selbst
+  höher als eine Seite wird.
+- **PDF-Export für die Statistikseite**: dieselbe Berichts-Infrastruktur,
+  ausgelöst über ein neues Menü neben der Überschrift „Übersicht", mit den
+  Karten Übersicht, Kosten je Fahrzeug und Kosten pro Jahr.
+- **Sidebar-Menüpunkte konfigurierbar**: Dokumente, Erinnerungen, Spritpreise
+  und KI-Zugriff lassen sich einzeln aus der Seitenleiste ausblenden, über
+  ein neues Konfigurationssymbol neben „Neues Fahrzeug".
+
+### Geändert
+- Sidebar: Symbole der Allgemein-Menüpunkte in Systemblau.
+- Fahrzeugdetails: die Karten „Betankungen – Statistik" und „Sonstige
+  Ausgaben – Statistik" zeigen ihre Kennzahlen jetzt ohne eigene
+  Kartenüberschrift, direkt unter der Abschnittsüberschrift.
+- Der PDF-Export der Fahrzeugdetails liegt jetzt als Eintrag „PDF" im
+  bestehenden Aktionsmenü statt in einem eigenen Symbol daneben.
+
+### Behoben
+- Export-, Import- und Dokument-Auswahldialoge liefen über
+  `.fileExporter`/`.fileImporter` und ließen sich dadurch nicht frei auf
+  dem Bildschirm verschieben.
 
 ## [v1.6](https://github.com/harfromgol/FuhrparkDesktop/releases/tag/v1.6) – 2026-08-07
 
