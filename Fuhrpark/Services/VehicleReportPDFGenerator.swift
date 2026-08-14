@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import CoreText
 
 /// Erzeugt aus `VehiclePDFReportView` ein mehrseitiges A4-PDF und öffnet es
 /// in Vorschau.app. Nutzt `ImageRenderer.render(rasterizationScale:renderer:)`:
@@ -10,6 +11,14 @@ import AppKit
 /// gezeichnet, nicht gerastert).
 enum VehicleReportPDFGenerator {
     private static let pageSize = CGSize(width: 595.28, height: 841.89) // A4 bei 72dpi
+    /// Weißraum oben/unten auf JEDER Seite – die Paginierung schneidet den
+    /// fortlaufenden Inhalt sonst bündig an der Seitenkante ab. Die Ränder
+    /// werden deshalb hier (nicht als Padding in `VehiclePDFReportView`)
+    /// verwaltet, damit sie auf jeder Seite gleich groß sind, nicht nur am
+    /// Anfang/Ende des Gesamtinhalts.
+    private static let topMargin: CGFloat = 48
+    private static let bottomMargin: CGFloat = 60
+    private static let contentAreaHeight = pageSize.height - topMargin - bottomMargin
 
     @MainActor
     static func generate(vehicle: Vehicle, enabledCards: Set<StatisticsCard>) throws -> URL {
@@ -40,20 +49,55 @@ enum VehicleReportPDFGenerator {
             // am UNTEREN Rand des Gesamtinhalts, nicht am oberen. Ohne
             // Berücksichtigung der vollen Inhaltshöhe (`size.height`) würde
             // Seite 1 daher das Seitenende zeigen. Die Verschiebung bezieht
-            // sich deshalb auf `size.height`, nicht nur auf den Seitenindex.
-            let pageCount = max(1, Int(ceil(size.height / pageSize.height)))
+            // sich deshalb auf `size.height`, nicht nur auf den Seitenindex,
+            // und auf `contentAreaHeight` statt der vollen Seitenhöhe, damit
+            // pro Seite Platz für Kopf-/Fußrand bleibt.
+            let pageCount = max(1, Int(ceil(size.height / contentAreaHeight)))
+            let contentArea = CGRect(x: 0, y: bottomMargin, width: pageSize.width, height: contentAreaHeight)
             for page in 0..<pageCount {
                 context.beginPDFPage(nil)
                 context.saveGState()
-                context.translateBy(x: 0, y: CGFloat(page + 1) * pageSize.height - size.height)
+                // Ohne diesen Clip zeichnet SwiftUI den kompletten (nur um
+                // `size.height` verschobenen) Inhalt weiter bis zum Seitenrand
+                // – eine Karte, die bis in den unteren Rand reicht, würde sich
+                // sonst mit der Fußzeile überlappen.
+                context.clip(to: contentArea)
+                context.translateBy(
+                    x: 0,
+                    y: CGFloat(page + 1) * contentAreaHeight - size.height + bottomMargin
+                )
                 drawContent(context)
                 context.restoreGState()
+                drawFooter(in: context, page: page, pageCount: pageCount)
                 context.endPDFPage()
             }
             context.closePDF()
         }
         if let thrown { throw thrown }
         return url
+    }
+
+    /// Zeichnet „Seite X von Y" mittig in den unteren Rand – bewusst NICHT
+    /// innerhalb des mit `saveGState`/`restoreGState` geklammerten,
+    /// verschobenen Koordinatensystems des Seiteninhalts, sondern in den
+    /// unveränderten Seitenkoordinaten, damit die Position auf jeder Seite
+    /// gleich bleibt.
+    private static func drawFooter(in context: CGContext, page: Int, pageCount: Int) {
+        let text = "Seite \(page + 1) von \(pageCount)"
+        let attributedString = NSAttributedString(string: text, attributes: [
+            .font: NSFont.systemFont(ofSize: 9),
+            .foregroundColor: NSColor.gray
+        ])
+        let line = CTLineCreateWithAttributedString(attributedString)
+        let bounds = CTLineGetBoundsWithOptions(line, .useOpticalBounds)
+
+        context.saveGState()
+        context.textPosition = CGPoint(
+            x: (pageSize.width - bounds.width) / 2,
+            y: (bottomMargin - bounds.height) / 2
+        )
+        CTLineDraw(line, context)
+        context.restoreGState()
     }
 
     /// Öffnet die PDF-Datei gezielt mit Vorschau.app statt der Standard-App.

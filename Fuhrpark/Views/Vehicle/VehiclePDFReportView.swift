@@ -40,7 +40,10 @@ struct VehiclePDFReportView: View {
                 kilometersByYearSection
             }
         }
-        .padding(24)
+        // Nur horizontal – oben/unten übernimmt `VehicleReportPDFGenerator`
+        // den Rand einheitlich auf JEDER Seite (siehe dort), nicht nur am
+        // Anfang/Ende des Gesamtinhalts.
+        .padding(.horizontal, 24)
         .frame(width: Self.pageWidth, alignment: .leading)
         .foregroundStyle(.black)
         .background(Color.white)
