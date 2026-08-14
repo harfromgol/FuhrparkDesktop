@@ -11,84 +11,45 @@ struct VehiclePDFReportView: View {
     let vehicle: Vehicle
     let enabledCards: Set<StatisticsCard>
 
-    static let pageWidth: CGFloat = 595.28 // A4 bei 72dpi
-    private static let horizontalPadding: CGFloat = 24
-    /// Breite, mit der `VehicleReportPDFGenerator` jeden Abschnitt einzeln
-    /// vermisst – muss der tatsächlichen Breite innerhalb der Padding-VStack
-    /// entsprechen, sonst weichen Einzel- und Gesamtmessung voneinander ab.
-    static let contentWidth = pageWidth - horizontalPadding * 2
-    /// Muss mit dem `spacing` der VStack unten übereinstimmen – wird für die
-    /// Seitenumbruch-Berechnung in `VehicleReportPDFGenerator` gebraucht.
-    static let sectionSpacing: CGFloat = 16
-    /// Inneres Padding von `ReportCard` – wird für die Zeilenumbruch-
-    /// Berechnung in `VehicleReportPDFGenerator` gebraucht: eine isoliert
-    /// (mit 0 Zeilen) vermessene Karte enthält dieses Padding direkt nach
-    /// dem Titel/Spaltenköpfen, in der echten Karte mit Zeilen sitzt es
-    /// aber erst nach der letzten Zeile. Ohne Korrektur um genau dieses
-    /// Padding würde jeder berechnete Zeilenumbruch zu weit in den Inhalt
-    /// hineinragen (siehe `VehicleReportPDFGenerator.pageStartOffsets`).
-    static let cardPadding: CGFloat = 14
-
-    /// Ein Abschnitt für die Seitenumbruch-Berechnung in
-    /// `VehicleReportPDFGenerator`: die Ansicht selbst (immer mit allen
-    /// Zeilen, wie im Bericht sichtbar) sowie – nur bei Tabellen-Karten mit
-    /// unterschiedlich vielen Zeilen (Kategorien/Jahre) – zusätzliche
-    /// Zeileninformationen, damit ein Umbruch nötigenfalls an einer
-    /// Zeilengrenze INNERHALB der Karte gesetzt werden kann, statt nur an
-    /// der Kartengrenze. Ohne das könnte eine Karte, die durch viele Jahre/
-    /// Kategorien höher als eine Seite wird, mitten in einer Zeile
-    /// zerschnitten werden.
-    struct ReportSection {
-        let view: AnyView
-        let rowInfo: RowInfo?
-
-        struct RowInfo {
-            let rowCount: Int
-            /// Dieselbe Karte, aber mit null Zeilen – für die separate
-            /// Messung von Kopf- (Titel/Spaltenköpfe) vs. Zeilenhöhe.
-            let chromeOnly: AnyView
-        }
-    }
-
     /// Alle sichtbaren Abschnitte in Reihenfolge. Als eigene, von außen
     /// lesbare Liste (statt eines direkt in `body` verschachtelten
-    /// `if`-Blocks), damit `VehicleReportPDFGenerator` jeden Abschnitt
-    /// einzeln vermessen und Seitenumbrüche setzen kann, ohne eine Karte
-    /// oder Zeile mittendrin zu zerschneiden.
-    var sections: [ReportSection] {
-        var result: [ReportSection] = [
-            ReportSection(view: AnyView(reportHeader), rowInfo: nil),
-            ReportSection(view: AnyView(headerStatsSection), rowInfo: nil)
+    /// `if`-Blocks), damit `ReportPDFGenerator` jeden Abschnitt einzeln
+    /// vermessen und Seitenumbrüche setzen kann, ohne eine Karte oder
+    /// Zeile mittendrin zu zerschneiden.
+    var sections: [PDFReportSection] {
+        var result: [PDFReportSection] = [
+            PDFReportSection(view: AnyView(reportHeader), rowInfo: nil),
+            PDFReportSection(view: AnyView(headerStatsSection), rowInfo: nil)
         ]
         if !vehicle.sortedFuelEntries.isEmpty {
-            result.append(ReportSection(view: AnyView(fuelStatsSection), rowInfo: nil))
+            result.append(PDFReportSection(view: AnyView(fuelStatsSection), rowInfo: nil))
         }
         if !vehicle.sortedExpenses.isEmpty {
-            result.append(ReportSection(view: AnyView(expenseStatsSection), rowInfo: nil))
+            result.append(PDFReportSection(view: AnyView(expenseStatsSection), rowInfo: nil))
         }
         if enabledCards.contains(.consumption), !vehicle.sortedFuelEntries.isEmpty {
-            result.append(ReportSection(view: AnyView(consumptionSection), rowInfo: nil))
+            result.append(PDFReportSection(view: AnyView(consumptionSection), rowInfo: nil))
         }
         if enabledCards.contains(.price), !vehicle.sortedFuelEntries.isEmpty {
-            result.append(ReportSection(view: AnyView(priceSection), rowInfo: nil))
+            result.append(PDFReportSection(view: AnyView(priceSection), rowInfo: nil))
         }
         if enabledCards.contains(.expenseCategory), !vehicle.sortedExpenses.isEmpty {
             let items = vehicle.expenseCostByCategory
-            result.append(ReportSection(
+            result.append(PDFReportSection(
                 view: AnyView(expenseCategorySection(items[0..<items.count])),
                 rowInfo: .init(rowCount: items.count, chromeOnly: AnyView(expenseCategorySection(items[0..<0])))
             ))
         }
         if enabledCards.contains(.yearlyCost), !vehicle.costsByYear.isEmpty {
             let items = vehicle.costsByYear
-            result.append(ReportSection(
+            result.append(PDFReportSection(
                 view: AnyView(yearlyCostSection(items[0..<items.count])),
                 rowInfo: .init(rowCount: items.count, chromeOnly: AnyView(yearlyCostSection(items[0..<0])))
             ))
         }
         if enabledCards.contains(.yearlyDistance), !vehicle.kilometersByYear.isEmpty {
             let items = vehicle.kilometersByYear
-            result.append(ReportSection(
+            result.append(PDFReportSection(
                 view: AnyView(kilometersByYearSection(items[0..<items.count])),
                 rowInfo: .init(rowCount: items.count, chromeOnly: AnyView(kilometersByYearSection(items[0..<0])))
             ))
@@ -97,14 +58,14 @@ struct VehiclePDFReportView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Self.sectionSpacing) {
+        VStack(alignment: .leading, spacing: PDFReportLayout.sectionSpacing) {
             ForEach(sections.indices, id: \.self) { sections[$0].view }
         }
-        // Nur horizontal – oben/unten übernimmt `VehicleReportPDFGenerator`
-        // den Rand einheitlich auf JEDER Seite (siehe dort), nicht nur am
+        // Nur horizontal – oben/unten übernimmt `ReportPDFGenerator` den
+        // Rand einheitlich auf JEDER Seite (siehe dort), nicht nur am
         // Anfang/Ende des Gesamtinhalts.
-        .padding(.horizontal, Self.horizontalPadding)
-        .frame(width: Self.pageWidth, alignment: .leading)
+        .padding(.horizontal, PDFReportLayout.horizontalPadding)
+        .frame(width: PDFReportLayout.pageWidth, alignment: .leading)
         .foregroundStyle(.black)
         .background(Color.white)
         .environment(\.colorScheme, .light)
@@ -121,7 +82,7 @@ struct VehiclePDFReportView: View {
     }
 
     private var headerStatsSection: some View {
-        ReportCard {
+        PDFReportCard {
             VStack(alignment: .leading, spacing: 4) {
                 Text(vehicle.licensePlate ?? "")
                     .font(.title2.bold())
@@ -156,7 +117,7 @@ struct VehiclePDFReportView: View {
     }
 
     private var fuelStatsSection: some View {
-        ReportCard(title: "\(vehicle.engineType.refuelNounPlural) – Statistik") {
+        PDFReportCard(title: "\(vehicle.engineType.refuelNounPlural) – Statistik") {
             HStack(alignment: .top, spacing: 16) {
                 StatTile(title: "Anzahl", value: "\(vehicle.fuelEntryCount)", systemImage: "number")
                 StatTile(
@@ -179,7 +140,7 @@ struct VehiclePDFReportView: View {
     }
 
     private var expenseStatsSection: some View {
-        ReportCard(title: "Sonstige Ausgaben – Statistik") {
+        PDFReportCard(title: "Sonstige Ausgaben – Statistik") {
             HStack(alignment: .top, spacing: 16) {
                 StatTile(title: "Anzahl", value: "\(vehicle.expenseCount)", systemImage: "number")
                 StatTile(
@@ -197,7 +158,7 @@ struct VehiclePDFReportView: View {
     }
 
     private var priceSection: some View {
-        ReportCard(title: vehicle.engineType.priceTitle) {
+        PDFReportCard(title: vehicle.engineType.priceTitle) {
             HStack(alignment: .top, spacing: 16) {
                 StatTile(title: "Niedrigster", value: pricePerLiterString(vehicle.minPricePerLiter), systemImage: "arrow.down")
                 StatTile(title: "Höchster", value: pricePerLiterString(vehicle.maxPricePerLiter), systemImage: "arrow.up")
@@ -207,7 +168,7 @@ struct VehiclePDFReportView: View {
     }
 
     private var consumptionSection: some View {
-        ReportCard(title: "Verbrauch") {
+        PDFReportCard(title: "Verbrauch") {
             HStack(alignment: .top, spacing: 16) {
                 StatTile(title: "Niedrigster", value: consumptionString(vehicle.minConsumption), systemImage: "arrow.down")
                 StatTile(title: "Größter", value: consumptionString(vehicle.maxConsumption), systemImage: "arrow.up")
@@ -221,7 +182,7 @@ struct VehiclePDFReportView: View {
     /// Anzeige, null Zeilen zur Kopf-/Zeilenhöhen-Messung in
     /// `VehicleReportPDFGenerator`).
     private func expenseCategorySection(_ items: ArraySlice<(category: String, total: Decimal)>) -> some View {
-        ReportCard(title: "Gesamtkosten pro Kategorie") {
+        PDFReportCard(title: "Gesamtkosten pro Kategorie") {
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                 GridRow {
                     Text("Kategorie")
@@ -246,7 +207,7 @@ struct VehiclePDFReportView: View {
     }
 
     private func yearlyCostSection(_ items: ArraySlice<YearlyCost>) -> some View {
-        ReportCard(title: "Kosten pro Jahr") {
+        PDFReportCard(title: "Kosten pro Jahr") {
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                 GridRow {
                     Text("Jahr")
@@ -273,7 +234,7 @@ struct VehiclePDFReportView: View {
     }
 
     private func kilometersByYearSection(_ items: ArraySlice<YearlyDistance>) -> some View {
-        ReportCard(title: "Gefahrene km pro Jahr") {
+        PDFReportCard(title: "Gefahrene km pro Jahr") {
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                 GridRow {
                     Text("Jahr")
@@ -312,25 +273,5 @@ struct VehiclePDFReportView: View {
     private func categoryShareString(_ total: Decimal) -> String {
         guard vehicle.totalCost > 0 else { return "–" }
         return DisplayFormatter.percentString(total / vehicle.totalCost)
-    }
-}
-
-/// Einfacher, gerahmter Abschnitt ohne Liquid Glass – das druckfreundliche
-/// Gegenstück zu `GlassCard`.
-private struct ReportCard<Content: View>: View {
-    var title: String?
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if let title {
-                Text(title)
-                    .font(.headline)
-            }
-            content
-        }
-        .padding(VehiclePDFReportView.cardPadding)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray.opacity(0.35)))
     }
 }

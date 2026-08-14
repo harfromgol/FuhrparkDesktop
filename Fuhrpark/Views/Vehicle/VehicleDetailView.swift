@@ -220,10 +220,15 @@ struct VehicleDetailView: View {
 
     private func exportPDF() {
         do {
-            let url = try VehicleReportPDFGenerator.generate(vehicle: vehicle, enabledCards: enabledCards)
+            let reportView = VehiclePDFReportView(vehicle: vehicle, enabledCards: enabledCards)
+            let url = try ReportPDFGenerator.generate(
+                reportView,
+                sections: reportView.sections,
+                filenamePrefix: vehicle.licensePlate ?? "Fahrzeug"
+            )
             Task {
                 do {
-                    try await VehicleReportPDFGenerator.openInPreview(url)
+                    try await ReportPDFGenerator.openInPreview(url)
                 } catch {
                     pdfExportErrorMessage = error.localizedDescription
                 }

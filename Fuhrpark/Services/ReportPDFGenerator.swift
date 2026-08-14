@@ -2,33 +2,44 @@ import SwiftUI
 import AppKit
 import CoreText
 
-/// Erzeugt aus `VehiclePDFReportView` ein mehrseitiges A4-PDF und öffnet es
-/// in Vorschau.app. Nutzt `ImageRenderer.render(rasterizationScale:renderer:)`:
+/// Erzeugt aus einer Berichts-View (z. B. `VehiclePDFReportView`,
+/// `StatisticsPDFReportView`) ein mehrseitiges A4-PDF und öffnet es in
+/// Vorschau.app. Nutzt `ImageRenderer.render(rasterizationScale:renderer:)`:
 /// dessen Callback liefert die natürliche Inhaltsgröße plus einen
 /// `(CGContext) -> Void`-Zeichenblock, der beliebig oft mit verschobenen
 /// Kontexten aufgerufen werden kann – die dokumentierte Technik für
 /// mehrseitige Vektor-PDFs aus SwiftUI (Text wird dabei als echter PDF-Text
 /// gezeichnet, nicht gerastert).
-enum VehicleReportPDFGenerator {
-    private static let pageSize = CGSize(width: 595.28, height: 841.89) // A4 bei 72dpi
+enum ReportPDFGenerator {
+    private static let pageSize = CGSize(width: PDFReportLayout.pageWidth, height: 841.89) // A4 bei 72dpi
     /// Weißraum oben/unten auf JEDER Seite – die Paginierung schneidet den
     /// fortlaufenden Inhalt sonst bündig an der Seitenkante ab. Die Ränder
-    /// werden deshalb hier (nicht als Padding in `VehiclePDFReportView`)
+    /// werden deshalb hier (nicht als Padding in der Berichts-View)
     /// verwaltet, damit sie auf jeder Seite gleich groß sind, nicht nur am
     /// Anfang/Ende des Gesamtinhalts.
     private static let topMargin: CGFloat = 48
     private static let bottomMargin: CGFloat = 60
     private static let contentAreaHeight = pageSize.height - topMargin - bottomMargin
 
+    /// - Parameters:
+    ///   - reportView: die zu druckende Berichts-View, bereits auf
+    ///     `PDFReportLayout.pageWidth` breit.
+    ///   - sections: dieselben Abschnitte wie in `reportView`, für die
+    ///     Seitenumbruch-Berechnung – siehe `PDFReportSection`.
+    ///   - filenamePrefix: Dateiname ohne Zeitstempel/Endung, z. B. das
+    ///     Kennzeichen oder „Statistik".
     @MainActor
-    static func generate(vehicle: Vehicle, enabledCards: Set<StatisticsCard>) throws -> URL {
-        let reportView = VehiclePDFReportView(vehicle: vehicle, enabledCards: enabledCards)
-        let pageStarts = pageStartOffsets(for: reportView.sections)
+    static func generate<ReportView: View>(
+        _ reportView: ReportView,
+        sections: [PDFReportSection],
+        filenamePrefix: String
+    ) throws -> URL {
+        let pageStarts = pageStartOffsets(for: sections)
         let totalHeight = pageStarts.totalHeight
 
         let renderer = ImageRenderer(content: reportView)
 
-        let filename = "\(vehicle.licensePlate ?? "Fahrzeug")_\(timestamp()).pdf"
+        let filename = "\(filenamePrefix)_\(timestamp()).pdf"
             .replacingOccurrences(of: "/", with: "-")
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
         guard let consumer = CGDataConsumer(url: url as CFURL) else {
@@ -92,19 +103,19 @@ enum VehicleReportPDFGenerator {
 
     /// Ermittelt, an welchem Inhalts-Offset (von oben gemessen) jede Seite
     /// beginnt. Umbrüche liegen an Abschnittsgrenzen (Kartenanfang) UND –
-    /// bei Tabellen-Karten mit unterschiedlich vielen Zeilen (Kategorien/
-    /// Jahre) – zusätzlich an jeder Zeilengrenze innerhalb einer Karte, die
-    /// für sich allein nicht mehr auf eine Seite passt. Eine solche Karte
-    /// wird dann komplett auf mehrere Seiten verteilt, ohne dass eine
-    /// einzelne Zeile mittendrin zerschnitten wird (ihr Rahmen schließt
-    /// dabei allerdings nicht sauber ab – kosmetischer Kompromiss für einen
-    /// in der Praxis sehr seltenen Fall).
+    /// bei Tabellen-Karten mit unterschiedlich vielen Zeilen – zusätzlich an
+    /// jeder Zeilengrenze innerhalb einer Karte, die für sich allein nicht
+    /// mehr auf eine Seite passt. Eine solche Karte wird dann komplett auf
+    /// mehrere Seiten verteilt, ohne dass eine einzelne Zeile mittendrin
+    /// zerschnitten wird (ihr Rahmen schließt dabei allerdings nicht sauber
+    /// ab – kosmetischer Kompromiss für einen in der Praxis sehr seltenen
+    /// Fall).
     @MainActor
     private static func pageStartOffsets(
-        for sections: [VehiclePDFReportView.ReportSection]
+        for sections: [PDFReportSection]
     ) -> (offsets: [CGFloat], totalHeight: CGFloat) {
         func measure(_ view: AnyView) -> CGFloat {
-            ImageRenderer(content: view.frame(width: VehiclePDFReportView.contentWidth)).nsImage?.size.height ?? 0
+            ImageRenderer(content: view.frame(width: PDFReportLayout.contentWidth)).nsImage?.size.height ?? 0
         }
 
         struct Measured {
@@ -133,15 +144,15 @@ enum VehicleReportPDFGenerator {
             // Zeile. Ohne den Abzug von `cardPadding` würde jeder
             // Zeilenumbruch-Kandidat um dieses Padding zu weit in den
             // Inhalt hineinragen und die jeweils nächste Zeile anschneiden.
-            let chromeHeight = measure(rowInfo.chromeOnly) - VehiclePDFReportView.cardPadding
-            let rowHeight = (height - VehiclePDFReportView.cardPadding - chromeHeight) / CGFloat(rowInfo.rowCount)
+            let chromeHeight = measure(rowInfo.chromeOnly) - PDFReportLayout.cardPadding
+            let rowHeight = (height - PDFReportLayout.cardPadding - chromeHeight) / CGFloat(rowInfo.rowCount)
             guard rowHeight > 0 else { return Measured(height: height, rowBreaks: []) }
             let rowBreaks = (1..<rowInfo.rowCount).map { chromeHeight + CGFloat($0) * rowHeight }
             return Measured(height: height, rowBreaks: rowBreaks)
         }
         guard !measured.isEmpty else { return ([0], 0) }
 
-        let spacing = VehiclePDFReportView.sectionSpacing
+        let spacing = PDFReportLayout.sectionSpacing
         var tops: [CGFloat] = []
         var cursor: CGFloat = 0
         for m in measured {
