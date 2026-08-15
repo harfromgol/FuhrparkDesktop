@@ -13,6 +13,7 @@ struct ExpenseListWindow: View {
     @State private var pendingDeletion: Expense?
     @State private var pageSize = ExpensePageSizeStore.get()
     @State private var currentPage = 0
+    @State private var pdfExportErrorMessage: String?
 
     init(vehicleRef: VehicleRef) {
         self.vehicleRef = vehicleRef
@@ -46,6 +47,13 @@ struct ExpenseListWindow: View {
         let start = currentPage * pageSize
         guard start < filteredExpenses.count else { return [] }
         return Array(filteredExpenses[start..<min(start + pageSize, filteredExpenses.count)])
+    }
+
+    /// Beschreibt den aktuellen Kategoriefilter für den PDF-Bericht – leere
+    /// Auswahl heißt „alle Ausgaben", siehe `filteredExpenses`.
+    private var categoryFilterLabel: String {
+        guard !selectedCategories.isEmpty else { return "Alle Kategorien" }
+        return selectedCategories.map { $0.name ?? "" }.sorted().joined(separator: ", ")
     }
 
     var body: some View {
@@ -90,6 +98,7 @@ struct ExpenseListWindow: View {
         }
         .frame(minWidth: 340, minHeight: 400)
         .navigationTitle("Sonstige Ausgaben – \(vehicleRef.licensePlate)")
+        .toolbar { toolbarContent }
         .onChange(of: selectedCategories) { _, _ in currentPage = 0 }
         .onChange(of: pageSize) { _, newValue in
             ExpensePageSizeStore.set(newValue)
@@ -98,24 +107,50 @@ struct ExpenseListWindow: View {
         .onChange(of: totalPages) { _, newValue in
             currentPage = min(currentPage, newValue - 1)
         }
-        .confirmationDialog(
-            "Ausgabe löschen?",
-            isPresented: Binding(
-                get: { pendingDeletion != nil },
-                set: { if !$0 { pendingDeletion = nil } }
-            ),
-            presenting: pendingDeletion
-        ) { expense in
-            Button("Löschen", role: .destructive) {
+        .modifier(ExpenseListAlertsModifier(
+            pendingDeletion: $pendingDeletion,
+            pdfExportErrorMessage: $pdfExportErrorMessage,
+            onDelete: { expense in
                 viewContext.delete(expense)
                 DocumentCleanup.finishDeletion(in: viewContext)
             }
-            Button("Abbrechen", role: .cancel) { }
-        } message: { expense in
-            let belege = expense.sortedDocuments.count
-            Text(belege == 0
-                 ? "„\(expense.recipient ?? "")“ wird unwiderruflich gelöscht."
-                 : "„\(expense.recipient ?? "")“ wird unwiderruflich gelöscht. Zugeordnete Belege bleiben erhalten, solange sie noch zu einer anderen Ausgabe gehören – sonst werden sie mit entfernt.")
+        ))
+    }
+
+    private func exportPDF() {
+        do {
+            let reportView = ExpenseListPDFReportView(
+                vehicleRef: vehicleRef,
+                expenses: filteredExpenses,
+                categoryFilterLabel: categoryFilterLabel
+            )
+            let url = try ReportPDFGenerator.generate(
+                reportView,
+                sections: reportView.sections,
+                filenamePrefix: "Ausgaben_\(vehicleRef.licensePlate)"
+            )
+            Task {
+                do {
+                    try await ReportPDFGenerator.openInPreview(url)
+                } catch {
+                    pdfExportErrorMessage = error.localizedDescription
+                }
+            }
+        } catch {
+            pdfExportErrorMessage = error.localizedDescription
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem {
+            Menu {
+                Button("PDF-Export") { exportPDF() }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+            }
+            .pointerStyle(.link)
+            .help("Weitere Aktionen")
         }
     }
 
@@ -177,5 +212,48 @@ struct ExpenseListWindow: View {
         }
         .buttonStyle(.plain)
         .pointerStyle(.link)
+    }
+}
+
+/// Bündelt Lösch-Bestätigung und PDF-Fehler-Alert in einem eigenen
+/// `ViewModifier` – hält `body` schlank genug für den Type-Checker (sonst
+/// „unable to type-check this expression in reasonable time", siehe
+/// `FuelEntryListAlertsModifier` in `FuelEntryListWindow.swift` für dasselbe
+/// Muster).
+private struct ExpenseListAlertsModifier: ViewModifier {
+    @Binding var pendingDeletion: Expense?
+    @Binding var pdfExportErrorMessage: String?
+    let onDelete: (Expense) -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .confirmationDialog(
+                "Ausgabe löschen?",
+                isPresented: Binding(
+                    get: { pendingDeletion != nil },
+                    set: { if !$0 { pendingDeletion = nil } }
+                ),
+                presenting: pendingDeletion
+            ) { expense in
+                Button("Löschen", role: .destructive) { onDelete(expense) }
+                Button("Abbrechen", role: .cancel) { }
+            } message: { expense in
+                let belege = expense.sortedDocuments.count
+                Text(belege == 0
+                     ? "„\(expense.recipient ?? "")“ wird unwiderruflich gelöscht."
+                     : "„\(expense.recipient ?? "")“ wird unwiderruflich gelöscht. Zugeordnete Belege bleiben erhalten, solange sie noch zu einer anderen Ausgabe gehören – sonst werden sie mit entfernt.")
+            }
+            .alert(
+                "PDF-Erstellung fehlgeschlagen",
+                isPresented: Binding(
+                    get: { pdfExportErrorMessage != nil },
+                    set: { if !$0 { pdfExportErrorMessage = nil } }
+                ),
+                presenting: pdfExportErrorMessage
+            ) { _ in
+                Button("OK", role: .cancel) { }
+            } message: { message in
+                Text(message)
+            }
     }
 }
