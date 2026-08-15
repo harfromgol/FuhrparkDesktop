@@ -24,8 +24,13 @@ struct PaginationControls: View {
 
             Spacer()
 
-            Button("Weiter", systemImage: "chevron.right") {
+            Button {
                 currentPage += 1
+            } label: {
+                HStack(spacing: 4) {
+                    Text("Weiter")
+                    Image(systemName: "chevron.right")
+                }
             }
             .buttonStyle(.glass)
             .disabled(currentPage >= totalPages - 1)

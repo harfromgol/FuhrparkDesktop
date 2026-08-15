@@ -151,12 +151,16 @@ struct FuelEntryListWindow: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem {
             Menu {
-                Button("PDF") { exportPDF() }
+                Button("PDF-Export") { exportPDF() }
             } label: {
                 Image(systemName: "ellipsis.circle")
             }
             .pointerStyle(.link)
             .help("Weitere Aktionen")
+            // Richtet das Icon am rechten Rand der Karten darunter aus –
+            // der Toolbar-eigene Trailing-Inset ist knapper als deren
+            // `.padding(20)`.
+            .padding(.trailing, 18)
         }
     }
 
