@@ -166,7 +166,7 @@ struct StatisticsView: View {
                                     .font(.headline)
                                 Spacer()
                                 Menu {
-                                    Button("PDF") { exportPDF() }
+                                    Button("PDF-Export") { exportPDF() }
                                 } label: {
                                     Image(systemName: "ellipsis.circle")
                                 }
