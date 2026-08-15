@@ -21,6 +21,7 @@ struct FuelEntryListWindow: View {
     @State private var didSetDefaultYear = false
     @State private var pageSize = FuelEntryPageSizeStore.get()
     @State private var currentPage = 0
+    @State private var pdfExportErrorMessage: String?
 
     init(vehicleRef: VehicleRef) {
         self.vehicleRef = vehicleRef
@@ -92,6 +93,7 @@ struct FuelEntryListWindow: View {
         }
         .frame(minWidth: 340, minHeight: 400)
         .navigationTitle("\(vehicleRef.engineType.refuelNounPlural) – \(vehicleRef.licensePlate)")
+        .toolbar { toolbarContent }
         .onAppear {
             guard !didSetDefaultYear else { return }
             didSetDefaultYear = true
@@ -110,19 +112,51 @@ struct FuelEntryListWindow: View {
         .onChange(of: totalPages) { _, newValue in
             currentPage = min(currentPage, newValue - 1)
         }
-        .confirmationDialog(
-            "\(vehicleRef.engineType.refuelNoun) löschen?",
-            isPresented: Binding(
-                get: { pendingDeletion != nil },
-                set: { if !$0 { pendingDeletion = nil } }
-            ),
-            presenting: pendingDeletion
-        ) { entry in
-            Button("Löschen", role: .destructive) {
+        .modifier(FuelEntryListAlertsModifier(
+            pendingDeletion: $pendingDeletion,
+            pdfExportErrorMessage: $pdfExportErrorMessage,
+            refuelNoun: vehicleRef.engineType.refuelNoun,
+            onDelete: { entry in
                 viewContext.delete(entry)
                 PersistenceController.shared.save(context: viewContext)
             }
-            Button("Abbrechen", role: .cancel) { }
+        ))
+    }
+
+    private func exportPDF() {
+        do {
+            let reportView = FuelEntryListPDFReportView(
+                vehicleRef: vehicleRef,
+                entries: filteredEntries,
+                selectedYear: selectedYear
+            )
+            let url = try ReportPDFGenerator.generate(
+                reportView,
+                sections: reportView.sections,
+                filenamePrefix: "\(vehicleRef.engineType.refuelNounPlural)_\(vehicleRef.licensePlate)"
+            )
+            Task {
+                do {
+                    try await ReportPDFGenerator.openInPreview(url)
+                } catch {
+                    pdfExportErrorMessage = error.localizedDescription
+                }
+            }
+        } catch {
+            pdfExportErrorMessage = error.localizedDescription
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem {
+            Menu {
+                Button("PDF") { exportPDF() }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+            }
+            .pointerStyle(.link)
+            .help("Weitere Aktionen")
         }
     }
 
@@ -153,5 +187,43 @@ struct FuelEntryListWindow: View {
                 }
             }
         }
+    }
+}
+
+/// Bündelt Lösch-Bestätigung und PDF-Fehler-Alert in einem eigenen
+/// `ViewModifier` – hält `body` schlank genug für den Type-Checker (sonst
+/// „unable to type-check this expression in reasonable time", siehe
+/// `VehicleConfirmationModifier` in `SidebarView.swift` für dasselbe Muster).
+private struct FuelEntryListAlertsModifier: ViewModifier {
+    @Binding var pendingDeletion: FuelEntry?
+    @Binding var pdfExportErrorMessage: String?
+    let refuelNoun: String
+    let onDelete: (FuelEntry) -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .confirmationDialog(
+                "\(refuelNoun) löschen?",
+                isPresented: Binding(
+                    get: { pendingDeletion != nil },
+                    set: { if !$0 { pendingDeletion = nil } }
+                ),
+                presenting: pendingDeletion
+            ) { entry in
+                Button("Löschen", role: .destructive) { onDelete(entry) }
+                Button("Abbrechen", role: .cancel) { }
+            }
+            .alert(
+                "PDF-Erstellung fehlgeschlagen",
+                isPresented: Binding(
+                    get: { pdfExportErrorMessage != nil },
+                    set: { if !$0 { pdfExportErrorMessage = nil } }
+                ),
+                presenting: pdfExportErrorMessage
+            ) { _ in
+                Button("OK", role: .cancel) { }
+            } message: { message in
+                Text(message)
+            }
     }
 }
