@@ -155,24 +155,8 @@ struct FuelEntryListWindow: View {
             } label: {
                 Image(systemName: "ellipsis.circle")
             }
-            // Wie das „...“-Menü bei Fahrzeugdetails/Statistik: ohne
-            // eigenen Rahmen/Chevron, damit nur das Icon selbst (statt
-            // einer nativen, am Toolbar-Trailing-Inset verankerten
-            // Schaltflächen-Kapsel) sichtbar ist. Genau diese native Kapsel
-            // ließ sich zuvor weder per `.padding` noch per `.offset`
-            // mitverschieben – beide bewegten nur das Icon darin, nicht die
-            // Kapsel selbst.
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
             .pointerStyle(.link)
             .help("Weitere Aktionen")
-            // `.fixedSize()` hält Icon+Kapsel auf ihrer natürlichen Größe;
-            // dieses Padding verschiebt beide zusammen als Einheit an den
-            // rechten Rand der Karten darunter, statt (wie zuvor bei der
-            // nativen Toolbar-Kapsel) nur das Icon innerhalb einer
-            // größeren, unbewegten Kapsel zu versetzen.
-            .padding(.trailing, 24)
         }
     }
 
