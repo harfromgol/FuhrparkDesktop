@@ -270,7 +270,7 @@ struct VehicleDetailView: View {
                     Button("Bearbeiten") { isPresentingEditVehicle = true }
                     Button("Löschen", role: .destructive) { vehiclePendingDeletion = vehicle }
                     Divider()
-                    Button("PDF") { exportPDF() }
+                    Button("PDF-Export") { exportPDF() }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
