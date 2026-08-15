@@ -57,8 +57,11 @@ struct FuhrparkDesktopApp: App {
         // ein `isMenuBarVisible = false` (z. B. bei „Alle Daten löschen")
         // das Icon nicht entfernte.
         @Bindable var pinnedFuelPricesBindable = pinnedFuelPricesViewModel
-        MenuBarExtra("Spritpreise", systemImage: "fuelpump.fill", isInserted: $pinnedFuelPricesBindable.isMenuBarVisible) {
+        MenuBarExtra(isInserted: $pinnedFuelPricesBindable.isMenuBarVisible) {
             PinnedFuelPricesMenuView()
+                .environment(pinnedFuelPricesViewModel)
+        } label: {
+            PinnedFuelPricesMenuBarLabel()
                 .environment(pinnedFuelPricesViewModel)
         }
         .menuBarExtraStyle(.window)
