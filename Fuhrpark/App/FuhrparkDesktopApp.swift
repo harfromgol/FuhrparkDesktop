@@ -13,6 +13,7 @@ struct FuhrparkDesktopApp: App {
     @State private var appCommands = AppCommands()
     @State private var fuelPricesViewModel = FuelPricesViewModel()
     @State private var pinnedFuelPricesViewModel = PinnedFuelPricesViewModel()
+    @State private var updateChecker = UpdateChecker()
 
     var body: some Scene {
         // Einzelfenster-Szene: kann per Menü geschlossen und wieder geöffnet
@@ -24,14 +25,16 @@ struct FuhrparkDesktopApp: App {
                 .environment(appCommands)
                 .environment(fuelPricesViewModel)
                 .environment(pinnedFuelPricesViewModel)
+                .environment(updateChecker)
                 .frame(minWidth: 800, idealWidth: 1000, minHeight: 500, idealHeight: 650)
                 .onAppear { appCommands.isMainWindowOpen = true }
                 .onDisappear { appCommands.isMainWindowOpen = false }
                 .task { await appCommands.scheduleDailyDueCheck() }
+                .task { await updateChecker.checkAutomatically() }
                 .persistWindowFrame(Self.mainWindowID)
         }
         .commands {
-            AppMenuCommands(appCommands: appCommands)
+            AppMenuCommands(appCommands: appCommands, updateChecker: updateChecker)
         }
 
         // Singleton wie das Hauptfenster (kein Payload, keine
@@ -131,14 +134,30 @@ struct FuhrparkDesktopApp: App {
     }
 }
 
-/// Menübefehle: „Ablage“ (Neues Fenster / Fenster schließen) und „Tools“.
+/// Menübefehle: App-Menü (Update-Prüfung), „Ablage“ (Neues Fenster / Fenster
+/// schließen) und „Tools“.
 struct AppMenuCommands: Commands {
     @Environment(\.openWindow) private var openWindow
 
     /// Geteilter Zustand (Öffnungszustand des Hauptfensters, Löschabfrage).
     let appCommands: AppCommands
 
+    /// Update-Prüfung; die Dialoge dazu zeigt `ContentView`.
+    @Bindable var updateChecker: UpdateChecker
+
     var body: some Commands {
+        // Direkt unter „Über FuhrparkDesktop“ – dort suchen macOS-Nutzer die
+        // Update-Prüfung. Der Haken daneben ist der einzige Weg zurück, wenn
+        // die einmalige Rückfrage beim Erststart mit „Nein“ beantwortet wurde.
+        CommandGroup(after: .appInfo) {
+            Button("Nach Updates suchen …") {
+                Task { await updateChecker.checkManually() }
+            }
+            .disabled(updateChecker.isChecking)
+
+            Toggle("Automatisch nach Updates suchen", isOn: $updateChecker.automaticChecksEnabled)
+        }
+
         // Ablage-Menü: Hauptfenster öffnen bzw. jeweils fokussiertes Fenster schließen.
         CommandGroup(replacing: .newItem) {
             Button("Neues Fenster") {

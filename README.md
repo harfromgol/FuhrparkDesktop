@@ -72,6 +72,17 @@ Alle eingegebenen Daten bleiben auf deinem Rechner. Es werden keinerlei Daten in
 
 Ausnahme: der Tankerkönig-API Key - falls eingegeben - muss natürlich an den Tankerkönig Server gesendet werden, sonst funktioniert die Tankstellen Umkreissuche nicht.
 
+Zur Update-Prüfung: Die App kann beim Start höchstens einmal täglich
+nachsehen, ob eine neue Version vorliegt. Dazu lädt sie eine kleine, für alle
+identische Datei von `fuhrpark-macos.gerd-klaus.de` – **ohne** jeden
+Parameter, insbesondere ohne die verwendete Version. Beim Webserver landet
+dabei nur, was bei jedem Seitenaufruf anfällt (IP-Adresse und Zeitpunkt); ein
+Nutzungsprofil lässt sich daraus nicht bilden. Die Prüfung wird beim ersten
+Start ausdrücklich erfragt und lässt sich jederzeit im Menü
+„FuhrparkDesktop“ → „Automatisch nach Updates suchen“ abschalten. Heruntergeladen
+oder installiert wird nichts von selbst – die App verweist nur auf die
+Download-Seite.
+
 Zum KI-Zugriff: Er ist nur aktiv, wenn Du ihn selbst in Deinem MCP-Client
 einträgst, und überträgt nichts von sich aus. Was Du fragst, entscheidet,
 welche Daten an die KI gehen – und damit an deren Anbieter.
@@ -135,7 +146,19 @@ project.yml       XcodeGen-Projektdefinition
 Scripts/build_dmg.sh
 ```
 
-Erzeugt ein installierbares DMG unter `dist/FuhrparkDesktop-<Version>.dmg`.
+Erzeugt ein installierbares DMG unter `dist/FuhrparkDesktop-<Version>.dmg`
+sowie `dist/version.json` – das Manifest für die Update-Prüfung.
+
+Zum Veröffentlichen beides auf den Webspace laden:
+
+| Datei | Ziel |
+|---|---|
+| `dist/FuhrparkDesktop-<Version>.dmg` | `downloads/` |
+| `dist/version.json` | `updates/version.json` |
+
+Vor dem Hochladen im Manifest `notes` aus `VERSION.md` füllen. Ohne das
+aktualisierte Manifest erfahren bestehende Installationen nichts von der
+neuen Version.
 
 ## Kontakt
 

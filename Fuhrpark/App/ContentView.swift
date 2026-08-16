@@ -16,6 +16,7 @@ struct ContentView: View {
     @Environment(AppCommands.self) private var appCommands
     @Environment(FuelPricesViewModel.self) private var fuelPricesViewModel
     @Environment(PinnedFuelPricesViewModel.self) private var pinnedFuelPricesViewModel
+    @Environment(UpdateChecker.self) private var updateChecker
     @State private var selection: SidebarSelection = .statistics
 
     /// Wird beim Start gesetzt, wenn sich der Datenspeicher nicht öffnen ließ
@@ -106,6 +107,7 @@ struct ContentView: View {
         } message: { message in
             Text(message)
         }
+        .modifier(UpdateNoticeModifier(updateChecker: updateChecker))
     }
 
     /// Dateiname-Vorschlag ohne Endung; `fileExporter` ergänzt „.json".
@@ -162,10 +164,72 @@ struct ContentView: View {
     }
 }
 
+/// Bündelt die vier Präsentationen der Update-Prüfung in einem eigenen
+/// `ViewModifier` – hält `body` schlank genug für den Type-Checker (sonst
+/// „unable to type-check this expression in reasonable time", siehe
+/// `FuelEntryListAlertsModifier` in `FuelEntryListWindow.swift` für dasselbe
+/// Muster).
+private struct UpdateNoticeModifier: ViewModifier {
+    @Bindable var updateChecker: UpdateChecker
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(item: $updateChecker.availableRelease) { release in
+                UpdateAvailableSheet(
+                    release: release,
+                    currentVersion: updateChecker.currentVersion,
+                    automaticChecks: $updateChecker.automaticChecksEnabled,
+                    onSkip: { updateChecker.skipOfferedRelease() },
+                    onDismiss: { updateChecker.availableRelease = nil }
+                )
+            }
+            .confirmationDialog(
+                "Nach neuen Versionen suchen?",
+                isPresented: $updateChecker.showsPermissionQuestion,
+                titleVisibility: .visible
+            ) {
+                Button("Ja, beim Start nachsehen") {
+                    Task { await updateChecker.answerPermissionQuestion(allowed: true) }
+                }
+                Button("Nein", role: .cancel) {
+                    Task { await updateChecker.answerPermissionQuestion(allowed: false) }
+                }
+            } message: {
+                Text("""
+                    FuhrparkDesktop kann beim Start höchstens einmal täglich nachsehen, \
+                    ob eine neue Version vorliegt. Dabei wird nur eine kleine Datei von \
+                    fuhrpark-macos.gerd-klaus.de geladen – es werden keine Angaben über \
+                    dich oder deinen Fuhrpark übertragen, auch nicht die verwendete \
+                    Version.
+
+                    Die Einstellung lässt sich jederzeit im Menü „FuhrparkDesktop“ ändern.
+                    """)
+            }
+            .alert("Du hast die neueste Version", isPresented: $updateChecker.showsUpToDateConfirmation) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("FuhrparkDesktop \(updateChecker.currentVersion) ist aktuell.")
+            }
+            .alert(
+                "Suche nach Updates fehlgeschlagen",
+                isPresented: Binding(
+                    get: { updateChecker.manualCheckError != nil },
+                    set: { if !$0 { updateChecker.manualCheckError = nil } }
+                ),
+                presenting: updateChecker.manualCheckError
+            ) { _ in
+                Button("OK", role: .cancel) { }
+            } message: { message in
+                Text(message)
+            }
+    }
+}
+
 #Preview {
     ContentView()
         .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
         .environment(AppCommands())
         .environment(FuelPricesViewModel())
         .environment(PinnedFuelPricesViewModel())
+        .environment(UpdateChecker())
 }
