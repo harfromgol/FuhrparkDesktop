@@ -25,6 +25,11 @@ struct ContentView: View {
     /// glauben, seine Daten seien weg.
     @State private var showsStoreError = PersistenceController.shared.loadError != nil
 
+    /// Geprüfte, aber noch nicht eingespielte Sicherung – hält den Zustand
+    /// zwischen Dateiauswahl und Sicherheitsabfrage. Wird die Abfrage
+    /// verneint, muss `BackupService.discard(_:)` aufräumen.
+    @State private var pendingRestore: BackupInspection?
+
     var body: some View {
         @Bindable var appCommands = appCommands
 
@@ -108,6 +113,13 @@ struct ContentView: View {
             Text(message)
         }
         .modifier(UpdateNoticeModifier(updateChecker: updateChecker))
+        .modifier(BackupModifier(
+            appCommands: appCommands,
+            pendingRestore: $pendingRestore,
+            onBackupRequested: presentBackupFolderPanel,
+            onRestoreRequested: presentRestoreFilePanel,
+            onRestoreConfirmed: performRestore
+        ))
     }
 
     /// Dateiname-Vorschlag ohne Endung; `fileExporter` ergänzt „.json".
@@ -151,6 +163,99 @@ struct ContentView: View {
             try DataTransfer.importData(data)
         } catch {
             appCommands.transferError = error.localizedDescription
+        }
+    }
+
+    /// Fragt den Ablageort ab und schreibt eine vollständige Sicherung.
+    private func presentBackupFolderPanel() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Sichern"
+        panel.message = "Ordner wählen, in dem die Sicherung abgelegt werden soll."
+        guard panel.runModal() == .OK, let folder = panel.url else { return }
+
+        appCommands.isBackupRunning = true
+        Task {
+            defer { appCommands.isBackupRunning = false }
+            do {
+                let url = try await BackupService.createBackup(inFolder: folder)
+                appCommands.backupResultMessage = "Die Sicherung wurde abgelegt unter:\n\(url.path)"
+            } catch {
+                appCommands.backupError = error.localizedDescription
+            }
+        }
+    }
+
+    /// Wählt eine Sicherung aus und entpackt sie zur Prüfung – ändert selbst
+    /// noch nichts am Bestand. Das übernimmt erst `performRestore` nach der
+    /// Sicherheitsabfrage.
+    private func presentRestoreFilePanel() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Öffnen"
+        // Dynamischer Typ aus der Endung – die App meldet keinen eigenen
+        // Dokumenttyp an. Klappt das nicht, lieber ungefiltert anzeigen als
+        // die Datei gar nicht auswählbar zu machen.
+        if let type = UTType(filenameExtension: BackupService.fileExtension) {
+            panel.allowedContentTypes = [type]
+        }
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        appCommands.isBackupRunning = true
+        Task {
+            defer { appCommands.isBackupRunning = false }
+            do {
+                pendingRestore = try await BackupService.inspect(archiveURL: url)
+            } catch {
+                appCommands.backupError = error.localizedDescription
+            }
+        }
+    }
+
+    /// Spielt die bestätigte Sicherung ein. Fragt vorher den Zielordner für
+    /// die Belege ab – nur, wenn welche im Archiv sind.
+    private func performRestore(_ inspection: BackupInspection) {
+        var documentsTarget: URL?
+        if inspection.manifest.documentFolderCount > 0 {
+            let panel = NSOpenPanel()
+            panel.canChooseDirectories = true
+            panel.canChooseFiles = false
+            panel.allowsMultipleSelection = false
+            panel.prompt = "Wählen"
+            panel.message = "Ordner wählen, in dem die \(inspection.manifest.documentFolderCount) Belege abgelegt werden sollen."
+            // Der Ordner aus dem Backup als Ausgangspunkt – er darf, muss aber
+            // nicht derselbe sein.
+            if let previous = inspection.manifest.originalWorkingDirectoryPath {
+                panel.directoryURL = URL(fileURLWithPath: previous)
+            }
+            guard panel.runModal() == .OK, let folder = panel.url else {
+                BackupService.discard(inspection)
+                return
+            }
+            documentsTarget = folder
+        }
+
+        // Auswahl zuerst zurücksetzen, da gleich alle Fahrzeuge gelöscht
+        // werden – wie beim JSON-Import.
+        selection = .statistics
+        appCommands.isBackupRunning = true
+        Task {
+            defer { appCommands.isBackupRunning = false }
+            do {
+                try await BackupService.restore(inspection, documentsTarget: documentsTarget)
+                appCommands.backupResultMessage = """
+                    Die Sicherung wurde eingespielt.
+
+                    Bitte starte FuhrparkDesktop neu, damit alle \
+                    wiederhergestellten Einstellungen greifen.
+                    """
+            } catch {
+                appCommands.backupError = error.localizedDescription
+            }
         }
     }
 
@@ -222,6 +327,88 @@ private struct UpdateNoticeModifier: ViewModifier {
             } message: { message in
                 Text(message)
             }
+    }
+}
+
+/// Bündelt die Präsentationen rund um Sicherung und Einspielen in einem
+/// eigenen `ViewModifier` – hält `body` schlank genug für den Type-Checker,
+/// dasselbe Muster wie `UpdateNoticeModifier` darüber.
+private struct BackupModifier: ViewModifier {
+    @Bindable var appCommands: AppCommands
+    @Binding var pendingRestore: BackupInspection?
+    let onBackupRequested: () -> Void
+    let onRestoreRequested: () -> Void
+    let onRestoreConfirmed: (BackupInspection) -> Void
+
+    func body(content: Content) -> some View {
+        content
+            // Menüaktionen liegen außerhalb der View-Hierarchie und können
+            // keine Panels zeigen; sie setzen ein Flag, das hier ausgewertet
+            // und sofort zurückgenommen wird – wie bei Export/Import.
+            .onChange(of: appCommands.showBackupFolderPicker) { _, isShown in
+                guard isShown else { return }
+                appCommands.showBackupFolderPicker = false
+                onBackupRequested()
+            }
+            .onChange(of: appCommands.showRestoreFilePicker) { _, isShown in
+                guard isShown else { return }
+                appCommands.showRestoreFilePicker = false
+                onRestoreRequested()
+            }
+            .confirmationDialog(
+                "Sicherung wirklich einspielen?",
+                isPresented: Binding(
+                    get: { pendingRestore != nil },
+                    set: { if !$0 { pendingRestore = nil } }
+                ),
+                titleVisibility: .visible,
+                presenting: pendingRestore
+            ) { inspection in
+                Button("Einspielen", role: .destructive) { onRestoreConfirmed(inspection) }
+                Button("Abbrechen", role: .cancel) { BackupService.discard(inspection) }
+            } message: { inspection in
+                Text(Self.confirmationText(for: inspection))
+            }
+            .alert(
+                "Sicherung",
+                isPresented: Binding(
+                    get: { appCommands.backupResultMessage != nil },
+                    set: { if !$0 { appCommands.backupResultMessage = nil } }
+                ),
+                presenting: appCommands.backupResultMessage
+            ) { _ in
+                Button("OK", role: .cancel) { }
+            } message: { message in
+                Text(message)
+            }
+            .alert(
+                "Sicherung fehlgeschlagen",
+                isPresented: Binding(
+                    get: { appCommands.backupError != nil },
+                    set: { if !$0 { appCommands.backupError = nil } }
+                ),
+                presenting: appCommands.backupError
+            ) { _ in
+                Button("OK", role: .cancel) { }
+            } message: { message in
+                Text(message)
+            }
+    }
+
+    private static func confirmationText(for inspection: BackupInspection) -> String {
+        let belege = inspection.manifest.documentFolderCount
+        let belegeText = belege == 0
+            ? "Sie enthält keine Belege."
+            : "Sie enthält \(belege) \(belege == 1 ? "Beleg" : "Belege") – der Ablageort dafür wird gleich abgefragt."
+        return """
+            „\(inspection.archiveName)“ vom \
+            \(FieldValidator.string(from: inspection.manifest.createdAt)) \
+            (erstellt mit Version \(inspection.manifest.appVersion)). \(belegeText)
+
+            Alle vorhandenen Fahrzeuge, Betankungen, Ausgaben, Erinnerungen und \
+            Einstellungen werden dabei unwiderruflich durch den Stand aus der \
+            Sicherung ersetzt.
+            """
     }
 }
 

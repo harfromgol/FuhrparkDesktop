@@ -22,6 +22,26 @@ final class AppCommands {
     /// Fehlermeldung eines fehlgeschlagenen Export-/Import-Vorgangs (für Alert).
     var transferError: String?
 
+    /// Öffnet die Ordnerabfrage für eine vollständige Sicherung.
+    var showBackupFolderPicker = false
+
+    /// Öffnet die Dateiabfrage zum Einspielen einer Sicherung.
+    var showRestoreFilePicker = false
+
+    /// Läuft gerade eine Sicherung oder ein Einspielvorgang? Beides fasst
+    /// Datenbank und Belegdateien an – die Menüpunkte bleiben so lange
+    /// deaktiviert, damit nicht zwei Vorgänge übereinander laufen.
+    var isBackupRunning = false
+
+    /// Erfolgsmeldung nach Sicherung/Einspielen (für Alert).
+    var backupResultMessage: String?
+
+    /// Fehlermeldung aus Sicherung/Einspielen. Bewusst getrennt von
+    /// `transferError`: Dessen Alert heißt „Datenübertragung fehlgeschlagen"
+    /// und gehört zum JSON-Export – bei einer fehlgeschlagenen Sicherung
+    /// stünde dort ein Titel, der nichts mit dem Vorgang zu tun hat.
+    var backupError: String?
+
     /// Ob das Hauptfenster gerade geöffnet ist. Steuert die Aktivierung der
     /// Menüpunkte „Neues Fenster“ / „Fenster schließen“. Wird von `ContentView`
     /// über `onAppear`/`onDisappear` gepflegt.
