@@ -1,6 +1,6 @@
 # FuhrparkDesktop für macOS
 
-[![GitHub](https://img.shields.io/badge/Lizenz-MIT-orange)](https://github.com/harfromgol/FuhrparkDesktop/blob/main/LICENSE) [![GitHub](https://img.shields.io/badge/Version-v1%2E7-blue)](https://github.com/harfromgol/FuhrparkDesktop/releases)
+[![GitHub](https://img.shields.io/badge/Lizenz-MIT-orange)](https://github.com/harfromgol/FuhrparkDesktop/blob/main/LICENSE) [![GitHub](https://img.shields.io/badge/Version-v1%2E8-blue)](https://github.com/harfromgol/FuhrparkDesktop/releases)
 
 Native macOS-App (SwiftUI + Core Data) zur Verwaltung eines kleinen Fuhrparks:
 Fahrzeuge, Betankungen, sonstige Ausgaben, Belege und Spritpreise an einem Ort.
