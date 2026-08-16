@@ -186,6 +186,18 @@ struct AppMenuCommands: Commands {
 
             Divider()
 
+            Button("Backup erstellen …", systemImage: "externaldrive.badge.plus") {
+                appCommands.showBackupFolderPicker = true
+            }
+            .disabled(appCommands.isBackupRunning)
+
+            Button("Backup einspielen …", systemImage: "externaldrive.badge.checkmark") {
+                appCommands.showRestoreFilePicker = true
+            }
+            .disabled(appCommands.isBackupRunning)
+
+            Divider()
+
             Button("Alle Daten löschen", systemImage: "trash") {
                 appCommands.showDeleteAllDataConfirmation = true
             }

@@ -87,6 +87,32 @@ Zum KI-Zugriff: Er ist nur aktiv, wenn Du ihn selbst in Deinem MCP-Client
 einträgst, und überträgt nichts von sich aus. Was Du fragst, entscheidet,
 welche Daten an die KI gehen – und damit an deren Anbieter.
 
+## Sicherung & Wiederherstellung
+
+Zwei Wege, die unterschiedliche Zwecke haben:
+
+| | Tools → „Daten exportieren“ | Tools → „Backup erstellen …“ |
+|---|---|---|
+| Format | JSON, lesbar | komprimiertes Archiv (`.fuhrparkbackup`) |
+| Fuhrparkdaten | ja | ja |
+| Einstellungen | nur Fensterpositionen | alle, inkl. API-Schlüssel |
+| Belegdateien | nein, nur Verweise | ja, vollständig |
+| gedacht zum | Weitergeben, Ansehen | Sichern der eigenen Installation |
+
+Beim Backup wird der Zielordner abgefragt; die Datei heißt
+`FuhrparkDesktop-Backup_<Datum-Uhrzeit>.fuhrparkbackup`.
+
+Beim Einspielen (`Tools → „Backup einspielen …“`) fragt die App nach einer
+Bestätigung – **der gesamte vorhandene Bestand wird ersetzt.** Enthält das
+Backup Belege, wird anschließend gefragt, in welchem Ordner sie abgelegt
+werden sollen. Der darf ein anderer sein als beim Sichern; die Pfade in der
+Datenbank sind relativ und müssen nicht angepasst werden. Belegordner, die
+dort liegen und nicht zum Backup gehören, werden entfernt – normale Dateien
+und Ordner ohne UUID-Namen bleiben unangetastet.
+
+Nach dem Einspielen die App neu starten, damit alle wiederhergestellten
+Einstellungen greifen.
+
 ## Projekt einrichten & starten
 
 Das `.xcodeproj` wird nicht versioniert, sondern aus `project.yml` generiert:
