@@ -98,4 +98,24 @@ hdiutil convert "$DMG_TMP" -format UDZO -imagekey zlib-level=9 -o "$DMG_FINAL"
 rm -f "$DMG_TMP"
 rm -rf "$STAGING" "$DERIVED_DATA"
 
+# Manifest für die Update-Prüfung (siehe UpdateCheckService). Wird aus
+# derselben Version erzeugt wie das DMG – von Hand gepflegt liefe es sonst
+# irgendwann der tatsächlichen Version hinterher, und die App meldete
+# entweder nichts oder ein Update, das es nicht gibt. "notes" und
+# "publishedAt" müssen noch gefüllt werden, danach beides zusammen auf den
+# Webspace laden.
+MANIFEST="$DIST_DIR/version.json"
+cat > "$MANIFEST" <<EOF
+{
+  "version": "$VERSION",
+  "publishedAt": "$(date +%Y-%m-%d)",
+  "minimumSystemVersion": "26.0",
+  "downloadPageURL": "https://fuhrpark-macos.gerd-klaus.de/#download",
+  "notes": [
+    "TODO: Stichpunkte aus VERSION.md eintragen"
+  ]
+}
+EOF
+
 echo "==> Fertig: $DMG_FINAL"
+echo "==> Manifest: $MANIFEST (notes ergänzen, dann nach updates/version.json hochladen)"
