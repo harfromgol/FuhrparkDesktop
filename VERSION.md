@@ -1,7 +1,45 @@
 # Versionshistorie
 
 Alle nennenswerten Änderungen an FuhrparkDesktop, gruppiert nach Release.
-Die Versionen sind als Git-Tags (`v1.1` … `v1.7`) markiert.
+Die Versionen sind als Git-Tags (`v1.1` … `v1.8`) markiert.
+
+## [v1.8](https://github.com/harfromgol/FuhrparkDesktop/releases/tag/v1.8) – 2026-08-16
+
+### Neu
+- **Vollständige Sicherung und Wiederherstellung**: „Backup erstellen …“ im
+  Tools-Menü schreibt Fuhrparkdaten, **alle** Einstellungen und die
+  Belegdateien in ein einzelnes komprimiertes Archiv
+  (`.fuhrparkbackup`); der Ablageort wird vorher abgefragt. „Backup
+  einspielen …“ ersetzt den gesamten Bestand nach einer Sicherheitsabfrage.
+  Enthält das Archiv Belege, wird gefragt, wo sie abgelegt werden sollen –
+  das darf ein anderer Ordner sein als beim Sichern. Abgrenzung zum
+  bestehenden JSON-Export: Der bleibt das teilbare, lesbare Format ohne
+  Belegdateien und ohne API-Schlüssel; das Backup ist die private
+  Komplettkopie derselben Installation und enthält beides.
+- **Hinweis auf neue Versionen**: Die App kann beim Start höchstens einmal
+  täglich nachsehen, ob auf der Produktseite eine neuere Version steht, und
+  weist mit einem Kurz-Changelog darauf hin. Beim ersten Start wird die
+  Erlaubnis dafür ausdrücklich erfragt; abgerufen wird eine statische Datei
+  **ohne** jeden Parameter, die verwendete Version geht nicht mit.
+  Ein- und ausschaltbar über „Automatisch nach Updates suchen“ im
+  App-Menü, dazu „Nach Updates suchen …“ für die Prüfung von Hand.
+  Heruntergeladen oder installiert wird nichts von selbst.
+- **PDF-Export für die Betankungsliste** und **für die Ausgabenliste**, je
+  über ein neues Menü in der Fenster-Titelleiste. Beide Berichte sind als
+  durchgehende Tabelle im Stil einer Tabellenkalkulation gesetzt, mit
+  abwechselnd hinterlegten Zeilen; der Seitenumbruch liegt immer auf einer
+  Zeilengrenze.
+- **Preis direkt in der Menüleiste**: Ist genau eine Tankstelle/Sorte
+  angepinnt, steht der Preis neben dem Zapfsäulen-Symbol statt erst im
+  Popover.
+
+### Geändert
+- Der Menüpunkt „PDF“ heißt in Statistik und Fahrzeugdetails jetzt
+  einheitlich „PDF-Export“.
+- Der Blätter-Knopf unten in den Listen heißt „Weiter ›“ statt „› Weiter“.
+- `Scripts/build_dmg.sh` erzeugt neben dem DMG jetzt auch
+  `dist/version.json` – das Manifest für die Update-Prüfung – aus derselben
+  Versionsnummer wie das DMG.
 
 ## [v1.7](https://github.com/harfromgol/FuhrparkDesktop/releases/tag/v1.7) – 2026-08-14
 
