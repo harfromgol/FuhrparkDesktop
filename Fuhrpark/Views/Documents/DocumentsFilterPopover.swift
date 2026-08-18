@@ -53,13 +53,15 @@ struct DocumentsFilterPopover: View {
                 .pointerStyle(.link)
             }
 
-            Picker("Fahrzeugstatus", selection: $statusFilter) {
-                ForEach(FahrzeugStatusFilter.allCases) { status in
-                    Text(status.displayName).tag(status)
+            LabeledContent("Status") {
+                Picker("Status", selection: $statusFilter) {
+                    ForEach(FahrzeugStatusFilter.allCases) { status in
+                        Text(status.displayName).tag(status)
+                    }
                 }
+                .labelsHidden()
+                .pickerStyle(.segmented)
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
 
             LabeledContent("Fahrzeug") {
                 Picker("Fahrzeug", selection: $selectedVehicleFilter) {
