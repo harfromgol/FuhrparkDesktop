@@ -83,8 +83,8 @@ struct DocumentsView: View {
     }
     @State private var activeSheet: SheetKind?
 
-    @State private var selectedVehicleFilter: Set<Vehicle> = []
-    @State private var selectedCategoryFilter: Set<String> = []
+    @State private var selectedVehicleFilter: Vehicle?
+    @State private var selectedCategoryFilter: String?
     @State private var statusFilter: FahrzeugStatusFilter = .alle
     @State private var isDateFilterActive = false
     @State private var dateFrom = Date()
@@ -111,8 +111,7 @@ struct DocumentsView: View {
                 guard let vehicle = document.vehicle else { return false }
                 return statusFilter == .aktiv ? !vehicle.decommissioned : vehicle.decommissioned
             }()
-            let vehicleMatch = selectedVehicleFilter.isEmpty
-                || document.vehicle.map(selectedVehicleFilter.contains) == true
+            let vehicleMatch = selectedVehicleFilter == nil || document.vehicle == selectedVehicleFilter
             return statusMatch && vehicleMatch
         }
     }
@@ -143,16 +142,16 @@ struct DocumentsView: View {
 
     private var filteredDocuments: [Dokument] {
         documentsAfterStatusAndVehicle.filter { document in
-            let categoryMatch = selectedCategoryFilter.isEmpty
-                || !Set(document.categoryNames).isDisjoint(with: selectedCategoryFilter)
+            let categoryMatch = selectedCategoryFilter == nil
+                || document.categoryNames.contains(selectedCategoryFilter!)
             let dateMatch = dateRange.map { $0.contains(document.createdAt ?? .distantPast) } ?? true
             return categoryMatch && dateMatch
         }
     }
 
     private var isAnyFilterActive: Bool {
-        statusFilter != .alle || !selectedVehicleFilter.isEmpty
-            || !selectedCategoryFilter.isEmpty || isDateFilterActive
+        statusFilter != .alle || selectedVehicleFilter != nil
+            || selectedCategoryFilter != nil || isDateFilterActive
     }
 
     var body: some View {
@@ -240,11 +239,17 @@ struct DocumentsView: View {
                  : "„\(document.filename)“ und die zugehörige Kopie im Arbeitsverzeichnis werden entfernt. Ein eventuell noch vorhandenes Original bleibt unberührt.")
         }
         .onChange(of: statusFilter) { _, _ in
-            selectedVehicleFilter.formIntersection(Set(vehiclesMatchingStatus))
-            selectedCategoryFilter.formIntersection(Set(allCategoryNames))
+            if let selectedVehicleFilter, !vehiclesMatchingStatus.contains(selectedVehicleFilter) {
+                self.selectedVehicleFilter = nil
+            }
+            if let selectedCategoryFilter, !allCategoryNames.contains(selectedCategoryFilter) {
+                self.selectedCategoryFilter = nil
+            }
         }
         .onChange(of: selectedVehicleFilter) { _, _ in
-            selectedCategoryFilter.formIntersection(Set(allCategoryNames))
+            if let selectedCategoryFilter, !allCategoryNames.contains(selectedCategoryFilter) {
+                self.selectedCategoryFilter = nil
+            }
         }
     }
 

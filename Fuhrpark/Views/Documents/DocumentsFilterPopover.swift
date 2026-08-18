@@ -16,16 +16,20 @@ enum FahrzeugStatusFilter: String, CaseIterable, Identifiable {
 }
 
 /// Filtereinstellungen für die Dokumente-Ansicht, geöffnet über das
-/// Filter-Symbol neben dem Zahnrad. Die vier Filter verunden sich und
-/// kaskadieren in dieser Reihenfolge: Fahrzeugstatus schränkt die
-/// wählbaren Fahrzeuge ein, beide zusammen schränken die wählbaren
-/// Kategorien ein. `availableVehicles`/`availableCategoryNames` kommen
-/// dafür bereits vorgefiltert von `DocumentsView` herein – diese Ansicht
-/// rechnet selbst nichts nach.
+/// Filter-Symbol neben dem Zahnrad. Alle Auswahlfelder sind Dropdown-Boxen
+/// mit fester Größe, damit sich das Popover nicht verschiebt, wenn sich
+/// durch die Kaskade die Anzahl der wählbaren Fahrzeuge/Kategorien ändert
+/// (anders als die zuvor verwendeten Chip-Gitter).
+///
+/// Die vier Filter verunden sich und kaskadieren in dieser Reihenfolge:
+/// Fahrzeugstatus schränkt die wählbaren Fahrzeuge ein, beide zusammen
+/// schränken die wählbaren Kategorien ein. `availableVehicles`/
+/// `availableCategoryNames` kommen dafür bereits vorgefiltert von
+/// `DocumentsView` herein – diese Ansicht rechnet selbst nichts nach.
 struct DocumentsFilterPopover: View {
     @Binding var statusFilter: FahrzeugStatusFilter
-    @Binding var selectedVehicleFilter: Set<Vehicle>
-    @Binding var selectedCategoryFilter: Set<String>
+    @Binding var selectedVehicleFilter: Vehicle?
+    @Binding var selectedCategoryFilter: String?
     @Binding var isDateFilterActive: Bool
     @Binding var dateFrom: Date
     @Binding var dateTo: Date
@@ -34,125 +38,71 @@ struct DocumentsFilterPopover: View {
     let availableCategoryNames: [String]
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    Text("Filter")
-                        .font(.headline)
-                    Spacer()
-                    Button("Zurücksetzen") {
-                        statusFilter = .alle
-                        selectedVehicleFilter.removeAll()
-                        selectedCategoryFilter.removeAll()
-                        isDateFilterActive = false
-                    }
-                    .buttonStyle(.borderless)
-                    .pointerStyle(.link)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Filter")
+                    .font(.headline)
+                Spacer()
+                Button("Zurücksetzen") {
+                    statusFilter = .alle
+                    selectedVehicleFilter = nil
+                    selectedCategoryFilter = nil
+                    isDateFilterActive = false
                 }
+                .buttonStyle(.borderless)
+                .pointerStyle(.link)
+            }
 
-                Picker("Fahrzeugstatus", selection: $statusFilter) {
-                    ForEach(FahrzeugStatusFilter.allCases) { status in
-                        Text(status.displayName).tag(status)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-
-                if !availableVehicles.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Fahrzeug")
-                            .font(.subheadline.bold())
-                        LazyVGrid(
-                            columns: [GridItem(.adaptive(minimum: 90), spacing: 8, alignment: .leading)],
-                            alignment: .leading,
-                            spacing: 8
-                        ) {
-                            filterChip(title: "Alle", selected: selectedVehicleFilter.isEmpty) {
-                                selectedVehicleFilter.removeAll()
-                            }
-                            ForEach(availableVehicles) { vehicle in
-                                filterChip(
-                                    title: vehicle.licensePlate ?? "",
-                                    selected: selectedVehicleFilter.contains(vehicle)
-                                ) {
-                                    if selectedVehicleFilter.contains(vehicle) {
-                                        selectedVehicleFilter.remove(vehicle)
-                                    } else {
-                                        selectedVehicleFilter.insert(vehicle)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if !availableCategoryNames.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Kategorie")
-                            .font(.subheadline.bold())
-                        LazyVGrid(
-                            columns: [GridItem(.adaptive(minimum: 90), spacing: 8, alignment: .leading)],
-                            alignment: .leading,
-                            spacing: 8
-                        ) {
-                            filterChip(title: "Alle", selected: selectedCategoryFilter.isEmpty) {
-                                selectedCategoryFilter.removeAll()
-                            }
-                            ForEach(availableCategoryNames, id: \.self) { name in
-                                filterChip(title: name, selected: selectedCategoryFilter.contains(name)) {
-                                    if selectedCategoryFilter.contains(name) {
-                                        selectedCategoryFilter.remove(name)
-                                    } else {
-                                        selectedCategoryFilter.insert(name)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Toggle("Zeitraum eingrenzen", isOn: $isDateFilterActive)
-                        .toggleStyle(.checkbox)
-                    if isDateFilterActive {
-                        DatePicker(
-                            "Von",
-                            selection: $dateFrom,
-                            in: ...dateTo,
-                            displayedComponents: .date
-                        )
-                        DatePicker(
-                            "Bis",
-                            selection: $dateTo,
-                            in: dateFrom...,
-                            displayedComponents: .date
-                        )
-                    }
+            Picker("Fahrzeugstatus", selection: $statusFilter) {
+                ForEach(FahrzeugStatusFilter.allCases) { status in
+                    Text(status.displayName).tag(status)
                 }
             }
-            .padding(16)
-        }
-        .frame(maxHeight: 480)
-        .frame(width: 340)
-    }
+            .pickerStyle(.segmented)
+            .labelsHidden()
 
-    private func filterChip(title: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.caption)
-                .lineLimit(1)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .frame(maxWidth: .infinity)
-                .background(
-                    selected ? Color.accentColor.opacity(0.25) : Color.secondary.opacity(0.12),
-                    in: Capsule()
-                )
-                .overlay(
-                    Capsule().strokeBorder(selected ? Color.accentColor : .clear, lineWidth: 1)
-                )
+            LabeledContent("Fahrzeug") {
+                Picker("Fahrzeug", selection: $selectedVehicleFilter) {
+                    Text("Alle").tag(Vehicle?.none)
+                    ForEach(availableVehicles) { vehicle in
+                        Text(vehicle.licensePlate ?? "").tag(Vehicle?.some(vehicle))
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+            }
+
+            LabeledContent("Kategorie") {
+                Picker("Kategorie", selection: $selectedCategoryFilter) {
+                    Text("Alle").tag(String?.none)
+                    ForEach(availableCategoryNames, id: \.self) { name in
+                        Text(name).tag(String?.some(name))
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle("Zeitraum eingrenzen", isOn: $isDateFilterActive)
+                    .toggleStyle(.checkbox)
+                if isDateFilterActive {
+                    DatePicker(
+                        "Von",
+                        selection: $dateFrom,
+                        in: ...dateTo,
+                        displayedComponents: .date
+                    )
+                    DatePicker(
+                        "Bis",
+                        selection: $dateTo,
+                        in: dateFrom...,
+                        displayedComponents: .date
+                    )
+                }
+            }
         }
-        .buttonStyle(.plain)
-        .pointerStyle(.link)
+        .padding(16)
+        .frame(width: 320, alignment: .leading)
     }
 }
