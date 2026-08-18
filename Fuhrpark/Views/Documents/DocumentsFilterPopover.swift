@@ -89,18 +89,20 @@ struct DocumentsFilterPopover: View {
                 Toggle("Zeitraum eingrenzen", isOn: $isDateFilterActive)
                     .toggleStyle(.checkbox)
                 if isDateFilterActive {
-                    DatePicker(
-                        "Von",
-                        selection: $dateFrom,
-                        in: ...dateTo,
-                        displayedComponents: .date
-                    )
-                    DatePicker(
-                        "Bis",
-                        selection: $dateTo,
-                        in: dateFrom...,
-                        displayedComponents: .date
-                    )
+                    HStack {
+                        DatePicker(
+                            "Von",
+                            selection: $dateFrom,
+                            in: ...dateTo,
+                            displayedComponents: .date
+                        )
+                        DatePicker(
+                            "Bis",
+                            selection: $dateTo,
+                            in: dateFrom...,
+                            displayedComponents: .date
+                        )
+                    }
                 }
             }
         }
