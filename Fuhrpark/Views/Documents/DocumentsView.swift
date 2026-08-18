@@ -83,15 +83,46 @@ struct DocumentsView: View {
     }
     @State private var activeSheet: SheetKind?
 
-    @State private var selectedVehicleFilter: Set<Vehicle> = []
-    @State private var selectedCategoryFilter: Set<String> = []
+    @State private var selectedVehicleFilter: Vehicle?
+    @State private var selectedCategoryFilter: String?
+    @State private var statusFilter: FahrzeugStatusFilter = .alle
+    @State private var isDateFilterActive = false
+    @State private var dateFrom = Date()
+    @State private var dateTo = Date()
+    @State private var isPresentingFilterPopover = false
 
-    /// Alle Kategorienamen, die aktuell mindestens einem Dokument zugeordnet
-    /// sind (über dessen Ausgabe), alphabetisch, ohne Duplikate.
+    /// Fahrzeuge, die zum gewählten Fahrzeugstatus passen – Grundlage der
+    /// Fahrzeugauswahl im Filter-Popover (erste Stufe der Kaskade).
+    private var vehiclesMatchingStatus: [Vehicle] {
+        switch statusFilter {
+        case .alle: Array(vehicles)
+        case .aktiv: vehicles.filter { !$0.decommissioned }
+        case .stillgelegt: vehicles.filter { $0.decommissioned }
+        }
+    }
+
+    /// Dokumente nach Fahrzeugstatus und Fahrzeugauswahl (zweite Stufe der
+    /// Kaskade) – Grundlage sowohl für die im Popover angebotenen
+    /// Kategorien als auch für die endgültige Liste.
+    private var documentsAfterStatusAndVehicle: [Dokument] {
+        documents.filter { document in
+            let statusMatch: Bool = {
+                guard statusFilter != .alle else { return true }
+                guard let vehicle = document.vehicle else { return false }
+                return statusFilter == .aktiv ? !vehicle.decommissioned : vehicle.decommissioned
+            }()
+            let vehicleMatch = selectedVehicleFilter == nil || document.vehicle == selectedVehicleFilter
+            return statusMatch && vehicleMatch
+        }
+    }
+
+    /// Alle Kategorienamen, die unter dem aktuellen Fahrzeugstatus- und
+    /// Fahrzeugfilter mindestens einem Dokument zugeordnet sind (über dessen
+    /// Ausgabe), alphabetisch, ohne Duplikate.
     private var allCategoryNames: [String] {
         var seen = Set<String>()
         var result: [String] = []
-        for document in documents {
+        for document in documentsAfterStatusAndVehicle {
             for name in document.categoryNames where seen.insert(name).inserted {
                 result.append(name)
             }
@@ -99,14 +130,28 @@ struct DocumentsView: View {
         return result.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
+    /// Aktiver Zeitraum als geschlossener Bereich über volle Tage, oder
+    /// `nil`, solange die Eingrenzung ausgeschaltet ist.
+    private var dateRange: ClosedRange<Date>? {
+        guard isDateFilterActive else { return nil }
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: dateFrom)
+        let end = calendar.date(byAdding: DateComponents(day: 1, second: -1), to: calendar.startOfDay(for: dateTo)) ?? dateTo
+        return start...end
+    }
+
     private var filteredDocuments: [Dokument] {
-        documents.filter { document in
-            let vehicleMatch = selectedVehicleFilter.isEmpty
-                || document.vehicle.map(selectedVehicleFilter.contains) == true
-            let categoryMatch = selectedCategoryFilter.isEmpty
-                || !Set(document.categoryNames).isDisjoint(with: selectedCategoryFilter)
-            return vehicleMatch && categoryMatch
+        documentsAfterStatusAndVehicle.filter { document in
+            let categoryMatch = selectedCategoryFilter == nil
+                || document.categoryNames.contains(selectedCategoryFilter!)
+            let dateMatch = dateRange.map { $0.contains(document.createdAt ?? .distantPast) } ?? true
+            return categoryMatch && dateMatch
         }
+    }
+
+    private var isAnyFilterActive: Bool {
+        statusFilter != .alle || selectedVehicleFilter != nil
+            || selectedCategoryFilter != nil || isDateFilterActive
     }
 
     var body: some View {
@@ -132,12 +177,6 @@ struct DocumentsView: View {
                     GlassEffectContainer {
                         VStack(alignment: .leading, spacing: 20) {
                             addButtonRow
-                            if !vehicles.isEmpty {
-                                vehicleFilterSection
-                            }
-                            if !allCategoryNames.isEmpty {
-                                categoryFilterSection
-                            }
                             documentListSection
                         }
                         .padding(20)
@@ -199,6 +238,19 @@ struct DocumentsView: View {
                  ? "„\(document.filename)“ wird von allen \(anzahl) zugeordneten Ausgaben entfernt, zusammen mit der Kopie im Arbeitsverzeichnis. Ein eventuell noch vorhandenes Original bleibt unberührt."
                  : "„\(document.filename)“ und die zugehörige Kopie im Arbeitsverzeichnis werden entfernt. Ein eventuell noch vorhandenes Original bleibt unberührt.")
         }
+        .onChange(of: statusFilter) { _, _ in
+            if let selectedVehicleFilter, !vehiclesMatchingStatus.contains(selectedVehicleFilter) {
+                self.selectedVehicleFilter = nil
+            }
+            if let selectedCategoryFilter, !allCategoryNames.contains(selectedCategoryFilter) {
+                self.selectedCategoryFilter = nil
+            }
+        }
+        .onChange(of: selectedVehicleFilter) { _, _ in
+            if let selectedCategoryFilter, !allCategoryNames.contains(selectedCategoryFilter) {
+                self.selectedCategoryFilter = nil
+            }
+        }
     }
 
     private var addButtonRow: some View {
@@ -213,6 +265,29 @@ struct DocumentsView: View {
             .help("Arbeitsverzeichnis konfigurieren")
             .popover(isPresented: $isPresentingWorkingDirectoryPopover) {
                 workingDirectoryPopover
+            }
+
+            Button {
+                isPresentingFilterPopover = true
+            } label: {
+                Image(systemName: isAnyFilterActive
+                    ? "line.3.horizontal.decrease.circle.fill"
+                    : "line.3.horizontal.decrease.circle")
+            }
+            .buttonStyle(.borderless)
+            .pointerStyle(.link)
+            .help("Dokumente filtern")
+            .popover(isPresented: $isPresentingFilterPopover) {
+                DocumentsFilterPopover(
+                    statusFilter: $statusFilter,
+                    selectedVehicleFilter: $selectedVehicleFilter,
+                    selectedCategoryFilter: $selectedCategoryFilter,
+                    isDateFilterActive: $isDateFilterActive,
+                    dateFrom: $dateFrom,
+                    dateTo: $dateTo,
+                    availableVehicles: vehiclesMatchingStatus,
+                    availableCategoryNames: allCategoryNames
+                )
             }
 
             Spacer()
@@ -270,75 +345,6 @@ struct DocumentsView: View {
             .padding(16)
         }
         .frame(width: 420, height: 360)
-    }
-
-    private var vehicleFilterSection: some View {
-        GlassCard(title: "Nach Fahrzeug filtern") {
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 90), spacing: 8, alignment: .leading)],
-                alignment: .leading,
-                spacing: 8
-            ) {
-                filterChip(title: "Alle", selected: selectedVehicleFilter.isEmpty) {
-                    selectedVehicleFilter.removeAll()
-                }
-                ForEach(vehicles) { vehicle in
-                    filterChip(
-                        title: vehicle.licensePlate ?? "",
-                        selected: selectedVehicleFilter.contains(vehicle)
-                    ) {
-                        if selectedVehicleFilter.contains(vehicle) {
-                            selectedVehicleFilter.remove(vehicle)
-                        } else {
-                            selectedVehicleFilter.insert(vehicle)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private var categoryFilterSection: some View {
-        GlassCard(title: "Nach Kategorie filtern") {
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 90), spacing: 8, alignment: .leading)],
-                alignment: .leading,
-                spacing: 8
-            ) {
-                filterChip(title: "Alle", selected: selectedCategoryFilter.isEmpty) {
-                    selectedCategoryFilter.removeAll()
-                }
-                ForEach(allCategoryNames, id: \.self) { name in
-                    filterChip(title: name, selected: selectedCategoryFilter.contains(name)) {
-                        if selectedCategoryFilter.contains(name) {
-                            selectedCategoryFilter.remove(name)
-                        } else {
-                            selectedCategoryFilter.insert(name)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func filterChip(title: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.caption)
-                .lineLimit(1)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .frame(maxWidth: .infinity)
-                .background(
-                    selected ? Color.accentColor.opacity(0.25) : Color.secondary.opacity(0.12),
-                    in: Capsule()
-                )
-                .overlay(
-                    Capsule().strokeBorder(selected ? Color.accentColor : .clear, lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
-        .pointerStyle(.link)
     }
 
     private var documentListSection: some View {
