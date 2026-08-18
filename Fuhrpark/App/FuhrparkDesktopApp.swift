@@ -177,15 +177,6 @@ struct AppMenuCommands: Commands {
         }
 
         CommandMenu("Tools") {
-            Button("Daten exportieren", systemImage: "square.and.arrow.up") {
-                appCommands.showExportDialog = true
-            }
-            Button("Daten importieren", systemImage: "square.and.arrow.down") {
-                appCommands.showImportDialog = true
-            }
-
-            Divider()
-
             Button("Backup erstellen …", systemImage: "externaldrive.badge.plus") {
                 appCommands.showBackupFolderPicker = true
             }
@@ -195,6 +186,19 @@ struct AppMenuCommands: Commands {
                 appCommands.showRestoreFilePicker = true
             }
             .disabled(appCommands.isBackupRunning)
+
+            Divider()
+
+            // JSON-Export/Import zur Datenübergabe an die FuhrparkWeb-App
+            // (separat vom Backup, siehe dessen Doc-Kommentare zur Abgrenzung).
+            Menu("Fuhrpark Web") {
+                Button("JSON exportieren", systemImage: "square.and.arrow.up") {
+                    appCommands.showExportDialog = true
+                }
+                Button("JSON importieren", systemImage: "square.and.arrow.down") {
+                    appCommands.showImportDialog = true
+                }
+            }
 
             Divider()
 
