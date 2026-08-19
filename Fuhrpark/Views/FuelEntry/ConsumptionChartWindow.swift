@@ -84,6 +84,11 @@ struct ConsumptionChartWindow: View {
                     }
                 }
                 .chartYScale(domain: yDomain)
+                // Fester Rand links/rechts der Zeitachse, unabhängig vom Inhalt –
+                // sonst verschiebt sich die Achse (und mit ihr die äußeren
+                // Datenpunkte), sobald der Hover-Tooltip am Rand mehr Platz
+                // braucht, als gerade da ist.
+                .chartXScale(range: .plotDimension(padding: 40))
                 .chartYAxisLabel(vehicleRef.engineType.consumptionUnit)
                 .chartYAxis {
                     AxisMarks { value in
