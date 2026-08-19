@@ -75,11 +75,14 @@ struct ConsumptionChartWindow: View {
                         .symbolSize(150)
                         .foregroundStyle(Color.accentColor)
                         .annotation(position: .top) {
-                            Text("\(FieldValidator.string(from: hoveredPoint.date)) · \(consumptionLabel(hoveredPoint.consumption))")
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+                            VStack(spacing: 2) {
+                                Text(FieldValidator.string(from: hoveredPoint.date))
+                                Text(consumptionLabel(hoveredPoint.consumption))
+                            }
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
                         }
                     }
                 }
