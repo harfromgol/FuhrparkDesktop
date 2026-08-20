@@ -25,6 +25,8 @@ struct ConsumptionChartWindow: View {
         )
     }
 
+    @State private var hoveredPoint: ConsumptionPoint?
+
     private var points: [ConsumptionPoint] {
         guard let vehicle = vehicles.first else { return [] }
         return vehicle.consumptionHistory.enumerated().map { index, item in
@@ -50,21 +52,46 @@ struct ConsumptionChartWindow: View {
                     description: Text("Für eine Verlaufsdarstellung sind mindestens zwei Verbrauchswerte nötig.")
                 )
             } else {
-                Chart(points) { point in
-                    LineMark(
-                        x: .value("Datum", point.date),
-                        y: .value("Verbrauch", point.consumption)
-                    )
-                    .interpolationMethod(.linear)
-                    .foregroundStyle(Color.accentColor)
+                Chart {
+                    ForEach(points) { point in
+                        LineMark(
+                            x: .value("Datum", point.date),
+                            y: .value("Verbrauch", point.consumption)
+                        )
+                        .interpolationMethod(.linear)
+                        .foregroundStyle(Color.accentColor)
 
-                    PointMark(
-                        x: .value("Datum", point.date),
-                        y: .value("Verbrauch", point.consumption)
-                    )
-                    .foregroundStyle(Color.accentColor)
+                        PointMark(
+                            x: .value("Datum", point.date),
+                            y: .value("Verbrauch", point.consumption)
+                        )
+                        .foregroundStyle(Color.accentColor)
+                    }
+                    if let hoveredPoint {
+                        PointMark(
+                            x: .value("Datum", hoveredPoint.date),
+                            y: .value("Verbrauch", hoveredPoint.consumption)
+                        )
+                        .symbolSize(150)
+                        .foregroundStyle(Color.accentColor)
+                        .annotation(position: .top) {
+                            VStack(spacing: 2) {
+                                Text(FieldValidator.string(from: hoveredPoint.date))
+                                Text(consumptionLabel(hoveredPoint.consumption))
+                            }
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+                        }
+                    }
                 }
                 .chartYScale(domain: yDomain)
+                // Fester Rand links/rechts der Zeitachse, unabhängig vom Inhalt –
+                // sonst verschiebt sich die Achse (und mit ihr die äußeren
+                // Datenpunkte), sobald der Hover-Tooltip am Rand mehr Platz
+                // braucht, als gerade da ist.
+                .chartXScale(range: .plotDimension(padding: 40))
                 .chartYAxisLabel(vehicleRef.engineType.consumptionUnit)
                 .chartYAxis {
                     AxisMarks { value in
@@ -76,6 +103,7 @@ struct ConsumptionChartWindow: View {
                         }
                     }
                 }
+                .chartDateHover(points: points, date: \.date, hovered: $hoveredPoint)
             }
         }
         .padding(20)

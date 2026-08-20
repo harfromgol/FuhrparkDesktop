@@ -25,6 +25,8 @@ struct PriceChartWindow: View {
         )
     }
 
+    @State private var hoveredPoint: FuelPricePoint?
+
     private var points: [FuelPricePoint] {
         entries.compactMap { entry in
             guard let date = entry.date, let price = entry.pricePerLiter?.decimalValue else { return nil }
@@ -54,21 +56,46 @@ struct PriceChartWindow: View {
                     description: Text("Für eine Verlaufsdarstellung sind mindestens zwei \(vehicleRef.engineType.refuelNounPlural) nötig.")
                 )
             } else {
-                Chart(points) { point in
-                    LineMark(
-                        x: .value("Datum", point.date),
-                        y: .value("Preis", point.price)
-                    )
-                    .interpolationMethod(.linear)
-                    .foregroundStyle(Color.accentColor)
+                Chart {
+                    ForEach(points) { point in
+                        LineMark(
+                            x: .value("Datum", point.date),
+                            y: .value("Preis", point.price)
+                        )
+                        .interpolationMethod(.linear)
+                        .foregroundStyle(Color.accentColor)
 
-                    PointMark(
-                        x: .value("Datum", point.date),
-                        y: .value("Preis", point.price)
-                    )
-                    .foregroundStyle(Color.accentColor)
+                        PointMark(
+                            x: .value("Datum", point.date),
+                            y: .value("Preis", point.price)
+                        )
+                        .foregroundStyle(Color.accentColor)
+                    }
+                    if let hoveredPoint {
+                        PointMark(
+                            x: .value("Datum", hoveredPoint.date),
+                            y: .value("Preis", hoveredPoint.price)
+                        )
+                        .symbolSize(150)
+                        .foregroundStyle(Color.accentColor)
+                        .annotation(position: .top) {
+                            VStack(spacing: 2) {
+                                Text(FieldValidator.string(from: hoveredPoint.date))
+                                Text(priceLabel(hoveredPoint.price))
+                            }
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+                        }
+                    }
                 }
                 .chartYScale(domain: yDomain)
+                // Fester Rand links/rechts der Zeitachse, unabhängig vom Inhalt –
+                // sonst verschiebt sich die Achse (und mit ihr die äußeren
+                // Datenpunkte), sobald der Hover-Tooltip am Rand mehr Platz
+                // braucht, als gerade da ist.
+                .chartXScale(range: .plotDimension(padding: 40))
                 .chartYAxis {
                     AxisMarks { value in
                         AxisGridLine()
@@ -79,6 +106,7 @@ struct PriceChartWindow: View {
                         }
                     }
                 }
+                .chartDateHover(points: points, date: \.date, hovered: $hoveredPoint)
             }
         }
         .padding(20)
