@@ -27,6 +27,9 @@ struct DistanceChartWindow: View {
         )
     }
 
+    @State private var hoveredYear: Int?
+    @State private var hoverLocation: CGPoint = .zero
+
     private var points: [DistancePoint] {
         guard let vehicle = vehicles.first else { return [] }
         return vehicle.kilometersByYear
@@ -49,12 +52,64 @@ struct DistanceChartWindow: View {
                         y: .value("km", point.kilometers)
                     )
                     .foregroundStyle(Color.accentColor)
+                    .opacity(hoveredYear == nil || hoveredYear == point.year ? 1 : 0.35)
                 }
                 .chartYAxisLabel("km")
+                .chartOverlay { proxy in
+                    GeometryReader { geometry in
+                        ZStack(alignment: .topLeading) {
+                            Rectangle()
+                                .fill(.clear)
+                                .contentShape(Rectangle())
+                                .onContinuousHover { phase in
+                                    switch phase {
+                                    case .active(let location):
+                                        hoverLocation = location
+                                        guard let anchor = proxy.plotFrame else {
+                                            hoveredYear = nil
+                                            return
+                                        }
+                                        let plotFrame = geometry[anchor]
+                                        let x = location.x - plotFrame.origin.x
+                                        guard x >= 0, x <= plotFrame.width,
+                                              let yearString: String = proxy.value(atX: x) else {
+                                            hoveredYear = nil
+                                            return
+                                        }
+                                        hoveredYear = Int(yearString)
+                                    case .ended:
+                                        hoveredYear = nil
+                                    }
+                                }
+                            if let hoveredYear, let point = points.first(where: { $0.year == hoveredYear }) {
+                                VStack(spacing: 2) {
+                                    Text(String(hoveredYear))
+                                    Text("\(DisplayFormatter.odometerString(point.kilometers)) km")
+                                }
+                                .font(.caption)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+                                .fixedSize()
+                                .position(clampedTooltipPosition(in: geometry.size))
+                            }
+                        }
+                    }
+                }
             }
         }
         .padding(20)
         .frame(minWidth: 480, minHeight: 340)
         .navigationTitle("Gefahrene km pro Jahr – \(vehicleRef.licensePlate)")
+    }
+
+    /// Tooltip-Position, an den Mauszeiger gebunden statt an einen festen
+    /// Balken – verschiebt beim Hover nie das Diagramm selbst (nur die
+    /// Opazität ändert sich), und bleibt innerhalb der Fenstergrenzen.
+    private func clampedTooltipPosition(in size: CGSize) -> CGPoint {
+        let halfWidth: CGFloat = 60
+        let x = min(max(hoverLocation.x, halfWidth), size.width - halfWidth)
+        let y = max(hoverLocation.y - 28, 20)
+        return CGPoint(x: x, y: y)
     }
 }
