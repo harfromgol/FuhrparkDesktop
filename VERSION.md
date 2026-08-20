@@ -1,7 +1,26 @@
 # Versionshistorie
 
 Alle nennenswerten Änderungen an FuhrparkDesktop, gruppiert nach Release.
-Die Versionen sind als Git-Tags (`v1.1` … `v1.8`) markiert.
+Die Versionen sind als Git-Tags (`v1.1` … `v1.8.1`) markiert.
+
+## [v1.8.1](https://github.com/harfromgol/FuhrparkDesktop/releases/tag/v1.8.1) – 2026-08-20
+
+### Geändert
+- **Dokumente-Filter überarbeitet**: Die bisherigen Filterkarten sind einem
+  Filter-Symbol samt Einstellungsfenster gewichen, ergänzt um Filter nach
+  Fahrzeugstatus (Alle/Aktiv/Stillgelegt) und nach Zeitraum. Fahrzeug und
+  Kategorie werden über Dropdown-Boxen statt Chips gewählt, damit sich das
+  Fenster nicht mehr verschiebt, wenn sich die Anzahl der Einträge ändert.
+  Die Filter verunden sich und kaskadieren: Fahrzeugstatus schränkt die
+  wählbaren Fahrzeuge ein, beide zusammen die wählbaren Kategorien.
+- **Tools-Menü aufgeräumt**: „Daten exportieren“/„Daten importieren“ heißen
+  jetzt „JSON exportieren“/„JSON importieren“ und liegen als Untermenü
+  „Fuhrpark Web“ hinter Backup/Restore statt davor.
+- **Diagramme reagieren auf die Maus**: Beim Überfahren mit dem Zeiger wird
+  in allen Statistik-Diagrammen (Verbrauch- und Preis-Verlauf,
+  Kategorie-Kreisdiagramm, Kosten und gefahrene Kilometer pro Jahr) die
+  jeweils getroffene Stelle leicht hervorgehoben und der genaue Wert als
+  Tooltip an der Mausposition eingeblendet.
 
 ## [v1.8](https://github.com/harfromgol/FuhrparkDesktop/releases/tag/v1.8) – 2026-08-16
 
