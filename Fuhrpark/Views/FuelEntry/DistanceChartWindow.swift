@@ -71,12 +71,20 @@ struct DistanceChartWindow: View {
                                         }
                                         let plotFrame = geometry[anchor]
                                         let x = location.x - plotFrame.origin.x
+                                        let y = location.y - plotFrame.origin.y
                                         guard x >= 0, x <= plotFrame.width,
-                                              let yearString: String = proxy.value(atX: x) else {
+                                              let yearString: String = proxy.value(atX: x),
+                                              let year = Int(yearString),
+                                              let point = points.first(where: { $0.year == year }),
+                                              let value: Double = proxy.value(atY: y) else {
                                             hoveredYear = nil
                                             return
                                         }
-                                        hoveredYear = Int(yearString)
+                                        let barValue = Double(point.kilometers)
+                                        let withinBar = barValue >= 0
+                                            ? (value >= 0 && value <= barValue)
+                                            : (value <= 0 && value >= barValue)
+                                        hoveredYear = withinBar ? year : nil
                                     case .ended:
                                         hoveredYear = nil
                                     }
