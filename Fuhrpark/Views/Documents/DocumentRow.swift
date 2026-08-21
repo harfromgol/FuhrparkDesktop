@@ -62,8 +62,12 @@ struct DocumentRow: View {
         } label: {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(document.filename)
-                        .font(.subheadline.bold())
+                    HStack(spacing: 6) {
+                        Image(systemName: "paperclip")
+                            .foregroundStyle(.secondary)
+                        Text(document.filename)
+                            .font(.subheadline.bold())
+                    }
                     HStack(spacing: 6) {
                         if let vehicle = document.vehicle {
                             Text(vehicle.licensePlate ?? "")
