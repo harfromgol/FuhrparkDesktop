@@ -188,4 +188,4 @@ neuen Version.
 
 ## Kontakt
 
-Solltest Du Fragen, Anregungen etc. haben, dann darfst Du gerne [Kontakt](mailto:nospam@gerd-klaus.de) zu mir aufnehmen. Wenn es meine Zeit zulässt, werde ich gerne weiterhelfen.
+Solltest Du Fragen, Anregungen etc. haben, dann darfst Du gerne [Kontakt](mailto:fuhrpark@gerd-klaus.de) zu mir aufnehmen. Wenn es meine Zeit zulässt, werde ich gerne weiterhelfen.
