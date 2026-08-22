@@ -83,7 +83,7 @@ struct ContentView: View {
             }
             Button("Abbrechen", role: .cancel) { }
         } message: {
-            Text("Alle Fahrzeuge, Betankungen, sonstigen Ausgaben, Kategorien und Erinnerungen sowie der gespeicherte Tankerkönig-API-Schlüssel und die angepinnten Spritpreise werden unwiderruflich gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden.")
+            Text("Alle Fahrzeuge, Betankungen, sonstigen Ausgaben, Kategorien und Erinnerungen sowie der gespeicherte Tankerkönig-API-Schlüssel und die angepinnten Spritpreise werden unwiderruflich gelöscht. Auch das festgelegte Arbeitsverzeichnis für Belege und Fahrzeugbilder wird vergessen. Dieser Vorgang kann nicht rückgängig gemacht werden.")
         }
         // Export/Import laufen bewusst NICHT über `.fileExporter`/`.fileImporter`,
         // sondern über direkte `NSSavePanel`/`NSOpenPanel` (siehe
@@ -285,9 +285,14 @@ struct ContentView: View {
         // Auswahl zuerst zurücksetzen, damit der Detailbereich nicht auf ein
         // gleich gelöschtes (invalidiertes) Fahrzeug zugreift.
         selection = .statistics
+        // Erst löschen (räumt dabei über den Sweep auch die Belege/Fahrzeug-
+        // bilder im noch konfigurierten Arbeitsverzeichnis auf), danach das
+        // Verzeichnis selbst vergessen – umgekehrt fände der Sweep gar kein
+        // Arbeitsverzeichnis mehr vor und ließe die Dateien liegen.
         PersistenceController.shared.deleteAllData()
         fuelPricesViewModel.resetAPIKey()
         pinnedFuelPricesViewModel.resetPinnedSelections()
+        WorkingDirectoryStore.clear()
     }
 }
 
