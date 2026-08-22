@@ -12,6 +12,7 @@ struct VehiclePhotoAvatar: View {
     @Environment(\.managedObjectContext) private var viewContext
 
     @State private var isPresentingSourceDialog = false
+    @State private var isPresentingWorkingDirectoryPrompt = false
     @State private var isPresentingPhotosPicker = false
     @State private var photosPickerItem: PhotosPickerItem?
     @State private var imageToCrop: CGImage?
@@ -19,12 +20,26 @@ struct VehiclePhotoAvatar: View {
 
     var body: some View {
         Button {
-            isPresentingSourceDialog = true
+            if WorkingDirectoryStore.isConfigured {
+                isPresentingSourceDialog = true
+            } else {
+                isPresentingWorkingDirectoryPrompt = true
+            }
         } label: {
             content
         }
         .buttonStyle(.plain)
         .pointerStyle(.link)
+        .confirmationDialog(
+            "Kein Arbeitsverzeichnis festgelegt",
+            isPresented: $isPresentingWorkingDirectoryPrompt,
+            titleVisibility: .visible
+        ) {
+            Button("Arbeitsverzeichnis auswählen…") { presentWorkingDirectoryPicker() }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("Fahrzeugbilder werden wie Belege im gewählten Arbeitsverzeichnis abgelegt. Ohne dieses Verzeichnis kann kein Bild gespeichert werden.")
+        }
         .confirmationDialog("Fahrzeugbild auswählen", isPresented: $isPresentingSourceDialog) {
             Button("Aus Datei…") { presentFilePicker() }
             Button("Aus Fotos-App…") { isPresentingPhotosPicker = true }
@@ -80,6 +95,25 @@ struct VehiclePhotoAvatar: View {
                             .frame(width: geometry.size.width, height: geometry.size.height)
                     }
                 }
+        }
+    }
+
+    /// Lässt ein Arbeitsverzeichnis wählen und macht bei Erfolg gleich mit der
+    /// eigentlichen Foto-Auswahl weiter, statt den Nutzer den Klick aufs Icon
+    /// wiederholen zu lassen.
+    private func presentWorkingDirectoryPicker() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Wählen"
+        panel.message = "Ordner wählen, in dem Belege und Fahrzeugbilder abgelegt werden sollen."
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try WorkingDirectoryStore.set(url: url)
+            isPresentingSourceDialog = true
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
