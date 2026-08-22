@@ -32,6 +32,13 @@ private struct VehicleDTO: Codable {
     /// Zugeordnete Erinnerungen. Optional, damit ältere Exporte (ohne dieses
     /// Feld) weiterhin lesbar sind – fehlt es, hat das Fahrzeug keine Erinnerungen.
     var reminders: [ReminderDTO]?
+    /// Relativer Pfad des Fahrzeugbilds im Arbeitsverzeichnis (siehe
+    /// `VehiclePhotoStorage`). Optional wie bei Dokumenten aus demselben
+    /// Grund: die Datei selbst wird nicht mit übertragen, nur der Verweis –
+    /// ohne ihn fände die App das beim Sichern vorhandene Bild beim
+    /// Wiedereinspielen nicht mehr, obwohl die Datei noch am selben Namen
+    /// (Fahrzeug-ID) im Arbeitsverzeichnis liegt.
+    var photoPath: String?
 }
 
 private struct FuelEntryDTO: Codable {
@@ -111,6 +118,7 @@ private extension VehicleDTO {
             .sorted { ($0.name ?? "") < ($1.name ?? "") }
             .map(CategoryDTO.init(category:))
         reminders = vehicle.sortedReminders.map(ReminderDTO.init(reminder:))
+        photoPath = vehicle.photoPath
     }
 }
 
@@ -237,6 +245,7 @@ enum DataTransfer {
             vehicle.decommissioned = dto.decommissioned ?? false
             vehicle.createdAt = dto.createdAt
             vehicle.lastChangedDts = dto.lastChangedDts
+            vehicle.photoPath = dto.photoPath
 
             // Kategorien zuerst anlegen, damit die Ausgaben sie referenzieren können.
             var categoriesByID: [UUID: Category] = [:]

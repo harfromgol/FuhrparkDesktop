@@ -217,16 +217,18 @@ struct ContentView: View {
     }
 
     /// Spielt die bestätigte Sicherung ein. Fragt vorher den Zielordner für
-    /// die Belege ab – nur, wenn welche im Archiv sind.
+    /// Belege und Fahrzeugbilder ab – nur, wenn welche im Archiv sind.
     private func performRestore(_ inspection: BackupInspection) {
         var documentsTarget: URL?
-        if inspection.manifest.documentFolderCount > 0 {
+        let documentFolderCount = inspection.manifest.documentFolderCount
+        let photoFileCount = inspection.manifest.photoFileCount ?? 0
+        if documentFolderCount > 0 || photoFileCount > 0 {
             let panel = NSOpenPanel()
             panel.canChooseDirectories = true
             panel.canChooseFiles = false
             panel.allowsMultipleSelection = false
             panel.prompt = "Wählen"
-            panel.message = "Ordner wählen, in dem die \(inspection.manifest.documentFolderCount) Belege abgelegt werden sollen."
+            panel.message = restoreFolderPickerMessage(documents: documentFolderCount, photos: photoFileCount)
             // Der Ordner aus dem Backup als Ausgangspunkt – er darf, muss aber
             // nicht derselbe sein.
             if let previous = inspection.manifest.originalWorkingDirectoryPath {
@@ -256,6 +258,21 @@ struct ContentView: View {
             } catch {
                 appCommands.backupError = error.localizedDescription
             }
+        }
+    }
+
+    /// Text für die Ordnerauswahl beim Einspielen – nennt nur, was tatsächlich
+    /// im Archiv steckt.
+    private func restoreFolderPickerMessage(documents: Int, photos: Int) -> String {
+        switch (documents > 0, photos > 0) {
+        case (true, true):
+            return "Ordner wählen, in dem die \(documents) Belege und \(photos) Fahrzeugbilder abgelegt werden sollen."
+        case (true, false):
+            return "Ordner wählen, in dem die \(documents) Belege abgelegt werden sollen."
+        case (false, true):
+            return "Ordner wählen, in dem die \(photos) Fahrzeugbilder abgelegt werden sollen."
+        case (false, false):
+            return "Ordner wählen."
         }
     }
 
@@ -397,9 +414,18 @@ private struct BackupModifier: ViewModifier {
 
     private static func confirmationText(for inspection: BackupInspection) -> String {
         let belege = inspection.manifest.documentFolderCount
-        let belegeText = belege == 0
-            ? "Sie enthält keine Belege."
-            : "Sie enthält \(belege) \(belege == 1 ? "Beleg" : "Belege") – der Ablageort dafür wird gleich abgefragt."
+        let fotos = inspection.manifest.photoFileCount ?? 0
+        let belegeText: String
+        switch (belege > 0, fotos > 0) {
+        case (true, true):
+            belegeText = "Sie enthält \(belege) \(belege == 1 ? "Beleg" : "Belege") und \(fotos) \(fotos == 1 ? "Fahrzeugbild" : "Fahrzeugbilder") – der Ablageort dafür wird gleich abgefragt."
+        case (true, false):
+            belegeText = "Sie enthält \(belege) \(belege == 1 ? "Beleg" : "Belege") – der Ablageort dafür wird gleich abgefragt."
+        case (false, true):
+            belegeText = "Sie enthält \(fotos) \(fotos == 1 ? "Fahrzeugbild" : "Fahrzeugbilder") – der Ablageort dafür wird gleich abgefragt."
+        case (false, false):
+            belegeText = "Sie enthält keine Belege oder Fahrzeugbilder."
+        }
         return """
             „\(inspection.archiveName)“ vom \
             \(FieldValidator.string(from: inspection.manifest.createdAt)) \

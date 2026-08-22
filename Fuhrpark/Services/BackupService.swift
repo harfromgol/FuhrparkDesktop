@@ -38,6 +38,7 @@ enum BackupService {
     nonisolated private static let dataFilename = "data.json"
     nonisolated private static let settingsFilename = "settings.plist"
     nonisolated private static let documentsFolderName = "documents"
+    nonisolated private static let photosFolderName = "fahrzeugbilder"
 
     // MARK: - Sichern
 
@@ -50,6 +51,7 @@ enum BackupService {
         let dataJSON = try DataTransfer.exportData()
         let settings = try SettingsSnapshot.capture()
         let documentIDs = (try? DocumentStorage.documentFolderIDs()) ?? []
+        let photoVehicleIDs = (try? VehiclePhotoStorage.photoFileVehicleIDs()) ?? []
         let originalPath = WorkingDirectoryStore.displayPath
         let appVersion = UpdateCheckService.currentVersion
 
@@ -58,6 +60,7 @@ enum BackupService {
                 dataJSON: dataJSON,
                 settings: settings,
                 documentIDs: documentIDs,
+                photoVehicleIDs: photoVehicleIDs,
                 originalWorkingDirectoryPath: originalPath,
                 appVersion: appVersion,
                 destinationFolder: folder
@@ -69,6 +72,7 @@ enum BackupService {
         dataJSON: Data,
         settings: Data,
         documentIDs: Set<UUID>,
+        photoVehicleIDs: Set<UUID>,
         originalWorkingDirectoryPath: String?,
         appVersion: String,
         destinationFolder: URL
@@ -101,11 +105,28 @@ enum BackupService {
             }
         }
 
+        if !photoVehicleIDs.isEmpty {
+            let photosDir = staging.appendingPathComponent(photosFolderName, isDirectory: true)
+            try FileManager.default.createDirectory(at: photosDir, withIntermediateDirectories: true)
+            try WorkingDirectoryStore.withAccess { workingDirURL in
+                let sourceFolder = workingDirURL.appendingPathComponent(VehiclePhotoStorage.folderName, isDirectory: true)
+                for id in photoVehicleIDs {
+                    let source = sourceFolder.appendingPathComponent("\(id.uuidString).jpg")
+                    guard FileManager.default.fileExists(atPath: source.path) else { continue }
+                    try FileManager.default.copyItem(
+                        at: source,
+                        to: photosDir.appendingPathComponent("\(id.uuidString).jpg")
+                    )
+                }
+            }
+        }
+
         let manifest = BackupManifest(
             formatVersion: BackupManifest.currentFormatVersion,
             appVersion: appVersion,
             createdAt: Date(),
             documentFolderCount: documentIDs.count,
+            photoFileCount: photoVehicleIDs.count,
             originalWorkingDirectoryPath: originalWorkingDirectoryPath
         )
         let encoder = JSONEncoder()
@@ -219,12 +240,16 @@ enum BackupService {
         let dataJSON = try Data(contentsOf: unpacked.appendingPathComponent(dataFilename))
         try DataTransfer.importData(dataJSON)
 
-        // 4. Belege zuletzt – NACH Schritt 3. Andersherum hielte der Aufräumer
-        //    aus `importData` die gerade entpackten Ordner für Fremdkörper und
-        //    löschte sie wieder.
-        guard inspection.manifest.documentFolderCount > 0, documentsTarget != nil else { return }
+        // 4. Belege und Fahrzeugbilder zuletzt – NACH Schritt 3. Andersherum
+        //    hielte der Aufräumer aus `importData` die gerade entpackten
+        //    Ordner/Dateien für Fremdkörper und löschte sie wieder.
+        guard documentsTarget != nil else { return }
+        let hasDocuments = inspection.manifest.documentFolderCount > 0
+        let hasPhotos = (inspection.manifest.photoFileCount ?? 0) > 0
+        guard hasDocuments || hasPhotos else { return }
         try await Task.detached(priority: .userInitiated) {
-            try restoreDocuments(from: unpacked)
+            if hasDocuments { try restoreDocuments(from: unpacked) }
+            if hasPhotos { try restorePhotos(from: unpacked) }
         }.value
     }
 
@@ -248,6 +273,29 @@ enum BackupService {
                 )
                 try? FileManager.default.removeItem(at: target)
                 try FileManager.default.copyItem(at: folder, to: target)
+            }
+        }
+    }
+
+    private nonisolated static func restorePhotos(from unpacked: URL) throws {
+        let photosDir = unpacked.appendingPathComponent(photosFolderName, isDirectory: true)
+        guard FileManager.default.fileExists(atPath: photosDir.path) else { return }
+
+        let files = try FileManager.default.contentsOfDirectory(
+            at: photosDir,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        )
+        try WorkingDirectoryStore.withAccess { workingDirURL in
+            let targetFolder = workingDirURL.appendingPathComponent(VehiclePhotoStorage.folderName, isDirectory: true)
+            try FileManager.default.createDirectory(at: targetFolder, withIntermediateDirectories: true)
+            for file in files {
+                // Nur UUID-benannte Dateien, dasselbe Schutzgitter wie in
+                // `restoreDocuments`.
+                guard UUID(uuidString: file.deletingPathExtension().lastPathComponent) != nil else { continue }
+                let target = targetFolder.appendingPathComponent(file.lastPathComponent)
+                try? FileManager.default.removeItem(at: target)
+                try FileManager.default.copyItem(at: file, to: target)
             }
         }
     }

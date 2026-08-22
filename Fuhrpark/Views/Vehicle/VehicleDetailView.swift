@@ -250,6 +250,8 @@ struct VehicleDetailView: View {
     private var header: some View {
         GlassCard {
             HStack(alignment: .top) {
+                VehiclePhotoAvatar(vehicle: vehicle)
+                    .frame(width: 60, height: 60)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(vehicle.licensePlate ?? "")
                         .font(.title2.bold())
