@@ -93,12 +93,17 @@ struct ContentView: View {
         .onChange(of: appCommands.showExportDialog) { _, isShown in
             guard isShown else { return }
             appCommands.showExportDialog = false
-            presentExportPanel()
+            // Erst im nächsten Runloop-Durchlauf zeigen: Ruft man `runModal()`
+            // noch innerhalb der Menü-Aktion auf, während das Menü selbst sich
+            // gerade erst schließt, erscheint das Panel manchmal nicht – ein
+            // bekanntes AppKit/SwiftUI-Timing-Problem bei aus `CommandMenu`
+            // ausgelösten modalen Panels.
+            DispatchQueue.main.async { presentExportPanel() }
         }
         .onChange(of: appCommands.showImportDialog) { _, isShown in
             guard isShown else { return }
             appCommands.showImportDialog = false
-            presentImportPanel()
+            DispatchQueue.main.async { presentImportPanel() }
         }
         .alert(
             "Datenübertragung fehlgeschlagen",
@@ -361,16 +366,18 @@ private struct BackupModifier: ViewModifier {
         content
             // Menüaktionen liegen außerhalb der View-Hierarchie und können
             // keine Panels zeigen; sie setzen ein Flag, das hier ausgewertet
-            // und sofort zurückgenommen wird – wie bei Export/Import.
+            // und sofort zurückgenommen wird – wie bei Export/Import. Das
+            // Zeigen selbst erst im nächsten Runloop-Durchlauf (siehe
+            // Kommentar bei `showExportDialog` in `ContentView.body`).
             .onChange(of: appCommands.showBackupFolderPicker) { _, isShown in
                 guard isShown else { return }
                 appCommands.showBackupFolderPicker = false
-                onBackupRequested()
+                DispatchQueue.main.async { onBackupRequested() }
             }
             .onChange(of: appCommands.showRestoreFilePicker) { _, isShown in
                 guard isShown else { return }
                 appCommands.showRestoreFilePicker = false
-                onRestoreRequested()
+                DispatchQueue.main.async { onRestoreRequested() }
             }
             .confirmationDialog(
                 "Sicherung wirklich einspielen?",
