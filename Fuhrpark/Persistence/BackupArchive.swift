@@ -15,6 +15,10 @@ struct BackupManifest: Codable {
     /// Anzahl der mitgesicherten Belegordner. `0` heißt: keine Ordnerabfrage
     /// beim Einspielen nötig.
     let documentFolderCount: Int
+    /// Anzahl der mitgesicherten Fahrzeugbilder. Optional, damit ältere
+    /// Archive ohne dieses Feld weiter lesbar bleiben – `nil` bedeutet
+    /// dasselbe wie `0`.
+    let photoFileCount: Int?
     /// Wo die Belege beim Sichern lagen – als Vorschlag beim Einspielen.
     let originalWorkingDirectoryPath: String?
 

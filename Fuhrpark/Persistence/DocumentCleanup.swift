@@ -72,8 +72,26 @@ enum DocumentCleanup {
         return ordnerIDs.subtracting(bekannteIDs)
     }
 
+    /// Fahrzeug-IDs, zu denen im `Fahrzeugbilder`-Ordner eine Bilddatei liegt,
+    /// aber kein (mehr) lebendes Fahrzeug existiert. Analog zu
+    /// `unknownFolderIDs`, nur für `VehiclePhotoStorage` statt `DocumentStorage`.
+    static func unknownPhotoVehicleIDs(in context: NSManagedObjectContext) -> Set<UUID> {
+        guard
+            WorkingDirectoryStore.isConfigured,
+            let fotoIDs = try? VehiclePhotoStorage.photoFileVehicleIDs(),
+            !fotoIDs.isEmpty
+        else { return [] }
+
+        let request = NSFetchRequest<Vehicle>(entityName: "Vehicle")
+        guard let vehicles = try? context.fetch(request) else { return [] }
+
+        let bekannteIDs = Set(vehicles.compactMap { $0.isDeleted ? nil : $0.id })
+        return fotoIDs.subtracting(bekannteIDs)
+    }
+
     /// Gleicht das Arbeitsverzeichnis an den Datenbankstand an.
     static func sweepWorkingDirectory(in context: NSManagedObjectContext) {
         DocumentStorage.removeFolders(withIDs: unknownFolderIDs(in: context))
+        VehiclePhotoStorage.removeFiles(withIDs: unknownPhotoVehicleIDs(in: context))
     }
 }

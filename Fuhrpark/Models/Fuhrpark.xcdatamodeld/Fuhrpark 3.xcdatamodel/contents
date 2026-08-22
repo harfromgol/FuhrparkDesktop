@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23788.4" systemVersion="24G84" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="NO" userDefinedModelVersionIdentifier="3">
+    <entity name="Vehicle" representedClassName="Vehicle" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="decommissioned" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="engineTypeRaw" optional="NO" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="lastChangedDts" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="licensePlate" optional="NO" attributeType="String"/>
+        <attribute name="manufacturer" optional="NO" attributeType="String"/>
+        <attribute name="model" optional="NO" attributeType="String"/>
+        <attribute name="odometer" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="photoPath" optional="YES" attributeType="String"/>
+        <relationship name="categories" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Category" inverseName="vehicle" inverseEntity="Category"/>
+        <relationship name="erinnerungen" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Erinnerung" inverseName="vehicle" inverseEntity="Erinnerung"/>
+        <relationship name="expenses" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Expense" inverseName="vehicle" inverseEntity="Expense"/>
+        <relationship name="fuelEntries" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="FuelEntry" inverseName="vehicle" inverseEntity="FuelEntry"/>
+    </entity>
+    <entity name="FuelEntry" representedClassName="FuelEntry" syncable="YES" codeGenerationType="class">
+        <attribute name="amount" optional="NO" attributeType="Decimal" defaultValueString="0.0" usesScalarValueType="NO"/>
+        <attribute name="consumption" optional="YES" attributeType="Double" usesScalarValueType="NO"/>
+        <attribute name="date" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="fullTank" optional="NO" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="liters" optional="NO" attributeType="Decimal" defaultValueString="0.0" usesScalarValueType="NO"/>
+        <attribute name="manualConsumption" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="odometer" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="previousEntryExists" optional="NO" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="pricePerLiter" optional="NO" attributeType="Decimal" defaultValueString="0.0" usesScalarValueType="NO"/>
+        <attribute name="station" optional="NO" attributeType="String"/>
+        <relationship name="vehicle" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Vehicle" inverseName="fuelEntries" inverseEntity="Vehicle"/>
+    </entity>
+    <entity name="Category" representedClassName="Category" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" optional="NO" attributeType="String"/>
+        <relationship name="expenses" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Expense" inverseName="categories" inverseEntity="Expense"/>
+        <relationship name="vehicle" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Vehicle" inverseName="categories" inverseEntity="Vehicle"/>
+    </entity>
+    <entity name="Expense" representedClassName="Expense" syncable="YES" codeGenerationType="class">
+        <attribute name="amount" optional="NO" attributeType="Decimal" defaultValueString="0.0" usesScalarValueType="NO"/>
+        <attribute name="date" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isIncome" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="purpose" optional="NO" attributeType="String"/>
+        <attribute name="recipient" optional="NO" attributeType="String"/>
+        <relationship name="categories" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Category" inverseName="expenses" inverseEntity="Category"/>
+        <relationship name="documents" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Dokument" inverseName="expense" inverseEntity="Dokument"/>
+        <relationship name="vehicle" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Vehicle" inverseName="expenses" inverseEntity="Vehicle"/>
+    </entity>
+    <entity name="Dokument" representedClassName="Dokument" syncable="YES" codeGenerationType="class">
+        <attribute name="bookmarkData" optional="YES" attributeType="Binary"/>
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="path" optional="NO" attributeType="String"/>
+        <relationship name="expense" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Expense" inverseName="documents" inverseEntity="Expense"/>
+    </entity>
+    <entity name="Erinnerung" representedClassName="Erinnerung" syncable="YES" codeGenerationType="class">
+        <attribute name="advanceNoticeRaw" optional="NO" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="dueDate" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isDone" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="repeatIntervalValue" optional="NO" attributeType="Integer 16" defaultValueString="1" usesScalarValueType="YES"/>
+        <attribute name="repeatUnitRaw" optional="NO" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="title" optional="NO" attributeType="String"/>
+        <relationship name="vehicle" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Vehicle" inverseName="erinnerungen" inverseEntity="Vehicle"/>
+    </entity>
+</model>

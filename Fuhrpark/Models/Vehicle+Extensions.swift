@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import CoreData
 
@@ -15,6 +16,9 @@ enum EngineType: Int16, CaseIterable, Identifiable, Codable {
         case .bev: return "BEV"
         }
     }
+
+    /// SF-Symbol-Name für die Fahrzeug-Miniatur, wenn kein Foto gesetzt ist.
+    var iconName: String { isBEV ? "bolt.car" : "car" }
 
     // MARK: - Einheiten (Verbrenner: Liter/Sprit, BEV: kWh/Strom)
 
@@ -77,6 +81,13 @@ extension Vehicle {
     var engineType: EngineType {
         get { EngineType(rawValue: engineTypeRaw) ?? .combustion }
         set { engineTypeRaw = newValue.rawValue }
+    }
+
+    /// Das gesetzte Fahrzeugbild, falls vorhanden. `nil`, wenn kein Bild
+    /// gesetzt ist oder die Datei im Arbeitsverzeichnis nicht (mehr) existiert.
+    var photo: NSImage? {
+        guard let photoPath else { return nil }
+        return VehiclePhotoStorage.loadImage(forRelativePath: photoPath)
     }
 
     /// Setzt den Zeitstempel der letzten Änderung auf jetzt. Wird beim Hinzufügen
