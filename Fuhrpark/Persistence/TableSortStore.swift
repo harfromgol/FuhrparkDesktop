@@ -1,18 +1,20 @@
 import Foundation
 
-/// Speichert die vom Nutzer gewählte Spalten-Sortierung der drei Tabellen in
-/// der Fahrzeug-Detailansicht (Kategorie-Kosten, Jahres-Kosten, Jahres-km) –
-/// global für alle Fahrzeuge (bewusst keine Fahrzeug-UUID-Ebene wie bei
+/// Speichert die vom Nutzer gewählte Spalten-Sortierung sortierbarer
+/// Tabellen in der Fahrzeug-Detailansicht und der flottenweiten Statistik –
+/// global, nicht je Fahrzeug (bewusst keine Fahrzeug-UUID-Ebene wie bei
 /// `StatisticsCardVisibilityStore`, da die Sortierreihenfolge eine reine
 /// Anzeigepräferenz ist), analog zum flachen `VehicleCostFilterStore`-Muster.
-enum VehicleDetailTableSortStore {
+enum TableSortStore {
     enum Table: String {
         case expenseCategory
         case yearlyCost
         case yearlyDistance
+        case costPerVehicle
+        case fleetYearlyCost
     }
 
-    private static let defaultsKey = "vehicleDetailTableSort"
+    private static let defaultsKey = "tableSort"
 
     /// `nil`, wenn für diese Tabelle noch keine eigene Wahl getroffen wurde –
     /// der Aufrufer verwendet dann den spaltenspezifischen Standard.

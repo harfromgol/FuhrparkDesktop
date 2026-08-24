@@ -17,8 +17,7 @@ struct VehicleDetailView: View {
     @State private var vehiclePendingDecommission: Vehicle?
     @State private var pdfExportErrorMessage: String?
     /// Spaltensortierung der drei Statistiktabellen, global für alle
-    /// Fahrzeuge aus den UserDefaults vorbelegt (siehe
-    /// `VehicleDetailTableSortStore`).
+    /// Fahrzeuge aus den UserDefaults vorbelegt (siehe `TableSortStore`).
     @State private var expenseCategorySort = TableSort<ExpenseCategorySortColumn>.initial(for: .expenseCategory)
     @State private var yearlyCostSort = TableSort<YearlyCostSortColumn>.initial(for: .yearlyCost)
     @State private var yearlyDistanceSort = TableSort<YearlyDistanceSortColumn>.initial(for: .yearlyDistance)

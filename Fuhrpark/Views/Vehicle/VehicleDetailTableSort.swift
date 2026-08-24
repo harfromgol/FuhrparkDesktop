@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// Eine sortierbare Spalte einer der drei Statistiktabellen in
-/// `VehicleDetailView`. `defaultAscending` ist die Richtung, die beim
-/// erstmaligen Klick auf diese Spalte (oder als allgemeiner Anfangswert der
-/// jeweils ersten Spalte) verwendet wird: Text-Spalten aufsteigend,
-/// numerische Spalten absteigend.
+/// Eine sortierbare Spalte einer der Statistiktabellen (Fahrzeug-
+/// Detailansicht oder flottenweite Statistik). `defaultAscending` ist die
+/// Richtung, die beim erstmaligen Klick auf diese Spalte (oder als
+/// allgemeiner Anfangswert der jeweils ersten Spalte) verwendet wird:
+/// Text-Spalten aufsteigend, numerische Spalten absteigend.
 protocol SortableColumn: RawRepresentable, CaseIterable, Hashable where RawValue == String {
     var defaultAscending: Bool { get }
 }
@@ -14,6 +14,10 @@ enum ExpenseCategorySortColumn: String, SortableColumn {
     var defaultAscending: Bool { self == .category }
 }
 
+/// Spalten einer Jahres-Kosten-Tabelle, sowohl der fahrzeugeigenen
+/// (`VehicleDetailView`) als auch der flottenweit aggregierten
+/// (`StatisticsView`) – gleiche Spalten, gleiche Standardrichtungen, daher
+/// von beiden Tabellen geteilt (unterschieden über `TableSort.table`).
 enum YearlyCostSortColumn: String, SortableColumn {
     case year, fuel, expense, total
     var defaultAscending: Bool { false }
@@ -24,22 +28,26 @@ enum YearlyDistanceSortColumn: String, SortableColumn {
     var defaultAscending: Bool { false }
 }
 
-/// Aktuelle Sortierung einer Tabelle, samt Persistenz in
-/// `VehicleDetailTableSortStore`. Klick auf die bereits aktive Spalte
-/// dreht die Richtung um, Klick auf eine andere Spalte übernimmt deren
-/// `defaultAscending`.
+enum CostPerVehicleSortColumn: String, SortableColumn {
+    case licensePlate, fuel, expense, total
+    var defaultAscending: Bool { self == .licensePlate }
+}
+
+/// Aktuelle Sortierung einer Tabelle, samt Persistenz in `TableSortStore`.
+/// Klick auf die bereits aktive Spalte dreht die Richtung um, Klick auf
+/// eine andere Spalte übernimmt deren `defaultAscending`.
 struct TableSort<Column: SortableColumn> {
     var column: Column
     var ascending: Bool
-    let table: VehicleDetailTableSortStore.Table
+    let table: TableSortStore.Table
 
-    static func initial(for table: VehicleDetailTableSortStore.Table) -> TableSort<Column> {
-        if let saved = VehicleDetailTableSortStore.sortState(for: table),
+    static func initial(for table: TableSortStore.Table) -> TableSort<Column> {
+        if let saved = TableSortStore.sortState(for: table),
            let column = Column(rawValue: saved.column) {
             return TableSort(column: column, ascending: saved.ascending, table: table)
         }
-        // Jede der drei Spalten-Enums hat mindestens einen Fall (Kategorie,
-        // Jahr) – `allCases` kann hier nie leer sein.
+        // Jede der Spalten-Enums hat mindestens einen Fall (Kategorie,
+        // Fahrzeug, Jahr) – `allCases` kann hier nie leer sein.
         let firstColumn = Column.allCases.first!
         return TableSort(column: firstColumn, ascending: firstColumn.defaultAscending, table: table)
     }
@@ -51,18 +59,18 @@ struct TableSort<Column: SortableColumn> {
             column = newColumn
             ascending = newColumn.defaultAscending
         }
-        VehicleDetailTableSortStore.setSortState(column: column.rawValue, ascending: ascending, for: table)
+        TableSortStore.setSortState(column: column.rawValue, ascending: ascending, for: table)
     }
 
     func isActive(_ candidate: Column) -> Bool { candidate == column }
 }
 
-/// Kopfzellen-Titel einer der drei Statistiktabellen: reiner Text, solange
-/// die Tabelle weniger als zwei Zeilen hat (Sortierung macht dann keinen
-/// Sinn), sonst klickbar mit Sortier-Chevron. Der Chevron ist dauerhaft
-/// sichtbar, aber ausschließlich an der gerade aktiven Spalte – ein Klick
-/// auf eine andere Spalte lässt ihn dorthin „springen", damit auf einen
-/// Blick klar ist, wonach sortiert ist.
+/// Kopfzellen-Titel einer sortierbaren Statistiktabelle: reiner Text,
+/// solange die Tabelle weniger als zwei Zeilen hat (Sortierung macht dann
+/// keinen Sinn), sonst klickbar mit Sortier-Chevron. Der Chevron ist
+/// dauerhaft sichtbar, aber ausschließlich an der gerade aktiven Spalte –
+/// ein Klick auf eine andere Spalte lässt ihn dorthin „springen", damit auf
+/// einen Blick klar ist, wonach sortiert ist.
 struct SortHeaderCell: View {
     let title: String
     let isActive: Bool

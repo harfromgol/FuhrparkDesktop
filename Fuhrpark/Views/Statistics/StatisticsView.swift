@@ -14,6 +14,10 @@ struct StatisticsView: View {
     @State private var yearlyCostCountOverride = YearlyCostCountStore.get()
     @State private var isPresentingYearlyCostConfig = false
     @State private var pdfExportErrorMessage: String?
+    /// Spaltensortierung der beiden Tabellen, global vorbelegt aus den
+    /// UserDefaults (siehe `TableSortStore`).
+    @State private var costPerVehicleSort = TableSort<CostPerVehicleSortColumn>.initial(for: .costPerVehicle)
+    @State private var fleetYearlyCostSort = TableSort<YearlyCostSortColumn>.initial(for: .fleetYearlyCost)
 
     private var totalCost: Decimal { vehicles.reduce(.zero) { $0 + $1.totalCost } }
     private var totalFuelCost: Decimal { vehicles.reduce(.zero) { $0 + $1.totalFuelCost } }
@@ -31,6 +35,27 @@ struct StatisticsView: View {
                 }
                 return (lhs.licensePlate ?? "") < (rhs.licensePlate ?? "")
             }
+    }
+
+    /// `costPerVehicleList`, umsortiert nach der vom Nutzer gewählten Spalte
+    /// (`costPerVehicleSort`) – ersetzt dabei die eingebaute Gruppierung
+    /// „aktiv vor stillgelegt" durch eine durchgehende Sortierung, da diese
+    /// Tabelle den Stillgelegt-Status ohnehin nicht anzeigt.
+    private var sortedCostPerVehicleList: [Vehicle] {
+        let items = costPerVehicleList
+        let ascending = costPerVehicleSort.ascending
+        switch costPerVehicleSort.column {
+        case .licensePlate:
+            return items.sorted {
+                ascending ? ($0.licensePlate ?? "") < ($1.licensePlate ?? "") : ($0.licensePlate ?? "") > ($1.licensePlate ?? "")
+            }
+        case .fuel:
+            return items.sorted { ascending ? $0.totalFuelCost < $1.totalFuelCost : $0.totalFuelCost > $1.totalFuelCost }
+        case .expense:
+            return items.sorted { ascending ? $0.totalExpenseCost < $1.totalExpenseCost : $0.totalExpenseCost > $1.totalExpenseCost }
+        case .total:
+            return items.sorted { ascending ? $0.totalCost < $1.totalCost : $0.totalCost > $1.totalCost }
+        }
     }
 
     /// Ein-/Ausschalten einer Fahrzeuggruppe, sofort persistiert.
@@ -109,6 +134,25 @@ struct StatisticsView: View {
     /// Auf `yearlyCostCount` begrenzte, neueste Jahre aus `costsByYear`.
     private var limitedCostsByYear: [YearlyCost] {
         Array(costsByYear.prefix(yearlyCostCount))
+    }
+
+    /// `limitedCostsByYear`, umsortiert nach der vom Nutzer gewählten Spalte
+    /// (`fleetYearlyCostSort`) – die Jahresauswahl selbst (`yearlyCostCount`)
+    /// bleibt unverändert, nur die Anzeigereihenfolge der ausgewählten Jahre
+    /// ändert sich.
+    private var sortedLimitedCostsByYear: [YearlyCost] {
+        let items = limitedCostsByYear
+        let ascending = fleetYearlyCostSort.ascending
+        switch fleetYearlyCostSort.column {
+        case .year:
+            return items.sorted { ascending ? $0.year < $1.year : $0.year > $1.year }
+        case .fuel:
+            return items.sorted { ascending ? $0.fuel < $1.fuel : $0.fuel > $1.fuel }
+        case .expense:
+            return items.sorted { ascending ? $0.expense < $1.expense : $0.expense > $1.expense }
+        case .total:
+            return items.sorted { ascending ? $0.total < $1.total : $0.total > $1.total }
+        }
     }
 
     private var yearlyCostConfigPopover: some View {
@@ -193,6 +237,7 @@ struct StatisticsView: View {
                         }
 
                         GlassCard {
+                            let isSortable = costPerVehicleList.count >= 2
                             HStack {
                                 Text("Kosten je Fahrzeug")
                                     .font(.headline)
@@ -212,17 +257,40 @@ struct StatisticsView: View {
 
                             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                                 GridRow {
-                                    Text("Fahrzeug")
-                                    Text("Betankungen").gridColumnAlignment(.trailing)
-                                    Text("Sonstige").gridColumnAlignment(.trailing)
-                                    Text("Gesamt").gridColumnAlignment(.trailing)
+                                    SortHeaderCell(
+                                        title: "Fahrzeug",
+                                        isActive: costPerVehicleSort.isActive(.licensePlate),
+                                        ascending: costPerVehicleSort.ascending,
+                                        isEnabled: isSortable
+                                    ) { costPerVehicleSort.select(.licensePlate) }
+                                    SortHeaderCell(
+                                        title: "Betankungen",
+                                        isActive: costPerVehicleSort.isActive(.fuel),
+                                        ascending: costPerVehicleSort.ascending,
+                                        isEnabled: isSortable
+                                    ) { costPerVehicleSort.select(.fuel) }
+                                    .gridColumnAlignment(.trailing)
+                                    SortHeaderCell(
+                                        title: "Sonstige",
+                                        isActive: costPerVehicleSort.isActive(.expense),
+                                        ascending: costPerVehicleSort.ascending,
+                                        isEnabled: isSortable
+                                    ) { costPerVehicleSort.select(.expense) }
+                                    .gridColumnAlignment(.trailing)
+                                    SortHeaderCell(
+                                        title: "Gesamt",
+                                        isActive: costPerVehicleSort.isActive(.total),
+                                        ascending: costPerVehicleSort.ascending,
+                                        isEnabled: isSortable
+                                    ) { costPerVehicleSort.select(.total) }
+                                    .gridColumnAlignment(.trailing)
                                 }
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
 
                                 Divider()
 
-                                ForEach(costPerVehicleList) { vehicle in
+                                ForEach(sortedCostPerVehicleList) { vehicle in
                                     GridRow {
                                         Text(vehicle.licensePlate ?? "")
                                         Text(DisplayFormatter.currencyString(vehicle.totalFuelCost))
@@ -236,6 +304,7 @@ struct StatisticsView: View {
                         }
 
                         GlassCard {
+                            let isSortable = limitedCostsByYear.count >= 2
                             HStack {
                                 Text("Kosten pro Jahr")
                                     .font(.headline)
@@ -255,17 +324,40 @@ struct StatisticsView: View {
 
                             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                                 GridRow {
-                                    Text("Jahr")
-                                    Text("Betankungen").gridColumnAlignment(.trailing)
-                                    Text("Sonstige").gridColumnAlignment(.trailing)
-                                    Text("Gesamt").gridColumnAlignment(.trailing)
+                                    SortHeaderCell(
+                                        title: "Jahr",
+                                        isActive: fleetYearlyCostSort.isActive(.year),
+                                        ascending: fleetYearlyCostSort.ascending,
+                                        isEnabled: isSortable
+                                    ) { fleetYearlyCostSort.select(.year) }
+                                    SortHeaderCell(
+                                        title: "Betankungen",
+                                        isActive: fleetYearlyCostSort.isActive(.fuel),
+                                        ascending: fleetYearlyCostSort.ascending,
+                                        isEnabled: isSortable
+                                    ) { fleetYearlyCostSort.select(.fuel) }
+                                    .gridColumnAlignment(.trailing)
+                                    SortHeaderCell(
+                                        title: "Sonstige",
+                                        isActive: fleetYearlyCostSort.isActive(.expense),
+                                        ascending: fleetYearlyCostSort.ascending,
+                                        isEnabled: isSortable
+                                    ) { fleetYearlyCostSort.select(.expense) }
+                                    .gridColumnAlignment(.trailing)
+                                    SortHeaderCell(
+                                        title: "Gesamt",
+                                        isActive: fleetYearlyCostSort.isActive(.total),
+                                        ascending: fleetYearlyCostSort.ascending,
+                                        isEnabled: isSortable
+                                    ) { fleetYearlyCostSort.select(.total) }
+                                    .gridColumnAlignment(.trailing)
                                 }
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
 
                                 Divider()
 
-                                ForEach(limitedCostsByYear) { item in
+                                ForEach(sortedLimitedCostsByYear) { item in
                                     GridRow {
                                         Text(String(item.year))
                                         Text(DisplayFormatter.currencyString(item.fuel))
