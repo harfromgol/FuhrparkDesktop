@@ -264,16 +264,19 @@ struct SidebarView: View {
         }
     }
 
+    /// Kein `Button` (wie sonst in dieser Datei) – ein die ganze Zeile
+    /// umschließender Button fängt den Mausklick ab, bevor die native
+    /// Drag&Drop-Umsortierung von `.onMove` in der „Fahrzeuge“-Sektion ihn zu
+    /// sehen bekommt, und verhindert sie damit vollständig. `.onTapGesture`
+    /// lässt beides nebeneinander funktionieren.
     @ViewBuilder
     private func vehicleRow(_ vehicle: Vehicle) -> some View {
-        Button {
-            selection = .vehicle(vehicle)
-        } label: {
-            VehicleRow(vehicle: vehicle)
-        }
-        .buttonStyle(.plain)
-        .pointerStyle(.link)
-        .listRowBackground(rowBackground(for: .vehicle(vehicle)))
+        VehicleRow(vehicle: vehicle)
+            .onTapGesture {
+                selection = .vehicle(vehicle)
+            }
+            .pointerStyle(.link)
+            .listRowBackground(rowBackground(for: .vehicle(vehicle)))
     }
 
     private func rowBackground(for item: SidebarSelection) -> Color {
