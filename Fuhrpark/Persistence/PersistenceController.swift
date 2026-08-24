@@ -40,6 +40,7 @@ struct PersistenceController {
         // arbeiten. Deshalb nur bei fehlerfreiem Start.
         if !inMemory, failure == nil {
             backfillVehicleTimestamps()
+            backfillVehicleSortOrder()
             if WorkingDirectoryStore.isConfigured {
                 DocumentMigration.migrateLegacyDocuments(using: self)
             }
@@ -58,6 +59,34 @@ struct PersistenceController {
             vehicle.lastChangedDts = vehicle.createdAt ?? Date()
         }
         save(context: context)
+    }
+
+    /// Einmalig (Flag in UserDefaults): vergibt für alle Fahrzeuge eine
+    /// manuelle Sortierposition (`sortOrder`), in genau der Reihenfolge, in
+    /// der die Seitenleiste sie bisher nach `lastChangedDts` zeigte – damit
+    /// die Nutzer beim Umstieg von automatischer auf per Drag&Drop
+    /// festgelegte Sortierung keinen Sprung in der Fahrzeugliste sehen.
+    /// Kein Abgleich über ein Datenfeld wie bei `backfillVehicleTimestamps`
+    /// möglich, da `sortOrder` (anders als `lastChangedDts`) nicht optional
+    /// ist und ihr Standardwert 0 nach einem Drag&Drop auch ein regulärer,
+    /// erneut gültiger Wert ist.
+    private static let sortOrderBackfillDoneKey = "vehicleSortOrderBackfillDone"
+
+    private func backfillVehicleSortOrder() {
+        guard !UserDefaults.standard.bool(forKey: Self.sortOrderBackfillDoneKey) else { return }
+        let context = container.viewContext
+        let request = NSFetchRequest<Vehicle>(entityName: "Vehicle")
+        request.sortDescriptors = [
+            NSSortDescriptor(keyPath: \Vehicle.lastChangedDts, ascending: false),
+            NSSortDescriptor(keyPath: \Vehicle.licensePlate, ascending: true)
+        ]
+        if let vehicles = try? context.fetch(request) {
+            for (index, vehicle) in vehicles.enumerated() {
+                vehicle.sortOrder = Int32(index)
+            }
+            save(context: context)
+        }
+        UserDefaults.standard.set(true, forKey: Self.sortOrderBackfillDoneKey)
     }
 
     static let preview: PersistenceController = {

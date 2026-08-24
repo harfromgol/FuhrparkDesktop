@@ -8,7 +8,7 @@ struct SidebarView: View {
 
     @FetchRequest(
         sortDescriptors: [
-            NSSortDescriptor(keyPath: \Vehicle.lastChangedDts, ascending: false),
+            NSSortDescriptor(keyPath: \Vehicle.sortOrder, ascending: true),
             NSSortDescriptor(keyPath: \Vehicle.licensePlate, ascending: true)
         ],
         animation: .default
@@ -40,9 +40,24 @@ struct SidebarView: View {
         return openReminders.filter(\.isDue).count
     }
 
-    /// Aktive Fahrzeuge in der bestehenden Sortierung (zuletzt geändert zuerst).
+    /// Aktive Fahrzeuge in der vom Nutzer per Drag&Drop festgelegten
+    /// Reihenfolge (`sortOrder`, siehe `moveActiveVehicles`).
     private var activeVehicles: [Vehicle] {
         vehicles.filter { !$0.decommissioned }
+    }
+
+    /// Übernimmt eine per Drag&Drop geänderte Reihenfolge: die komplette
+    /// aktive Liste wird dabei lückenlos neu durchnummeriert (0…n-1), statt
+    /// nur die verschobenen Fahrzeuge anzupassen – einfacher und robust
+    /// gegen Kollisionen, da `sortOrder` sonst schnell an mehreren Stellen
+    /// gleichzeitig verschoben werden müsste.
+    private func moveActiveVehicles(from source: IndexSet, to destination: Int) {
+        var reordered = activeVehicles
+        reordered.move(fromOffsets: source, toOffset: destination)
+        for (index, vehicle) in reordered.enumerated() {
+            vehicle.sortOrder = Int32(index)
+        }
+        PersistenceController.shared.save(context: viewContext)
     }
 
     /// Stillgelegte Fahrzeuge, alphabetisch nach Kennzeichen.
@@ -205,6 +220,7 @@ struct SidebarView: View {
                         vehiclePendingDeletion = activeVehicles[index]
                     }
                 }
+                .onMove(perform: moveActiveVehicles)
             } header: {
                 sectionHeader("Fahrzeuge", count: activeVehicles.count)
             }
