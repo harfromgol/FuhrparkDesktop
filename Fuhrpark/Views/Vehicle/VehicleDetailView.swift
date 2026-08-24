@@ -21,6 +21,11 @@ struct VehicleDetailView: View {
     @State private var expenseCategorySort = TableSort<ExpenseCategorySortColumn>.initial(for: .expenseCategory)
     @State private var yearlyCostSort = TableSort<YearlyCostSortColumn>.initial(for: .yearlyCost)
     @State private var yearlyDistanceSort = TableSort<YearlyDistanceSortColumn>.initial(for: .yearlyDistance)
+    /// Anordnung/Größe des Fahrzeugbilds, global aus den UserDefaults
+    /// vorbelegt (siehe `VehiclePhotoLayoutStore`), umschaltbar per
+    /// Rechtsklick-Kontextmenü auf dem Bild selbst (`VehiclePhotoAvatar`).
+    @State private var photoLayout = VehiclePhotoLayoutStore.layout()
+    @State private var photoTopSize = VehiclePhotoLayoutStore.topSize()
     /// Welche der optionalen Statistik-Karten sichtbar sind, aus den
     /// UserDefaults vorbelegt (siehe `StatisticsCardVisibilityStore`). Wird
     /// je Fahrzeug separat gespeichert; da diese View pro Fahrzeug neu
@@ -37,6 +42,28 @@ struct VehicleDetailView: View {
     private var vehicleRef: VehicleRef? {
         guard let id = vehicle.id else { return nil }
         return VehicleRef(id: id, licensePlate: vehicle.licensePlate ?? "", engineType: vehicle.engineType)
+    }
+
+    /// Anordnung/Größe des Fahrzeugbilds, sofort persistiert – gebunden an
+    /// das Kontextmenü in `VehiclePhotoAvatar`.
+    private var photoLayoutBinding: Binding<VehiclePhotoLayout> {
+        Binding(
+            get: { photoLayout },
+            set: { newValue in
+                photoLayout = newValue
+                VehiclePhotoLayoutStore.setLayout(newValue)
+            }
+        )
+    }
+
+    private var photoTopSizeBinding: Binding<Int> {
+        Binding(
+            get: { photoTopSize },
+            set: { newValue in
+                photoTopSize = newValue
+                VehiclePhotoLayoutStore.setTopSize(newValue)
+            }
+        )
     }
 
     /// Ein-/Ausschalten einer Statistik-Karte, sofort persistiert.
@@ -79,6 +106,13 @@ struct VehicleDetailView: View {
         ScrollView {
             GlassEffectContainer {
                 VStack(alignment: .leading, spacing: 20) {
+                    if photoLayout == .top {
+                        let size = VehiclePhotoLayoutStore.topSizePoints(photoTopSize)
+                        VehiclePhotoAvatar(vehicle: vehicle, layout: photoLayoutBinding, topSize: photoTopSizeBinding)
+                            .frame(width: size, height: size)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+
                     header
 
                     sectionHeader(title: vehicle.engineType.refuelNounPlural, systemImage: "fuelpump.fill") {
@@ -255,8 +289,10 @@ struct VehicleDetailView: View {
     private var header: some View {
         GlassCard {
             HStack(alignment: .top) {
-                VehiclePhotoAvatar(vehicle: vehicle)
-                    .frame(width: 60, height: 60)
+                if photoLayout == .side {
+                    VehiclePhotoAvatar(vehicle: vehicle, layout: photoLayoutBinding, topSize: photoTopSizeBinding)
+                        .frame(width: 60, height: 60)
+                }
                 VStack(alignment: .leading, spacing: 4) {
                     Text(vehicle.licensePlate ?? "")
                         .font(.title2.bold())
