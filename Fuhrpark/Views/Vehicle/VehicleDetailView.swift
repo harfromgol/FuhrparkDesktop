@@ -16,6 +16,11 @@ struct VehicleDetailView: View {
     @State private var vehiclePendingDeletion: Vehicle?
     @State private var vehiclePendingDecommission: Vehicle?
     @State private var pdfExportErrorMessage: String?
+    /// Spaltensortierung der drei Statistiktabellen, global für alle
+    /// Fahrzeuge aus den UserDefaults vorbelegt (siehe `TableSortStore`).
+    @State private var expenseCategorySort = TableSort<ExpenseCategorySortColumn>.initial(for: .expenseCategory)
+    @State private var yearlyCostSort = TableSort<YearlyCostSortColumn>.initial(for: .yearlyCost)
+    @State private var yearlyDistanceSort = TableSort<YearlyDistanceSortColumn>.initial(for: .yearlyDistance)
     /// Welche der optionalen Statistik-Karten sichtbar sind, aus den
     /// UserDefaults vorbelegt (siehe `StatisticsCardVisibilityStore`). Wird
     /// je Fahrzeug separat gespeichert; da diese View pro Fahrzeug neu
@@ -452,13 +457,28 @@ struct VehicleDetailView: View {
         }
     }
 
+    /// `vehicle.expenseCostByCategory`, umsortiert nach der vom Nutzer
+    /// gewählten Spalte (`expenseCategorySort`). „Anteil" nutzt denselben
+    /// Vergleich wie „Betrag", da er monoton daraus abgeleitet ist.
+    private var sortedExpenseCategoryStatistics: [(category: String, total: Decimal)] {
+        let items = vehicle.expenseCostByCategory
+        let ascending = expenseCategorySort.ascending
+        switch expenseCategorySort.column {
+        case .category:
+            return items.sorted { ascending ? $0.category < $1.category : $0.category > $1.category }
+        case .total, .share:
+            return items.sorted { ascending ? $0.total < $1.total : $0.total > $1.total }
+        }
+    }
+
     private var expenseCategoryStatistics: some View {
-        GlassCard {
+        let isSortable = vehicle.expenseCostByCategory.count >= 2
+        return GlassCard {
             HStack {
                 Text("Gesamtkosten pro Kategorie")
                     .font(.headline)
                 Spacer()
-                if vehicle.expenseCostByCategory.count >= 2, let vehicleRef {
+                if isSortable, let vehicleRef {
                     Button {
                         openWindow(id: "category-chart", value: vehicleRef)
                     } label: {
@@ -472,16 +492,33 @@ struct VehicleDetailView: View {
             }
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                 GridRow {
-                    Text("Kategorie")
-                    Text("Betrag").gridColumnAlignment(.trailing)
-                    Text("Anteil").gridColumnAlignment(.trailing)
+                    SortHeaderCell(
+                        title: "Kategorie",
+                        isActive: expenseCategorySort.isActive(.category),
+                        ascending: expenseCategorySort.ascending,
+                        isEnabled: isSortable
+                    ) { expenseCategorySort.select(.category) }
+                    SortHeaderCell(
+                        title: "Betrag",
+                        isActive: expenseCategorySort.isActive(.total),
+                        ascending: expenseCategorySort.ascending,
+                        isEnabled: isSortable
+                    ) { expenseCategorySort.select(.total) }
+                    .gridColumnAlignment(.trailing)
+                    SortHeaderCell(
+                        title: "Anteil",
+                        isActive: expenseCategorySort.isActive(.share),
+                        ascending: expenseCategorySort.ascending,
+                        isEnabled: isSortable
+                    ) { expenseCategorySort.select(.share) }
+                    .gridColumnAlignment(.trailing)
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
                 Divider()
 
-                ForEach(vehicle.expenseCostByCategory, id: \.category) { item in
+                ForEach(sortedExpenseCategoryStatistics, id: \.category) { item in
                     GridRow {
                         Text(item.category)
                         Text(DisplayFormatter.costString(item.total))
@@ -502,13 +539,29 @@ struct VehicleDetailView: View {
         return DisplayFormatter.percentString(total / vehicle.totalCost)
     }
 
+    private var sortedYearlyCostStatistics: [YearlyCost] {
+        let items = vehicle.costsByYear
+        let ascending = yearlyCostSort.ascending
+        switch yearlyCostSort.column {
+        case .year:
+            return items.sorted { ascending ? $0.year < $1.year : $0.year > $1.year }
+        case .fuel:
+            return items.sorted { ascending ? $0.fuel < $1.fuel : $0.fuel > $1.fuel }
+        case .expense:
+            return items.sorted { ascending ? $0.expense < $1.expense : $0.expense > $1.expense }
+        case .total:
+            return items.sorted { ascending ? $0.total < $1.total : $0.total > $1.total }
+        }
+    }
+
     private var yearlyCostStatistics: some View {
-        GlassCard {
+        let isSortable = vehicle.costsByYear.count >= 2
+        return GlassCard {
             HStack {
                 Text("Kosten pro Jahr")
                     .font(.headline)
                 Spacer()
-                if vehicle.costsByYear.count >= 2, let vehicleRef {
+                if isSortable, let vehicleRef {
                     Button {
                         openWindow(id: "yearly-cost-chart", value: vehicleRef)
                     } label: {
@@ -522,17 +575,40 @@ struct VehicleDetailView: View {
             }
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                 GridRow {
-                    Text("Jahr")
-                    Text("Betankungen").gridColumnAlignment(.trailing)
-                    Text("Sonstige").gridColumnAlignment(.trailing)
-                    Text("Gesamt").gridColumnAlignment(.trailing)
+                    SortHeaderCell(
+                        title: "Jahr",
+                        isActive: yearlyCostSort.isActive(.year),
+                        ascending: yearlyCostSort.ascending,
+                        isEnabled: isSortable
+                    ) { yearlyCostSort.select(.year) }
+                    SortHeaderCell(
+                        title: "Betankungen",
+                        isActive: yearlyCostSort.isActive(.fuel),
+                        ascending: yearlyCostSort.ascending,
+                        isEnabled: isSortable
+                    ) { yearlyCostSort.select(.fuel) }
+                    .gridColumnAlignment(.trailing)
+                    SortHeaderCell(
+                        title: "Sonstige",
+                        isActive: yearlyCostSort.isActive(.expense),
+                        ascending: yearlyCostSort.ascending,
+                        isEnabled: isSortable
+                    ) { yearlyCostSort.select(.expense) }
+                    .gridColumnAlignment(.trailing)
+                    SortHeaderCell(
+                        title: "Gesamt",
+                        isActive: yearlyCostSort.isActive(.total),
+                        ascending: yearlyCostSort.ascending,
+                        isEnabled: isSortable
+                    ) { yearlyCostSort.select(.total) }
+                    .gridColumnAlignment(.trailing)
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
                 Divider()
 
-                ForEach(vehicle.costsByYear) { item in
+                ForEach(sortedYearlyCostStatistics) { item in
                     GridRow {
                         Text(String(item.year))
                         Text(DisplayFormatter.currencyString(item.fuel))
@@ -551,13 +627,27 @@ struct VehicleDetailView: View {
     /// `Vehicle.kilometersByYear`). Jahre ohne ermittelbaren Start- oder
     /// End-Kilometerstand (z. B. ein zukünftiges Jahr ohne jede Betankung)
     /// fehlen dort bereits, statt mit einem Platzhalter angezeigt zu werden.
+    private var sortedKilometersByYearStatistics: [YearlyDistance] {
+        let items = vehicle.kilometersByYear
+        let ascending = yearlyDistanceSort.ascending
+        switch yearlyDistanceSort.column {
+        case .year:
+            return items.sorted { ascending ? $0.year < $1.year : $0.year > $1.year }
+        case .kilometers:
+            return items.sorted { ascending ? $0.kilometers < $1.kilometers : $0.kilometers > $1.kilometers }
+        case .odometer:
+            return items.sorted { ascending ? $0.odometerAtYearEnd < $1.odometerAtYearEnd : $0.odometerAtYearEnd > $1.odometerAtYearEnd }
+        }
+    }
+
     private var kilometersByYearStatistics: some View {
-        GlassCard {
+        let isSortable = vehicle.kilometersByYear.count >= 2
+        return GlassCard {
             HStack {
                 Text("Gefahrene km pro Jahr")
                     .font(.headline)
                 Spacer()
-                if vehicle.kilometersByYear.count >= 2, let vehicleRef {
+                if isSortable, let vehicleRef {
                     Button {
                         openWindow(id: "distance-chart", value: vehicleRef)
                     } label: {
@@ -571,16 +661,33 @@ struct VehicleDetailView: View {
             }
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                 GridRow {
-                    Text("Jahr")
-                    Text("km").gridColumnAlignment(.trailing)
-                    Text("Tachostand").gridColumnAlignment(.trailing)
+                    SortHeaderCell(
+                        title: "Jahr",
+                        isActive: yearlyDistanceSort.isActive(.year),
+                        ascending: yearlyDistanceSort.ascending,
+                        isEnabled: isSortable
+                    ) { yearlyDistanceSort.select(.year) }
+                    SortHeaderCell(
+                        title: "km",
+                        isActive: yearlyDistanceSort.isActive(.kilometers),
+                        ascending: yearlyDistanceSort.ascending,
+                        isEnabled: isSortable
+                    ) { yearlyDistanceSort.select(.kilometers) }
+                    .gridColumnAlignment(.trailing)
+                    SortHeaderCell(
+                        title: "Tachostand",
+                        isActive: yearlyDistanceSort.isActive(.odometer),
+                        ascending: yearlyDistanceSort.ascending,
+                        isEnabled: isSortable
+                    ) { yearlyDistanceSort.select(.odometer) }
+                    .gridColumnAlignment(.trailing)
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
                 Divider()
 
-                ForEach(vehicle.kilometersByYear) { item in
+                ForEach(sortedKilometersByYearStatistics) { item in
                     GridRow {
                         Text(String(item.year))
                         Text("\(DisplayFormatter.odometerString(item.kilometers)) km")
