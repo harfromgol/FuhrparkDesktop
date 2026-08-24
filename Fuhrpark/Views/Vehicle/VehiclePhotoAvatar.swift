@@ -9,6 +9,8 @@ import UniformTypeIdentifiers
 /// gefolgt vom Zuschnitt-Editor.
 struct VehiclePhotoAvatar: View {
     @ObservedObject var vehicle: Vehicle
+    @Binding var layout: VehiclePhotoLayout
+    @Binding var topSize: Int
     @Environment(\.managedObjectContext) private var viewContext
 
     @State private var isPresentingSourceDialog = false
@@ -30,6 +32,21 @@ struct VehiclePhotoAvatar: View {
         }
         .buttonStyle(.plain)
         .pointerStyle(.link)
+        .contextMenu {
+            Picker("Anordnung", selection: $layout) {
+                Text("Oben").tag(VehiclePhotoLayout.top)
+                Text("Seitlich").tag(VehiclePhotoLayout.side)
+            }
+            .pickerStyle(.inline)
+
+            if layout == .top {
+                Picker("Größe", selection: $topSize) {
+                    ForEach(Array(VehiclePhotoLayoutStore.topSizeRange), id: \.self) { size in
+                        Text("\(size)").tag(size)
+                    }
+                }
+            }
+        }
         .confirmationDialog(
             "Kein Arbeitsverzeichnis festgelegt",
             isPresented: $isPresentingWorkingDirectoryPrompt,
