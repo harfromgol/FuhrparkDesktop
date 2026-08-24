@@ -91,7 +91,10 @@ extension Vehicle {
     }
 
     /// Setzt den Zeitstempel der letzten Änderung auf jetzt. Wird beim Hinzufügen
-    /// einer Betankung oder sonstigen Ausgabe aufgerufen.
+    /// einer Betankung oder sonstigen Ausgabe aufgerufen. Reines Metadatum
+    /// (u. a. über MCP abrufbar) – bestimmt seit Einführung der manuellen
+    /// Drag&Drop-Sortierung (`sortOrder`) nicht mehr die Reihenfolge in der
+    /// Seitenleiste.
     func touch() {
         lastChangedDts = Date()
     }

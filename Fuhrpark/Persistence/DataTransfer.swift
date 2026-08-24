@@ -39,6 +39,11 @@ private struct VehicleDTO: Codable {
     /// Wiedereinspielen nicht mehr, obwohl die Datei noch am selben Namen
     /// (Fahrzeug-ID) im Arbeitsverzeichnis liegt.
     var photoPath: String?
+    /// Vom Nutzer per Drag&Drop festgelegte Position in der Seitenleiste.
+    /// Optional, damit ältere Exporte (ohne dieses Feld) weiterhin lesbar
+    /// sind – fehlt es, sortiert das Fahrzeug beim Import mit dem
+    /// Standardwert 0 ein.
+    var sortOrder: Int32?
 }
 
 private struct FuelEntryDTO: Codable {
@@ -119,6 +124,7 @@ private extension VehicleDTO {
             .map(CategoryDTO.init(category:))
         reminders = vehicle.sortedReminders.map(ReminderDTO.init(reminder:))
         photoPath = vehicle.photoPath
+        sortOrder = vehicle.sortOrder
     }
 }
 
@@ -246,6 +252,7 @@ enum DataTransfer {
             vehicle.createdAt = dto.createdAt
             vehicle.lastChangedDts = dto.lastChangedDts
             vehicle.photoPath = dto.photoPath
+            vehicle.sortOrder = dto.sortOrder ?? 0
 
             // Kategorien zuerst anlegen, damit die Ausgaben sie referenzieren können.
             var categoriesByID: [UUID: Category] = [:]

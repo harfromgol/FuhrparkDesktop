@@ -8,7 +8,7 @@ struct SidebarView: View {
 
     @FetchRequest(
         sortDescriptors: [
-            NSSortDescriptor(keyPath: \Vehicle.lastChangedDts, ascending: false),
+            NSSortDescriptor(keyPath: \Vehicle.sortOrder, ascending: true),
             NSSortDescriptor(keyPath: \Vehicle.licensePlate, ascending: true)
         ],
         animation: .default
@@ -40,9 +40,44 @@ struct SidebarView: View {
         return openReminders.filter(\.isDue).count
     }
 
-    /// Aktive Fahrzeuge in der bestehenden Sortierung (zuletzt geändert zuerst).
+    /// Aktive Fahrzeuge in der vom Nutzer per Drag&Drop festgelegten
+    /// Reihenfolge (`sortOrder`, siehe `moveActiveVehicles`).
     private var activeVehicles: [Vehicle] {
         vehicles.filter { !$0.decommissioned }
+    }
+
+    /// Übernimmt eine per Drag&Drop geänderte Reihenfolge: die komplette
+    /// aktive Liste wird dabei lückenlos neu durchnummeriert (0…n-1), statt
+    /// nur die verschobenen Fahrzeuge anzupassen – einfacher und robust
+    /// gegen Kollisionen, da `sortOrder` sonst schnell an mehreren Stellen
+    /// gleichzeitig verschoben werden müsste.
+    ///
+    /// `.onMove` erkannte auf macOS überhaupt keine Ziehgeste (kein
+    /// Geist-Bild, keinerlei Reaktion) – Ursache war, dass die Liste ohne
+    /// eigene `selection:`-Bindung lief; die zeilenweise Auswahl passierte
+    /// bisher per eigenem `Button`/`.onTapGesture`. AppKits Zeilen-Drag ist
+    /// an die native Listenauswahl gekoppelt (siehe `listSelectionBinding`
+    /// unten) – erst mit `List(selection:)` und `.tag(...)` auf den Zeilen
+    /// beginnt `.onMove` überhaupt, Drag-Gesten zu erkennen.
+    private func moveActiveVehicles(from source: IndexSet, to destination: Int) {
+        var reordered = activeVehicles
+        reordered.move(fromOffsets: source, toOffset: destination)
+        for (index, vehicle) in reordered.enumerated() {
+            vehicle.sortOrder = Int32(index)
+        }
+        PersistenceController.shared.save(context: viewContext)
+    }
+
+    /// Bindung für `List(selection:)`: macOS koppelt die native
+    /// Zeilen-Drag-Erkennung an die eingebaute Listenauswahl, die eine
+    /// optionale Auswahl erwartet. `selection` selbst bleibt nicht-optional
+    /// (irgendetwas ist immer ausgewählt) – ein `nil` von der Liste (z. B.
+    /// bei Klick ins Leere) fällt deshalb zurück auf „Statistik“.
+    private var listSelectionBinding: Binding<SidebarSelection?> {
+        Binding(
+            get: { selection },
+            set: { selection = $0 ?? .statistics }
+        )
     }
 
     /// Stillgelegte Fahrzeuge, alphabetisch nach Kennzeichen.
@@ -132,7 +167,7 @@ struct SidebarView: View {
     }
 
     private var list: some View {
-        List {
+        List(selection: listSelectionBinding) {
             Section(isExpanded: $isGeneralExpanded) {
                 Button {
                     selection = .statistics
@@ -205,6 +240,7 @@ struct SidebarView: View {
                         vehiclePendingDeletion = activeVehicles[index]
                     }
                 }
+                .onMove(perform: moveActiveVehicles)
             } header: {
                 sectionHeader("Fahrzeuge", count: activeVehicles.count)
             }
@@ -248,16 +284,16 @@ struct SidebarView: View {
         }
     }
 
+    /// Kein `Button`/`.onTapGesture` (wie sonst in dieser Datei) – die Zeile
+    /// nutzt stattdessen `.tag(...)` und die native Listenauswahl
+    /// (`listSelectionBinding`), weil AppKits Zeilen-Drag für `.onMove` nur
+    /// darüber überhaupt aktiv wird. Deshalb auch kein eigener
+    /// `rowBackground`-Tint mehr hier: die native macOS-Auswahlhervorhebung
+    /// übernimmt das.
     @ViewBuilder
     private func vehicleRow(_ vehicle: Vehicle) -> some View {
-        Button {
-            selection = .vehicle(vehicle)
-        } label: {
-            VehicleRow(vehicle: vehicle)
-        }
-        .buttonStyle(.plain)
-        .pointerStyle(.link)
-        .listRowBackground(rowBackground(for: .vehicle(vehicle)))
+        VehicleRow(vehicle: vehicle)
+            .tag(SidebarSelection.vehicle(vehicle))
     }
 
     private func rowBackground(for item: SidebarSelection) -> Color {

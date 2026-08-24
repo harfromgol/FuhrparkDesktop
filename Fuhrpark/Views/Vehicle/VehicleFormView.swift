@@ -1,3 +1,4 @@
+import CoreData
 import SwiftUI
 
 struct VehicleFormView: View {
@@ -126,6 +127,7 @@ struct VehicleFormView: View {
         if vehicleToEdit == nil {
             vehicle.id = UUID()
             vehicle.createdAt = Date()
+            vehicle.sortOrder = Self.topSortOrder(in: viewContext)
         }
         vehicle.licensePlate = licensePlate
         vehicle.manufacturer = manufacturer
@@ -136,6 +138,17 @@ struct VehicleFormView: View {
 
         PersistenceController.shared.save(context: viewContext)
         dismiss()
+    }
+
+    /// Sortierposition, die ein neu angelegtes Fahrzeug ganz an den Anfang
+    /// der Seitenleiste setzt: eine kleiner als die kleinste bisher
+    /// vergebene (bzw. 0, wenn es noch kein Fahrzeug gibt).
+    private static func topSortOrder(in context: NSManagedObjectContext) -> Int32 {
+        let request = NSFetchRequest<Vehicle>(entityName: "Vehicle")
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \Vehicle.sortOrder, ascending: true)]
+        request.fetchLimit = 1
+        let lowest = (try? context.fetch(request))?.first?.sortOrder ?? 0
+        return lowest - 1
     }
 }
 
