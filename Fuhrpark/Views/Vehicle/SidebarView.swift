@@ -51,6 +51,14 @@ struct SidebarView: View {
     /// nur die verschobenen Fahrzeuge anzupassen – einfacher und robust
     /// gegen Kollisionen, da `sortOrder` sonst schnell an mehreren Stellen
     /// gleichzeitig verschoben werden müsste.
+    ///
+    /// `.onMove` erkannte auf macOS überhaupt keine Ziehgeste (kein
+    /// Geist-Bild, keinerlei Reaktion) – Ursache war, dass die Liste ohne
+    /// eigene `selection:`-Bindung lief; die zeilenweise Auswahl passierte
+    /// bisher per eigenem `Button`/`.onTapGesture`. AppKits Zeilen-Drag ist
+    /// an die native Listenauswahl gekoppelt (siehe `listSelectionBinding`
+    /// unten) – erst mit `List(selection:)` und `.tag(...)` auf den Zeilen
+    /// beginnt `.onMove` überhaupt, Drag-Gesten zu erkennen.
     private func moveActiveVehicles(from source: IndexSet, to destination: Int) {
         var reordered = activeVehicles
         reordered.move(fromOffsets: source, toOffset: destination)
@@ -58,6 +66,18 @@ struct SidebarView: View {
             vehicle.sortOrder = Int32(index)
         }
         PersistenceController.shared.save(context: viewContext)
+    }
+
+    /// Bindung für `List(selection:)`: macOS koppelt die native
+    /// Zeilen-Drag-Erkennung an die eingebaute Listenauswahl, die eine
+    /// optionale Auswahl erwartet. `selection` selbst bleibt nicht-optional
+    /// (irgendetwas ist immer ausgewählt) – ein `nil` von der Liste (z. B.
+    /// bei Klick ins Leere) fällt deshalb zurück auf „Statistik“.
+    private var listSelectionBinding: Binding<SidebarSelection?> {
+        Binding(
+            get: { selection },
+            set: { selection = $0 ?? .statistics }
+        )
     }
 
     /// Stillgelegte Fahrzeuge, alphabetisch nach Kennzeichen.
@@ -147,7 +167,7 @@ struct SidebarView: View {
     }
 
     private var list: some View {
-        List {
+        List(selection: listSelectionBinding) {
             Section(isExpanded: $isGeneralExpanded) {
                 Button {
                     selection = .statistics
@@ -264,19 +284,16 @@ struct SidebarView: View {
         }
     }
 
-    /// Kein `Button` (wie sonst in dieser Datei) – ein die ganze Zeile
-    /// umschließender Button fängt den Mausklick ab, bevor die native
-    /// Drag&Drop-Umsortierung von `.onMove` in der „Fahrzeuge“-Sektion ihn zu
-    /// sehen bekommt, und verhindert sie damit vollständig. `.onTapGesture`
-    /// lässt beides nebeneinander funktionieren.
+    /// Kein `Button`/`.onTapGesture` (wie sonst in dieser Datei) – die Zeile
+    /// nutzt stattdessen `.tag(...)` und die native Listenauswahl
+    /// (`listSelectionBinding`), weil AppKits Zeilen-Drag für `.onMove` nur
+    /// darüber überhaupt aktiv wird. Deshalb auch kein eigener
+    /// `rowBackground`-Tint mehr hier: die native macOS-Auswahlhervorhebung
+    /// übernimmt das.
     @ViewBuilder
     private func vehicleRow(_ vehicle: Vehicle) -> some View {
         VehicleRow(vehicle: vehicle)
-            .onTapGesture {
-                selection = .vehicle(vehicle)
-            }
-            .pointerStyle(.link)
-            .listRowBackground(rowBackground(for: .vehicle(vehicle)))
+            .tag(SidebarSelection.vehicle(vehicle))
     }
 
     private func rowBackground(for item: SidebarSelection) -> Color {
