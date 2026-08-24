@@ -22,9 +22,6 @@ struct VehicleDetailView: View {
     @State private var expenseCategorySort = TableSort<ExpenseCategorySortColumn>.initial(for: .expenseCategory)
     @State private var yearlyCostSort = TableSort<YearlyCostSortColumn>.initial(for: .yearlyCost)
     @State private var yearlyDistanceSort = TableSort<YearlyDistanceSortColumn>.initial(for: .yearlyDistance)
-    @State private var isExpenseCategoryHeaderHovered = false
-    @State private var isYearlyCostHeaderHovered = false
-    @State private var isYearlyDistanceHeaderHovered = false
     /// Welche der optionalen Statistik-Karten sichtbar sind, aus den
     /// UserDefaults vorbelegt (siehe `StatisticsCardVisibilityStore`). Wird
     /// je Fahrzeug separat gespeichert; da diese View pro Fahrzeug neu
@@ -499,31 +496,26 @@ struct VehicleDetailView: View {
                     SortHeaderCell(
                         title: "Kategorie",
                         isActive: expenseCategorySort.isActive(.category),
-                        ascending: expenseCategorySort.displayAscending(.category),
-                        isEnabled: isSortable,
-                        isHeaderHovered: isExpenseCategoryHeaderHovered
+                        ascending: expenseCategorySort.ascending,
+                        isEnabled: isSortable
                     ) { expenseCategorySort.select(.category) }
                     SortHeaderCell(
                         title: "Betrag",
                         isActive: expenseCategorySort.isActive(.total),
-                        ascending: expenseCategorySort.displayAscending(.total),
-                        isEnabled: isSortable,
-                        isHeaderHovered: isExpenseCategoryHeaderHovered
+                        ascending: expenseCategorySort.ascending,
+                        isEnabled: isSortable
                     ) { expenseCategorySort.select(.total) }
                     .gridColumnAlignment(.trailing)
                     SortHeaderCell(
                         title: "Anteil",
                         isActive: expenseCategorySort.isActive(.share),
-                        ascending: expenseCategorySort.displayAscending(.share),
-                        isEnabled: isSortable,
-                        isHeaderHovered: isExpenseCategoryHeaderHovered
+                        ascending: expenseCategorySort.ascending,
+                        isEnabled: isSortable
                     ) { expenseCategorySort.select(.share) }
                     .gridColumnAlignment(.trailing)
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .contentShape(Rectangle())
-                .onHover { isExpenseCategoryHeaderHovered = isSortable && $0 }
 
                 Divider()
 
@@ -587,39 +579,33 @@ struct VehicleDetailView: View {
                     SortHeaderCell(
                         title: "Jahr",
                         isActive: yearlyCostSort.isActive(.year),
-                        ascending: yearlyCostSort.displayAscending(.year),
-                        isEnabled: isSortable,
-                        isHeaderHovered: isYearlyCostHeaderHovered
+                        ascending: yearlyCostSort.ascending,
+                        isEnabled: isSortable
                     ) { yearlyCostSort.select(.year) }
                     SortHeaderCell(
                         title: "Betankungen",
                         isActive: yearlyCostSort.isActive(.fuel),
-                        ascending: yearlyCostSort.displayAscending(.fuel),
-                        isEnabled: isSortable,
-                        isHeaderHovered: isYearlyCostHeaderHovered
+                        ascending: yearlyCostSort.ascending,
+                        isEnabled: isSortable
                     ) { yearlyCostSort.select(.fuel) }
                     .gridColumnAlignment(.trailing)
                     SortHeaderCell(
                         title: "Sonstige",
                         isActive: yearlyCostSort.isActive(.expense),
-                        ascending: yearlyCostSort.displayAscending(.expense),
-                        isEnabled: isSortable,
-                        isHeaderHovered: isYearlyCostHeaderHovered
+                        ascending: yearlyCostSort.ascending,
+                        isEnabled: isSortable
                     ) { yearlyCostSort.select(.expense) }
                     .gridColumnAlignment(.trailing)
                     SortHeaderCell(
                         title: "Gesamt",
                         isActive: yearlyCostSort.isActive(.total),
-                        ascending: yearlyCostSort.displayAscending(.total),
-                        isEnabled: isSortable,
-                        isHeaderHovered: isYearlyCostHeaderHovered
+                        ascending: yearlyCostSort.ascending,
+                        isEnabled: isSortable
                     ) { yearlyCostSort.select(.total) }
                     .gridColumnAlignment(.trailing)
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .contentShape(Rectangle())
-                .onHover { isYearlyCostHeaderHovered = isSortable && $0 }
 
                 Divider()
 
@@ -679,31 +665,26 @@ struct VehicleDetailView: View {
                     SortHeaderCell(
                         title: "Jahr",
                         isActive: yearlyDistanceSort.isActive(.year),
-                        ascending: yearlyDistanceSort.displayAscending(.year),
-                        isEnabled: isSortable,
-                        isHeaderHovered: isYearlyDistanceHeaderHovered
+                        ascending: yearlyDistanceSort.ascending,
+                        isEnabled: isSortable
                     ) { yearlyDistanceSort.select(.year) }
                     SortHeaderCell(
                         title: "km",
                         isActive: yearlyDistanceSort.isActive(.kilometers),
-                        ascending: yearlyDistanceSort.displayAscending(.kilometers),
-                        isEnabled: isSortable,
-                        isHeaderHovered: isYearlyDistanceHeaderHovered
+                        ascending: yearlyDistanceSort.ascending,
+                        isEnabled: isSortable
                     ) { yearlyDistanceSort.select(.kilometers) }
                     .gridColumnAlignment(.trailing)
                     SortHeaderCell(
                         title: "Tachostand",
                         isActive: yearlyDistanceSort.isActive(.odometer),
-                        ascending: yearlyDistanceSort.displayAscending(.odometer),
-                        isEnabled: isSortable,
-                        isHeaderHovered: isYearlyDistanceHeaderHovered
+                        ascending: yearlyDistanceSort.ascending,
+                        isEnabled: isSortable
                     ) { yearlyDistanceSort.select(.odometer) }
                     .gridColumnAlignment(.trailing)
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .contentShape(Rectangle())
-                .onHover { isYearlyDistanceHeaderHovered = isSortable && $0 }
 
                 Divider()
 

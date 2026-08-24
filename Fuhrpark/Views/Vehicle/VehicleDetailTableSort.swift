@@ -55,42 +55,29 @@ struct TableSort<Column: SortableColumn> {
     }
 
     func isActive(_ candidate: Column) -> Bool { candidate == column }
-
-    /// Anzeige-Richtung für eine Kopfzelle: die tatsächliche Richtung für die
-    /// aktive Spalte, sonst die Richtung, die ein Klick auf `candidate`
-    /// ergäbe (für den dezenten Hover-Hinweis auf noch inaktiven Spalten).
-    func displayAscending(_ candidate: Column) -> Bool {
-        isActive(candidate) ? ascending : candidate.defaultAscending
-    }
 }
 
 /// Kopfzellen-Titel einer der drei Statistiktabellen: reiner Text, solange
 /// die Tabelle weniger als zwei Zeilen hat (Sortierung macht dann keinen
-/// Sinn), sonst klickbar mit Sortier-Chevron, der ausschließlich beim
-/// Überfahren der Kopfzeile mit der Maus sichtbar ist – auch für die
-/// gerade aktive Spalte, damit die Kopfzeile im Ruhezustand aufgeräumt
-/// bleibt.
+/// Sinn), sonst klickbar mit Sortier-Chevron. Der Chevron ist dauerhaft
+/// sichtbar, aber ausschließlich an der gerade aktiven Spalte – ein Klick
+/// auf eine andere Spalte lässt ihn dorthin „springen", damit auf einen
+/// Blick klar ist, wonach sortiert ist.
 struct SortHeaderCell: View {
     let title: String
     let isActive: Bool
     let ascending: Bool
     let isEnabled: Bool
-    let isHeaderHovered: Bool
     let action: () -> Void
-
-    private var showIcon: Bool {
-        isEnabled && isHeaderHovered
-    }
 
     var body: some View {
         if isEnabled {
             Button(action: action) {
                 HStack(spacing: 4) {
                     Text(title)
-                    if showIcon {
+                    if isActive {
                         Image(systemName: ascending ? "chevron.up" : "chevron.down")
                             .font(.caption2)
-                            .foregroundStyle(isActive ? .secondary : .tertiary)
                     }
                 }
             }
