@@ -1,7 +1,51 @@
 # Versionshistorie
 
 Alle nennenswerten Änderungen an FuhrparkDesktop, gruppiert nach Release.
-Die Versionen sind als Git-Tags (`v1.1` … `v1.8.1`) markiert.
+Die Versionen sind als Git-Tags (`v1.1` … `v1.9`) markiert.
+
+## [v1.9](https://github.com/harfromgol/FuhrparkDesktop/releases/tag/v1.9) – 2026-08-25
+
+### Neu
+- **Fahrzeugbild**: Fahrzeuge können jetzt ein Foto erhalten (Auswahl aus
+  Datei oder Fotos-App), mit rundem Zuschnitt-Editor (Drag-/Zoom-Geste plus
+  Slider, Vorschau entspricht exakt dem Export). Das Bild wird beim
+  Aufräumen des Arbeitsverzeichnisses, in Backup/Restore und im
+  JSON-Export/Import korrekt mitgeführt.
+- **Fahrzeugbild-Anordnung wählbar**: Per Rechtsklick-Kontextmenü auf dem
+  Bild in der Fahrzeug-Detailansicht lässt sich wählen, ob es wie bisher
+  klein seitlich vor dem Kennzeichen sitzt oder groß und zentriert über der
+  ganzen Karte, dort zusätzlich in einer Größenstufe 1–5. Die Wahl übersteht
+  einen Neustart, Standard bleibt die bisherige seitliche Anordnung.
+- **Sortierbare Tabellen**: Die drei Statistiktabellen der
+  Fahrzeug-Detailansicht (Kosten pro Kategorie, Kosten pro Jahr, gefahrene
+  km pro Jahr) sowie „Kosten je Fahrzeug" und „Kosten pro Jahr" in der
+  Flotten-Statistik lassen sich jetzt per Klick auf die Kopfzeile
+  spaltenweise auf- oder absteigend sortieren. Ein Chevron markiert die
+  aktive Spalte; die Wahl gilt global je Tabellentyp und übersteht einen
+  Neustart.
+- **Fahrzeugliste per Drag & Drop sortierbar**: Die Seitenleiste ordnet
+  Fahrzeuge nicht mehr automatisch nach letzter Änderung (neue Betankung
+  oder Ausgabe schob sie bisher nach oben). Neue Fahrzeuge erscheinen ganz
+  oben, ansonsten legt die Reihenfolge jetzt der Nutzer per Drag & Drop
+  selbst fest und sie bleibt stabil, bis er sie erneut verschiebt.
+
+### Geändert
+- „Kosten je Fahrzeug" in der Statistik sortiert nicht mehr zusätzlich
+  stillgelegte Fahrzeuge ans Ende, sondern durchgehend nach der gewählten
+  Spalte – die Tabelle zeigt den Stillgelegt-Status ohnehin nicht an.
+- Das Büroklammer-Symbol in der Dokumentenliste steht jetzt nur noch vor
+  dem Dateinamen statt über die ganze Zeile.
+
+### Behoben
+- Die über das Werkzeuge-Menü geöffneten Panels (Backup erstellen/einspielen,
+  JSON exportieren/importieren) erschienen manchmal gar nicht und
+  brauchten mehrere Klicks – ein Timing-Problem beim Öffnen direkt aus der
+  Menü-Aktion heraus.
+- Der Klick aufs Fahrzeugbild-Icon prüft jetzt vorab, ob ein
+  Arbeitsverzeichnis konfiguriert ist, statt erst nach dem Zuschneiden mit
+  einer Fehlermeldung zu scheitern.
+- „Alle Daten löschen" setzt jetzt auch die Zuordnung des
+  Arbeitsverzeichnisses zurück, nicht nur die Fuhrparkdaten.
 
 ## [v1.8.1](https://github.com/harfromgol/FuhrparkDesktop/releases/tag/v1.8.1) – 2026-08-20
 
