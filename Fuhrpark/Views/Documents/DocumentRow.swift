@@ -28,10 +28,14 @@ struct DocumentRow: View {
 
     private var empfaengerVollstaendig: String {
         let ausgaben = document.sortedExpenses
-        guard !ausgaben.isEmpty else { return "Keiner Ausgabe zugeordnet" }
-        return ausgaben
-            .map { "\($0.recipient ?? "") – \($0.purpose ?? "")" }
-            .joined(separator: "\n")
+        if !ausgaben.isEmpty {
+            return ausgaben
+                .map { "\($0.recipient ?? "") – \($0.purpose ?? "")" }
+                .joined(separator: "\n")
+        }
+        let notizen = document.sortedNotizen
+        guard !notizen.isEmpty else { return "Keiner Ausgabe oder Notiz zugeordnet" }
+        return notizen.map { $0.text ?? "" }.joined(separator: "\n")
     }
 
     /// Hinweis, falls die Datei gerade nicht erreichbar ist – sonst `nil`.
@@ -104,7 +108,7 @@ struct DocumentRow: View {
         .buttonStyle(.plain)
         .pointerStyle(.link)
         .contextMenu {
-            Button("Ausgaben zuordnen…", action: onReassign)
+            Button("Zuordnung bearbeiten…", action: onReassign)
             Button("Im Finder anzeigen") {
                 do {
                     try document.reveal()

@@ -18,13 +18,15 @@ enum DocumentCleanup {
         sweepWorkingDirectory(in: context)
     }
 
-    /// Löscht Belege, auf die keine Ausgabe mehr zeigt. Nur Core Data.
+    /// Löscht Belege, auf die weder eine Ausgabe noch eine Notiz mehr zeigt.
+    /// Nur Core Data.
     ///
     /// Bewusst im Speicher gefiltert statt per Prädikat `expenses.@count == 0`:
     /// Die Löschregeln laufen erst beim Speichern durch, ein Prädikat sähe den
     /// Stand von vorher. Deshalb wird auf **beiden** Seiten `isDeleted`
     /// geprüft – dann ist das Ergebnis unabhängig davon, wann Core Data die
-    /// Cascade-Regel von `Vehicle.expenses` tatsächlich verarbeitet.
+    /// Cascade-Regel von `Vehicle.expenses`/`Vehicle.notizen` tatsächlich
+    /// verarbeitet.
     @discardableResult
     static func removeOrphanedDocuments(in context: NSManagedObjectContext) -> Int {
         let request = NSFetchRequest<Dokument>(entityName: "Dokument")
@@ -34,7 +36,9 @@ enum DocumentCleanup {
         for document in documents where !document.isDeleted {
             let lebendeAusgaben = ((document.expense as? Set<Expense>) ?? [])
                 .filter { !$0.isDeleted }
-            if lebendeAusgaben.isEmpty {
+            let lebendeNotizen = ((document.notizen as? Set<Notiz>) ?? [])
+                .filter { !$0.isDeleted }
+            if lebendeAusgaben.isEmpty && lebendeNotizen.isEmpty {
                 context.delete(document)
                 entfernt += 1
             }

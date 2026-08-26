@@ -7,6 +7,7 @@ enum SidebarSelection: Hashable {
     case statistics
     case fuelPrices
     case documents
+    case notes
     case reminders
     case mcp
     case vehicle(Vehicle)
@@ -44,6 +45,8 @@ struct ContentView: View {
                 FuelPricesView()
             case .documents:
                 DocumentsView()
+            case .notes:
+                NotesView()
             case .reminders:
                 RemindersView()
             case .mcp:
@@ -83,7 +86,7 @@ struct ContentView: View {
             }
             Button("Abbrechen", role: .cancel) { }
         } message: {
-            Text("Alle Fahrzeuge, Betankungen, sonstigen Ausgaben, Kategorien und Erinnerungen sowie der gespeicherte Tankerkönig-API-Schlüssel und die angepinnten Spritpreise werden unwiderruflich gelöscht. Auch das festgelegte Arbeitsverzeichnis für Belege und Fahrzeugbilder wird vergessen. Dieser Vorgang kann nicht rückgängig gemacht werden.")
+            Text("Alle Fahrzeuge, Betankungen, sonstigen Ausgaben, Kategorien, Erinnerungen und Notizen sowie der gespeicherte Tankerkönig-API-Schlüssel und die angepinnten Spritpreise werden unwiderruflich gelöscht. Auch das festgelegte Arbeitsverzeichnis für Belege und Fahrzeugbilder wird vergessen. Dieser Vorgang kann nicht rückgängig gemacht werden.")
         }
         // Export/Import laufen bewusst NICHT über `.fileExporter`/`.fileImporter`,
         // sondern über direkte `NSSavePanel`/`NSOpenPanel` (siehe
@@ -443,9 +446,9 @@ private struct BackupModifier: ViewModifier {
             \(FieldValidator.string(from: inspection.manifest.createdAt)) \
             (erstellt mit Version \(inspection.manifest.appVersion)). \(belegeText)
 
-            Alle vorhandenen Fahrzeuge, Betankungen, Ausgaben, Erinnerungen und \
-            Einstellungen werden dabei unwiderruflich durch den Stand aus der \
-            Sicherung ersetzt.
+            Alle vorhandenen Fahrzeuge, Betankungen, Ausgaben, Erinnerungen, \
+            Notizen und Einstellungen werden dabei unwiderruflich durch den \
+            Stand aus der Sicherung ersetzt.
             """
     }
 }
