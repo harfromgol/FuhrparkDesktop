@@ -31,35 +31,31 @@ struct ReminderRow: View {
             .pointerStyle(.link)
             .help(reminder.isDone ? "Als offen markieren" : "Als erledigt markieren")
 
-            Button(action: onEdit) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(reminder.title ?? "")
-                            .font(.subheadline.bold())
-                            .strikethrough(reminder.isDone)
-                            .foregroundStyle(reminder.isDone ? .secondary : .primary)
-                        HStack(spacing: 6) {
-                            if let plate = reminder.vehicle?.licensePlate {
-                                Text(plate)
-                            }
-                            if let repeatDescription = reminder.repeatDescription {
-                                Text("· \(repeatDescription)")
-                            }
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(reminder.title ?? "")
+                        .font(.subheadline.bold())
+                        .strikethrough(reminder.isDone)
+                        .foregroundStyle(reminder.isDone ? .secondary : .primary)
+                    HStack(spacing: 6) {
+                        if let plate = reminder.vehicle?.licensePlate {
+                            Text(plate)
                         }
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        if let repeatDescription = reminder.repeatDescription {
+                            Text("· \(repeatDescription)")
+                        }
                     }
-                    Spacer()
-                    if let due = reminder.dueDate {
-                        Text(FieldValidator.string(from: due))
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(dateColor)
-                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
-                .contentShape(Rectangle())
+                Spacer()
+                if let due = reminder.dueDate {
+                    Text(FieldValidator.string(from: due))
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(dateColor)
+                }
             }
-            .buttonStyle(.plain)
-            .pointerStyle(.link)
+            .contentShape(Rectangle())
         }
         .padding(.vertical, 8)
         .contextMenu {
