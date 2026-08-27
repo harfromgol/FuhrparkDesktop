@@ -53,18 +53,36 @@ extension Dokument {
         addToExpense(expenseToAdd)
     }
 
+    /// Zugeordnete Notizen, neueste zuerst.
+    var sortedNotizen: [Notiz] {
+        let set = (notizen as? Set<Notiz>) ?? []
+        return set.sorted { ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }
+    }
+
+    /// Setzt die Zuordnung auf genau diese Notizen.
+    func setNotizen(_ notizen: Set<Notiz>) {
+        self.notizen = NSSet(set: notizen)
+    }
+
+    /// Ergänzt eine weitere Notiz.
+    func link(to notizToAdd: Notiz) {
+        addToNotizen(notizToAdd)
+    }
+
     /// Fahrzeug des Belegs.
     ///
-    /// Eindeutig, weil alle zugeordneten Ausgaben zum selben Fahrzeug gehören
+    /// Eindeutig, weil alle zugeordneten Ausgaben (bzw., falls keine
+    /// vorhanden, alle zugeordneten Notizen) zum selben Fahrzeug gehören
     /// müssen – die Zuordnungsansicht setzt das durch. Die erste Ausgabe
-    /// genügt daher als Auskunft.
+    /// genügt daher als Auskunft, ersatzweise die erste Notiz.
     var vehicle: Vehicle? {
-        sortedExpenses.first?.vehicle
+        sortedExpenses.first?.vehicle ?? sortedNotizen.first?.vehicle
     }
 
     /// Kategorien aller zugeordneten Ausgaben, ohne Duplikate und alphabetisch
     /// (das Dokument übernimmt die Kategorien der Ausgaben, statt sie doppelt
-    /// zu pflegen).
+    /// zu pflegen). Ist das Dokument (auch) einer Notiz zugeordnet, kommt die
+    /// synthetische Kategorie „Notizen" hinzu.
     var categoryNames: [String] {
         var seen = Set<String>()
         var result: [String] = []
@@ -72,6 +90,9 @@ extension Dokument {
             for name in expense.categoryNames where seen.insert(name).inserted {
                 result.append(name)
             }
+        }
+        if !sortedNotizen.isEmpty, seen.insert("Notizen").inserted {
+            result.append("Notizen")
         }
         return result.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }

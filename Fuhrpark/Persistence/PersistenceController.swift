@@ -146,7 +146,7 @@ struct PersistenceController {
     func deleteAllData(sweepingFiles: Bool = true) {
         let context = container.viewContext
 
-        let entityNames = ["Vehicle", "FuelEntry", "Expense", "Category", "Dokument", "Erinnerung"]
+        let entityNames = ["Vehicle", "FuelEntry", "Expense", "Category", "Dokument", "Erinnerung", "Notiz"]
         for name in entityNames {
             let request = NSFetchRequest<NSManagedObject>(entityName: name)
             request.includesPropertyValues = false

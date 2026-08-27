@@ -31,6 +31,23 @@ struct NewDocumentAssignmentView: View {
 
     @State private var selectedVehicle: Vehicle?
     @State private var selectedExpenses: Set<Expense>
+    @State private var selectedNotizen: Set<Notiz>
+    /// Welche der beiden Listen gerade eingeblendet ist. Rein die Anzeige –
+    /// die Auswahl in der jeweils ausgeblendeten Liste bleibt beim Umschalten
+    /// erhalten, ein Beleg kann weiterhin gleichzeitig Ausgaben UND Notizen
+    /// zugeordnet sein.
+    @State private var assignmentTab: AssignmentTab = .expenses
+
+    private enum AssignmentTab: String, CaseIterable, Identifiable {
+        case expenses, notes
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .expenses: "Sonstige Ausgaben"
+            case .notes: "Notizen"
+            }
+        }
+    }
 
     init(
         path: String,
@@ -48,6 +65,7 @@ struct NewDocumentAssignmentView: View {
         self.onError = onError
         _selectedVehicle = State(initialValue: existingDocument?.vehicle)
         _selectedExpenses = State(initialValue: Set(existingDocument?.sortedExpenses ?? []))
+        _selectedNotizen = State(initialValue: Set(existingDocument?.sortedNotizen ?? []))
     }
 
     private var isEditingExisting: Bool { existingDocument != nil }
@@ -60,10 +78,26 @@ struct NewDocumentAssignmentView: View {
                         fileCard
                         vehicleCard
                         if let selectedVehicle {
-                            ExpensePickerSection(
-                                vehicle: selectedVehicle,
-                                selection: $selectedExpenses
-                            )
+                            Picker("Zuordnungsart", selection: $assignmentTab) {
+                                ForEach(AssignmentTab.allCases) { tab in
+                                    Text(tab.title).tag(tab)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .labelsHidden()
+
+                            switch assignmentTab {
+                            case .expenses:
+                                ExpensePickerSection(
+                                    vehicle: selectedVehicle,
+                                    selection: $selectedExpenses
+                                )
+                            case .notes:
+                                NotePickerSection(
+                                    vehicle: selectedVehicle,
+                                    selection: $selectedNotizen
+                                )
+                            }
                         }
                     }
                     .padding(20)
@@ -76,16 +110,21 @@ struct NewDocumentAssignmentView: View {
                 Button("Abbrechen", role: .cancel) { onCancel() }
                     .pointerStyle(.link)
                 Spacer()
-                Button(selectedExpenses.isEmpty ? "Zuordnen" : "Zuordnen (\(selectedExpenses.count))") {
+                Button(zuordnenTitle) {
                     save()
                 }
                 .buttonStyle(.glassProminent)
-                .disabled(selectedExpenses.isEmpty)
-                .pointerStyle(selectedExpenses.isEmpty ? nil : .link)
+                .disabled(selectedExpenses.isEmpty && selectedNotizen.isEmpty)
+                .pointerStyle(selectedExpenses.isEmpty && selectedNotizen.isEmpty ? nil : .link)
             }
             .padding(16)
         }
-        .frame(width: 460, height: 620)
+        .frame(width: 460, height: 700)
+    }
+
+    private var zuordnenTitle: String {
+        let count = selectedExpenses.count + selectedNotizen.count
+        return count == 0 ? "Zuordnen" : "Zuordnen (\(count))"
     }
 
     // MARK: - Karten
@@ -119,10 +158,11 @@ struct NewDocumentAssignmentView: View {
                 .labelsHidden()
                 .onChange(of: selectedVehicle) {
                     selectedExpenses.removeAll()
+                    selectedNotizen.removeAll()
                 }
             }
 
-            Text("Ein Beleg gehört zu genau einem Fahrzeug. Du kannst ihm mehrere Ausgaben dieses Fahrzeugs zuordnen.")
+            Text("Ein Beleg gehört zu genau einem Fahrzeug. Du kannst ihm mehrere Ausgaben und/oder Notizen dieses Fahrzeugs zuordnen.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -132,10 +172,11 @@ struct NewDocumentAssignmentView: View {
     // MARK: - Speichern
 
     private func save() {
-        guard !selectedExpenses.isEmpty else { return }
+        guard !selectedExpenses.isEmpty || !selectedNotizen.isEmpty else { return }
 
         if let existingDocument {
             existingDocument.setExpenses(selectedExpenses)
+            existingDocument.setNotizen(selectedNotizen)
             PersistenceController.shared.save(context: viewContext)
             onSaved()
             return
@@ -172,6 +213,7 @@ struct NewDocumentAssignmentView: View {
         document.path = relativePath
         document.createdAt = Date()
         document.setExpenses(selectedExpenses)
+        document.setNotizen(selectedNotizen)
 
         do {
             try viewContext.save()
@@ -258,6 +300,71 @@ private struct ExpensePickerSection: View {
             selection.remove(expense)
         } else {
             selection.insert(expense)
+        }
+    }
+}
+
+/// Notizenliste eines Fahrzeugs zum An- und Abwählen, exakt analog zu
+/// `ExpensePickerSection` – ein Beleg kann gleichzeitig Ausgaben UND Notizen
+/// zugeordnet sein, beide Sektionen sind daher unabhängig voneinander nutzbar.
+private struct NotePickerSection: View {
+    @Binding var selection: Set<Notiz>
+
+    @FetchRequest private var notizen: FetchedResults<Notiz>
+
+    init(vehicle: Vehicle, selection: Binding<Set<Notiz>>) {
+        _selection = selection
+        _notizen = FetchRequest(
+            sortDescriptors: [NSSortDescriptor(keyPath: \Notiz.date, ascending: false)],
+            predicate: NSPredicate(format: "vehicle == %@", vehicle),
+            animation: .default
+        )
+    }
+
+    var body: some View {
+        GlassCard(title: "Notizen (\(selection.count) ausgewählt)") {
+            if notizen.isEmpty {
+                Text("Für dieses Fahrzeug sind noch keine Notizen erfasst.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(notizen) { notiz in
+                        Button {
+                            toggle(notiz)
+                        } label: {
+                            HStack(alignment: .top, spacing: 10) {
+                                Image(systemName: selection.contains(notiz) ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(selection.contains(notiz) ? Color.accentColor : .secondary)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(notiz.text ?? "")
+                                        .font(.caption)
+                                        .lineLimit(2)
+                                }
+                                Spacer()
+                                if let date = notiz.date {
+                                    Text(FieldValidator.string(from: date))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .padding(.vertical, 8)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .pointerStyle(.link)
+                        Divider()
+                    }
+                }
+            }
+        }
+    }
+
+    private func toggle(_ notiz: Notiz) {
+        if selection.contains(notiz) {
+            selection.remove(notiz)
+        } else {
+            selection.insert(notiz)
         }
     }
 }

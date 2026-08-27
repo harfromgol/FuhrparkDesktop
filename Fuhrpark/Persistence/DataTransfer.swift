@@ -32,6 +32,9 @@ private struct VehicleDTO: Codable {
     /// Zugeordnete Erinnerungen. Optional, damit ältere Exporte (ohne dieses
     /// Feld) weiterhin lesbar sind – fehlt es, hat das Fahrzeug keine Erinnerungen.
     var reminders: [ReminderDTO]?
+    /// Zugeordnete Notizen. Optional, damit ältere Exporte (ohne dieses
+    /// Feld) weiterhin lesbar sind – fehlt es, hat das Fahrzeug keine Notizen.
+    var notizen: [NotizDTO]?
     /// Relativer Pfad des Fahrzeugbilds im Arbeitsverzeichnis (siehe
     /// `VehiclePhotoStorage`). Optional wie bei Dokumenten aus demselben
     /// Grund: die Datei selbst wird nicht mit übertragen, nur der Verweis –
@@ -104,6 +107,16 @@ private struct ReminderDTO: Codable {
     var createdAt: Date
 }
 
+private struct NotizDTO: Codable {
+    var id: UUID
+    var date: Date
+    var text: String
+    var createdAt: Date
+    /// Zugeordnete Dokumente. Optional, damit ältere Exporte (ohne dieses Feld)
+    /// weiterhin lesbar sind – fehlt es, hat die Notiz keine Dokumente.
+    var documents: [DokumentDTO]?
+}
+
 // MARK: - Entität -> DTO
 
 private extension VehicleDTO {
@@ -123,6 +136,7 @@ private extension VehicleDTO {
             .sorted { ($0.name ?? "") < ($1.name ?? "") }
             .map(CategoryDTO.init(category:))
         reminders = vehicle.sortedReminders.map(ReminderDTO.init(reminder:))
+        notizen = vehicle.sortedNotizen.map(NotizDTO.init(notiz:))
         photoPath = vehicle.photoPath
         sortOrder = vehicle.sortOrder
     }
@@ -186,6 +200,16 @@ private extension ReminderDTO {
     }
 }
 
+private extension NotizDTO {
+    init(notiz: Notiz) {
+        id = notiz.id ?? UUID()
+        date = notiz.date ?? Date()
+        text = notiz.text ?? ""
+        createdAt = notiz.createdAt ?? Date()
+        documents = notiz.sortedDokumente.map(DokumentDTO.init(document:))
+    }
+}
+
 // MARK: - Export / Import
 
 enum DataTransfer {
@@ -209,7 +233,7 @@ enum DataTransfer {
         request.sortDescriptors = [NSSortDescriptor(keyPath: \Vehicle.createdAt, ascending: true)]
         let vehicles = try context.fetch(request)
         let root = ExportRoot(
-            schemaVersion: 7,
+            schemaVersion: 8,
             exportedAt: Date(),
             vehicles: vehicles.map(VehicleDTO.init(vehicle:)),
             windowFrames: WindowFrameStore.all()
@@ -326,6 +350,34 @@ enum DataTransfer {
                 reminder.advanceNoticeRaw = r.advanceNoticeRaw
                 reminder.createdAt = r.createdAt
                 reminder.vehicle = vehicle
+            }
+
+            for n in dto.notizen ?? [] {
+                let notiz = Notiz(context: context)
+                notiz.id = n.id
+                notiz.date = n.date
+                notiz.text = n.text
+                notiz.createdAt = n.createdAt
+                notiz.vehicle = vehicle
+
+                for d in n.documents ?? [] {
+                    if let bekannt = documentsByID[d.id] {
+                        // Dasselbe Dokument kann sowohl an einer Ausgabe als
+                        // auch an einer Notiz hängen – dieselbe ID darf dann
+                        // nicht doppelt angelegt werden (siehe Ausgaben-Schleife
+                        // oben für dieselbe Überlegung).
+                        if bekannt.vehicle == nil || bekannt.vehicle == vehicle {
+                            bekannt.link(to: notiz)
+                        }
+                        continue
+                    }
+                    let document = Dokument(context: context)
+                    document.id = d.id
+                    document.path = d.path
+                    document.createdAt = d.createdAt
+                    document.link(to: notiz)
+                    documentsByID[d.id] = document
+                }
             }
         }
 

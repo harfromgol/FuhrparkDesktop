@@ -93,6 +93,7 @@ struct SidebarView: View {
     private var sectionOfSelection: SidebarSection? {
         switch selection {
         case .documents: return .documents
+        case .notes: return .notes
         case .reminders: return .reminders
         case .fuelPrices: return .fuelPrices
         case .mcp: return .mcp
@@ -161,7 +162,7 @@ struct SidebarView: View {
                 title: "Fahrzeug wirklich löschen?",
                 actionLabel: "Löschen",
                 actionRole: .destructive,
-                message: { "„\($0.licensePlate ?? "")“ und alle zugehörigen \($0.engineType.refuelNounPlural), Ausgaben und Erinnerungen werden unwiderruflich gelöscht." },
+                message: { "„\($0.licensePlate ?? "")“ und alle zugehörigen \($0.engineType.refuelNounPlural), Ausgaben, Erinnerungen und Notizen werden unwiderruflich gelöscht." },
                 action: delete
             ))
     }
@@ -187,6 +188,17 @@ struct SidebarView: View {
                     .buttonStyle(.plain)
                     .pointerStyle(.link)
                     .listRowBackground(rowBackground(for: .documents))
+                }
+
+                if enabledSections.contains(.notes) {
+                    Button {
+                        selection = .notes
+                    } label: {
+                        sidebarLabel("Notizen", systemImage: "note.text")
+                    }
+                    .buttonStyle(.plain)
+                    .pointerStyle(.link)
+                    .listRowBackground(rowBackground(for: .notes))
                 }
 
                 if enabledSections.contains(.reminders) {

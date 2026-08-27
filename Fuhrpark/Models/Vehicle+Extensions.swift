@@ -115,6 +115,12 @@ extension Vehicle {
         return set.sorted { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) }
     }
 
+    /// Zugeordnete Notizen, nach Datum absteigend sortiert (neueste zuerst).
+    var sortedNotizen: [Notiz] {
+        let set = (notizen as? Set<Notiz>) ?? []
+        return set.sorted { ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }
+    }
+
     /// Letzte (vom Kilometerstand her höchste) Betankung, exklusive der übergebenen.
     func previousFuelEntry(before entry: FuelEntry?) -> FuelEntry? {
         let entries = sortedFuelEntries.filter { $0 !== entry }

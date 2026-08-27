@@ -6,6 +6,7 @@ import Foundation
 /// immer sichtbar.
 enum SidebarSection: String, CaseIterable, Identifiable {
     case documents
+    case notes
     case reminders
     case fuelPrices
     case mcp
@@ -15,6 +16,7 @@ enum SidebarSection: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .documents: return "Dokumente"
+        case .notes: return "Notizen"
         case .reminders: return "Erinnerungen"
         case .fuelPrices: return "Spritpreise"
         case .mcp: return "KI-Zugriff"
