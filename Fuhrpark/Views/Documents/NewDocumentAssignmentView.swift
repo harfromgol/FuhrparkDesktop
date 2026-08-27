@@ -32,6 +32,22 @@ struct NewDocumentAssignmentView: View {
     @State private var selectedVehicle: Vehicle?
     @State private var selectedExpenses: Set<Expense>
     @State private var selectedNotizen: Set<Notiz>
+    /// Welche der beiden Listen gerade eingeblendet ist. Rein die Anzeige –
+    /// die Auswahl in der jeweils ausgeblendeten Liste bleibt beim Umschalten
+    /// erhalten, ein Beleg kann weiterhin gleichzeitig Ausgaben UND Notizen
+    /// zugeordnet sein.
+    @State private var assignmentTab: AssignmentTab = .expenses
+
+    private enum AssignmentTab: String, CaseIterable, Identifiable {
+        case expenses, notes
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .expenses: "Sonstige Ausgaben"
+            case .notes: "Notizen"
+            }
+        }
+    }
 
     init(
         path: String,
@@ -62,14 +78,26 @@ struct NewDocumentAssignmentView: View {
                         fileCard
                         vehicleCard
                         if let selectedVehicle {
-                            ExpensePickerSection(
-                                vehicle: selectedVehicle,
-                                selection: $selectedExpenses
-                            )
-                            NotePickerSection(
-                                vehicle: selectedVehicle,
-                                selection: $selectedNotizen
-                            )
+                            Picker("Zuordnungsart", selection: $assignmentTab) {
+                                ForEach(AssignmentTab.allCases) { tab in
+                                    Text(tab.title).tag(tab)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .labelsHidden()
+
+                            switch assignmentTab {
+                            case .expenses:
+                                ExpensePickerSection(
+                                    vehicle: selectedVehicle,
+                                    selection: $selectedExpenses
+                                )
+                            case .notes:
+                                NotePickerSection(
+                                    vehicle: selectedVehicle,
+                                    selection: $selectedNotizen
+                                )
+                            }
                         }
                     }
                     .padding(20)
