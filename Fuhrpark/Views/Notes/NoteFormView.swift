@@ -64,13 +64,7 @@ struct NoteFormView: View {
                         }
 
                         GlassCard(title: "Kennzeichen") {
-                            Picker("Kennzeichen", selection: $selectedVehicle) {
-                                Text("Bitte wählen").tag(Vehicle?.none)
-                                ForEach(vehicles) { vehicle in
-                                    Text(vehicle.licensePlate ?? "").tag(Vehicle?.some(vehicle))
-                                }
-                            }
-                            .labelsHidden()
+                            VehiclePicker(vehicles: Array(vehicles), selection: $selectedVehicle)
                         }
 
                         documentsSection
