@@ -149,17 +149,11 @@ struct NewDocumentAssignmentView: View {
                 Text(selectedVehicle?.licensePlate ?? "—")
                     .font(.subheadline.bold())
             } else {
-                Picker("Fahrzeug", selection: $selectedVehicle) {
-                    Text("Bitte wählen").tag(Vehicle?.none)
-                    ForEach(vehicles) { vehicle in
-                        Text(vehicle.licensePlate ?? "").tag(Vehicle?.some(vehicle))
+                VehiclePicker(vehicles: Array(vehicles), selection: $selectedVehicle)
+                    .onChange(of: selectedVehicle) {
+                        selectedExpenses.removeAll()
+                        selectedNotizen.removeAll()
                     }
-                }
-                .labelsHidden()
-                .onChange(of: selectedVehicle) {
-                    selectedExpenses.removeAll()
-                    selectedNotizen.removeAll()
-                }
             }
 
             Text("Ein Beleg gehört zu genau einem Fahrzeug. Du kannst ihm mehrere Ausgaben und/oder Notizen dieses Fahrzeugs zuordnen.")
