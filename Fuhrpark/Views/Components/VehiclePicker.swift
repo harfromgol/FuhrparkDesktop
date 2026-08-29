@@ -52,6 +52,9 @@ struct VehiclePicker: View {
                     sectionHeader("Aktiv")
                     ForEach(activeVehicles) { vehicleRow($0) }
                 }
+                if !activeVehicles.isEmpty && !decommissionedVehicles.isEmpty {
+                    Divider()
+                }
                 if !decommissionedVehicles.isEmpty {
                     sectionHeader("Stillgelegt")
                     ForEach(decommissionedVehicles) { vehicleRow($0) }
