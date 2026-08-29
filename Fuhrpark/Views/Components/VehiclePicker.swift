@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Ersetzt den nativen `.menu`-Picker für die Fahrzeugauswahl: gruppiert
 /// nach Status (Aktiv/Stillgelegt) mit Überschriften und zeigt je Fahrzeug
-/// zwei Zeilen (Kennzeichen + Hersteller/Modell) – beides kann ein
+/// zwei Zeilen (Kennzeichen + Hersteller/Modell/km-Stand) – beides kann ein
 /// natives `Picker`/`NSMenuItem` nicht gleichzeitig, da Menüeinträge nur
 /// einen einzelnen Titel pro Zeile kennen. Folgt demselben
 /// Button-+-Popover-Muster wie `ExpensePickerSection`/`NotePickerSection`
@@ -95,7 +95,7 @@ struct VehiclePicker: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(vehicle.licensePlate ?? "")
                         .font(.subheadline.bold())
-                    Text("\(vehicle.manufacturer ?? "") \(vehicle.model ?? "")")
+                    Text("\(vehicle.manufacturer ?? "") \(vehicle.model ?? "") - \(DisplayFormatter.odometerString(vehicle.highestOdometer)) km")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
