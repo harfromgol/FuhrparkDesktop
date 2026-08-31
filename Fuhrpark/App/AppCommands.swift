@@ -13,6 +13,16 @@ final class AppCommands {
     /// Löst im `ContentView` die Sicherheitsabfrage zum Zurücksetzen der App aus.
     var showResetAppConfirmation = false
 
+    /// Öffnet das Einstellungsfenster (`SettingsView`) als Sheet über dem Hauptfenster.
+    var showSettings = false
+
+    /// Welcher Abschnitt beim nächsten Öffnen von `showSettings` vorausgewählt
+    /// sein soll – z. B. „Dokumente“, wenn das Zahnrad-Symbol in
+    /// `DocumentsView` das Fenster direkt dort öffnet. Bleibt zwischen zwei
+    /// Aufrufen stehen, das Fenster merkt sich so den zuletzt gezeigten
+    /// Abschnitt, wenn es allgemein über das App-Menü geöffnet wird.
+    var settingsInitialSection: SettingsSection = .documents
+
     /// Öffnet den Datei-Dialog zum Exportieren aller Daten als JSON.
     var showExportDialog = false
 
