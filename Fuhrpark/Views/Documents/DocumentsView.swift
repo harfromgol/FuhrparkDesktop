@@ -204,7 +204,7 @@ struct DocumentsView: View {
                     onError: { hinweis = .fehler($0) }
                 )
             case .migrationFailures:
-                migrationFailuresSheet
+                MigrationFailuresSheet(failures: migrationFailures, onDismiss: { activeSheet = nil })
             }
         }
         .alert(
@@ -322,31 +322,6 @@ struct DocumentsView: View {
         .frame(width: 280, alignment: .leading)
     }
 
-    private var migrationFailuresSheet: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Einige Dokumente konnten nicht automatisch übernommen werden")
-                .font(.headline)
-                .padding(20)
-            List(migrationFailures, id: \.documentID) { failure in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(failure.filename)
-                        .font(.subheadline.bold())
-                    Text(failure.reason)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            Divider()
-            HStack {
-                Spacer()
-                Button("OK") { activeSheet = nil }
-                    .pointerStyle(.link)
-            }
-            .padding(16)
-        }
-        .frame(width: 420, height: 360)
-    }
-
     private var documentListSection: some View {
         GlassCard(title: "Alle Dokumente (\(filteredDocuments.count))") {
             if filteredDocuments.isEmpty {
@@ -431,40 +406,17 @@ struct DocumentsView: View {
     private func handleFolderSelection(_ result: Result<URL, Error>) {
         guard case .success(let url) = result else { return }
         do {
-            try WorkingDirectoryStore.set(url: url)
+            let outcome = try WorkingDirectoryChange.apply(url: url, in: viewContext)
             isWorkingDirectoryConfigured = true
             workingDirectoryRevision += 1
-            let failures = DocumentMigration.migrateLegacyDocuments(using: PersistenceController.shared)
-            if !failures.isEmpty {
-                migrationFailures = failures
+            if !outcome.migrationFailures.isEmpty {
+                migrationFailures = outcome.migrationFailures
                 activeSheet = .migrationFailures
-            } else {
-                warnAboutForeignFolders()
+            } else if let warning = outcome.foreignFolderWarning {
+                hinweis = Hinweis(titel: "Fremde Belegordner im Verzeichnis", text: warning)
             }
         } catch {
             hinweis = .fehler(error.localizedDescription)
         }
-    }
-
-    /// Warnt, wenn im frisch gewählten Verzeichnis Belegordner liegen, die
-    /// dieser Datenbestand nicht kennt.
-    ///
-    /// Hintergrund: `DocumentCleanup` hält die Invariante „das
-    /// Arbeitsverzeichnis enthält genau die Ordner, die die Datenbank kennt“
-    /// aufrecht und räumt beim nächsten Löschvorgang alles Übrige weg. Zeigt
-    /// man versehentlich auf das Belegverzeichnis eines anderen Bestands –
-    /// etwa mit dem Testbau auf das der produktiven App, die seit der
-    /// Container-Trennung nebeneinander laufen –, wäre das ein stiller
-    /// Datenverlust. Der Hinweis löscht selbst nichts; er nennt nur, was
-    /// betroffen wäre, solange noch umgestellt werden kann.
-    private func warnAboutForeignFolders() {
-        let fremde = DocumentCleanup.unknownFolderIDs(in: viewContext).count
-        guard fremde > 0 else { return }
-        hinweis = Hinweis(
-            titel: "Fremde Belegordner im Verzeichnis",
-            text: fremde == 1
-                ? "In diesem Ordner liegt ein Belegordner, der nicht zu diesem Datenbestand gehört. Er wird beim nächsten Löschvorgang entfernt. Wähle ein anderes Verzeichnis, falls er zu einer anderen Installation gehört."
-                : "In diesem Ordner liegen \(fremde) Belegordner, die nicht zu diesem Datenbestand gehören. Sie werden beim nächsten Löschvorgang entfernt. Wähle ein anderes Verzeichnis, falls sie zu einer anderen Installation gehören."
-        )
     }
 }

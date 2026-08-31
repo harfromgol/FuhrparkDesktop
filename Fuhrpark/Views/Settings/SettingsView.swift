@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// Zeigt die App-Einstellungen als modales Fenster (Sheet) über dem
 /// Hauptfenster: eine Liste der Abschnitte links, deren Inhalt rechts –
@@ -57,8 +58,90 @@ struct SettingsView: View {
     private func content(for section: SettingsSection) -> some View {
         switch section {
         case .documents:
-            // Platzhalter – der Inhalt folgt in einem späteren Schritt.
-            EmptyView()
+            DocumentsSettingsSection()
+        }
+    }
+}
+
+/// Inhalt der Sektion „Dokumente“: zeigt und ändert das Arbeitsverzeichnis
+/// für Belege/Dokumente – dieselbe Funktion wie im Zahnrad-Popover in
+/// `DocumentsView`, hier aber direkt sichtbar statt hinter einem
+/// zusätzlichen Klick versteckt. Die eigentliche Logik (Migration
+/// vorhandener Dokumente, Warnung vor fremden Belegordnern) steckt in
+/// `WorkingDirectoryChange`, damit beide Stellen exakt gleich verhalten.
+/// Eigener, lokaler Sheet-/Alert-Zustand statt geteiltem: `SettingsView`
+/// hat sonst keine weiteren Sheets/Alerts, ein Konflikt mit dem
+/// „nur ein Präsentations-Modifier gleichzeitig“-Verhalten aus
+/// `DocumentsView.activeSheet` besteht hier also nicht.
+private struct DocumentsSettingsSection: View {
+    @Environment(\.managedObjectContext) private var viewContext
+
+    @State private var isConfigured = WorkingDirectoryStore.isConfigured
+    /// Erzwingt eine Neuberechnung des Pfad-Texts nach einem Wechsel –
+    /// `WorkingDirectoryStore` ist reines UserDefaults ohne SwiftUI-
+    /// Reaktivität (siehe gleichlautender Kommentar in `DocumentsView`).
+    @State private var revision = 0
+    @State private var migrationFailures: [DocumentMigration.Failure] = []
+    @State private var isPresentingMigrationFailures = false
+    @State private var hinweis: Hinweis?
+
+    private struct Hinweis: Identifiable {
+        let id = UUID()
+        let titel: String
+        let text: String
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Arbeitsverzeichnis")
+                .font(.headline)
+            Text(WorkingDirectoryStore.displayPath ?? "Kein Arbeitsverzeichnis festgelegt")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+                .id(revision)
+            Button(isConfigured ? "Ändern…" : "Ordner wählen…") {
+                presentFolderPicker()
+            }
+            .buttonStyle(.bordered)
+            .pointerStyle(.link)
+        }
+        .alert(
+            hinweis?.titel ?? "",
+            isPresented: Binding(
+                get: { hinweis != nil },
+                set: { if !$0 { hinweis = nil } }
+            ),
+            presenting: hinweis
+        ) { _ in
+            Button("OK", role: .cancel) { }
+        } message: { hinweis in
+            Text(hinweis.text)
+        }
+        .sheet(isPresented: $isPresentingMigrationFailures) {
+            MigrationFailuresSheet(failures: migrationFailures, onDismiss: { isPresentingMigrationFailures = false })
+        }
+    }
+
+    private func presentFolderPicker() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Wählen"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let outcome = try WorkingDirectoryChange.apply(url: url, in: viewContext)
+            isConfigured = true
+            revision += 1
+            if !outcome.migrationFailures.isEmpty {
+                migrationFailures = outcome.migrationFailures
+                isPresentingMigrationFailures = true
+            } else if let warning = outcome.foreignFolderWarning {
+                hinweis = Hinweis(titel: "Fremde Belegordner im Verzeichnis", text: warning)
+            }
+        } catch {
+            hinweis = Hinweis(titel: "Fehler", text: error.localizedDescription)
         }
     }
 }
@@ -86,4 +169,5 @@ enum SettingsSection: String, CaseIterable, Identifiable {
 
 #Preview {
     SettingsView()
+        .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
 }
