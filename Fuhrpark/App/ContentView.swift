@@ -77,16 +77,16 @@ struct ContentView: View {
                 """)
         }
         .confirmationDialog(
-            "Wirklich alle Daten löschen?",
-            isPresented: $appCommands.showDeleteAllDataConfirmation,
+            "Wirklich die App zurücksetzen?",
+            isPresented: $appCommands.showResetAppConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Alle Daten löschen", role: .destructive) {
-                deleteAllData()
+            Button("App zurücksetzen", role: .destructive) {
+                resetApp()
             }
             Button("Abbrechen", role: .cancel) { }
         } message: {
-            Text("Alle Fahrzeuge, Betankungen, sonstigen Ausgaben, Kategorien, Erinnerungen und Notizen sowie der gespeicherte Tankerkönig-API-Schlüssel und die angepinnten Spritpreise werden unwiderruflich gelöscht. Auch das festgelegte Arbeitsverzeichnis für Belege und Fahrzeugbilder wird vergessen. Dieser Vorgang kann nicht rückgängig gemacht werden.")
+            Text("Alle Fahrzeuge, Betankungen, sonstigen Ausgaben, Kategorien, Erinnerungen, Notizen und die gespeicherten Belege/Fahrzeugbilder werden unwiderruflich gelöscht. Zusätzlich werden sämtliche Einstellungen zurückgesetzt: Tankerkönig-API-Schlüssel, angepinnte Spritpreise, das festgelegte Arbeitsverzeichnis, alle Filter, Sortierungen und Fenstergrößen. Die App beendet sich danach und startet beim nächsten Öffnen wie frisch installiert. Dieser Vorgang kann nicht rückgängig gemacht werden.")
         }
         // Export/Import laufen bewusst NICHT über `.fileExporter`/`.fileImporter`,
         // sondern über direkte `NSSavePanel`/`NSOpenPanel` (siehe
@@ -284,18 +284,17 @@ struct ContentView: View {
         }
     }
 
-    private func deleteAllData() {
+    private func resetApp() {
         // Auswahl zuerst zurücksetzen, damit der Detailbereich nicht auf ein
-        // gleich gelöschtes (invalidiertes) Fahrzeug zugreift.
+        // gleich gelöschtes (invalidiertes) Fahrzeug zugreift, während
+        // `AppReset` noch läuft.
         selection = .statistics
-        // Erst löschen (räumt dabei über den Sweep auch die Belege/Fahrzeug-
-        // bilder im noch konfigurierten Arbeitsverzeichnis auf), danach das
-        // Verzeichnis selbst vergessen – umgekehrt fände der Sweep gar kein
-        // Arbeitsverzeichnis mehr vor und ließe die Dateien liegen.
-        PersistenceController.shared.deleteAllData()
         fuelPricesViewModel.resetAPIKey()
         pinnedFuelPricesViewModel.resetPinnedSelections()
-        WorkingDirectoryStore.clear()
+        // Core Data, Belege/Fahrzeugbilder und alle UserDefaults dieses
+        // Containers löschen, dann die App beenden – siehe Doc-Kommentar an
+        // `AppReset` für den Grund, warum kein automatischer Neustart folgt.
+        AppReset.performFactoryReset()
     }
 }
 
