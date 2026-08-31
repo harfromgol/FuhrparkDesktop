@@ -18,6 +18,9 @@ struct StatisticsView: View {
     /// UserDefaults (siehe `TableSortStore`).
     @State private var costPerVehicleSort = TableSort<CostPerVehicleSortColumn>.initial(for: .costPerVehicle)
     @State private var fleetYearlyCostSort = TableSort<YearlyCostSortColumn>.initial(for: .fleetYearlyCost)
+    /// Sichtbare Höhe der `ScrollView`, um den „Keine Daten“-Hinweis darin
+    /// vertikal zu zentrieren statt ihn nur mit festem Abstand oben anzuzeigen.
+    @State private var scrollViewHeight: CGFloat = 0
 
     private var totalCost: Decimal { vehicles.reduce(.zero) { $0 + $1.totalCost } }
     private var totalFuelCost: Decimal { vehicles.reduce(.zero) { $0 + $1.totalFuelCost } }
@@ -202,7 +205,11 @@ struct StatisticsView: View {
                             systemImage: "chart.bar",
                             description: Text("Lege ein Fahrzeug an, um Statistiken zu sehen.")
                         )
-                        .padding(.top, 60)
+                        // 40 = die 20pt Innenabstand oben und unten aus dem
+                        // `.padding(20)` der VStack weiter unten, damit die
+                        // Mindesthöhe genau der sichtbaren ScrollView-Höhe
+                        // entspricht statt sie um die Ränder zu überschreiten.
+                        .frame(maxWidth: .infinity, minHeight: max(0, scrollViewHeight - 40))
                     } else {
                         GlassCard {
                             HStack {
@@ -374,6 +381,7 @@ struct StatisticsView: View {
                 .padding(20)
             }
         }
+        .onGeometryChange(for: CGFloat.self, of: \.size.height) { scrollViewHeight = $0 }
         .navigationTitle("Statistik")
         .alert(
             "PDF-Erstellung fehlgeschlagen",
