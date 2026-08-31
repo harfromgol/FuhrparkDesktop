@@ -67,6 +67,8 @@ struct SettingsView: View {
         switch section {
         case .documents:
             DocumentsSettingsSection()
+        case .fuelPrices:
+            FuelPricesSettingsSection()
         }
     }
 }
@@ -181,23 +183,67 @@ private struct DocumentsSettingsSection: View {
     }
 }
 
+/// Inhalt der Sektion „Spritpreise“: Eingabe des Tankerkönig-API-Schlüssels
+/// – vormals direkt in `FuelPricesView`, jetzt zentral hier, damit die
+/// eigentliche Ansicht sich auf Karte/Ergebnisse konzentrieren kann. Nutzt
+/// dasselbe, App-weit geteilte `FuelPricesViewModel` wie `FuelPricesView`
+/// selbst (als Environment-Objekt injiziert, siehe `FuhrparkDesktopApp`) –
+/// ein hier gespeicherter Schlüssel startet deshalb auch sofort den
+/// Ladevorgang, dessen Ergebnis beim nächsten Besuch von „Spritpreise“ im
+/// Hauptfenster bereits steht.
+private struct FuelPricesSettingsSection: View {
+    @Environment(FuelPricesViewModel.self) private var vm
+
+    var body: some View {
+        @Bindable var vm = vm
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Tankerkönig-API-Schlüssel")
+                .font(.headline)
+            Text("Wird für die Umkreissuche nach Spritpreisen in der Nähe benötigt.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            ValidatedField(
+                title: "API-Schlüssel",
+                text: $vm.apiKey,
+                kind: .apiKey,
+                isValidBinding: $vm.isKeyFieldValid
+            )
+
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                let cooldownActive = vm.secondsRemaining(asOf: context.date) != nil
+                Button("Speichern & Laden") {
+                    vm.saveKeyAndStart()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!vm.isKeyFieldValid || cooldownActive)
+                .pointerStyle(vm.isKeyFieldValid && !cooldownActive ? .link : nil)
+            }
+        }
+    }
+}
+
 /// Abschnitte im Einstellungsfenster: links als Liste, rechts der
 /// zugehörige Inhalt. Weitere Abschnitte ergänzen hier einfach einen Fall.
 enum SettingsSection: String, CaseIterable, Identifiable {
     case documents
+    case fuelPrices
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .documents: return "Dokumente"
+        case .fuelPrices: return "Spritpreise"
         }
     }
 
-    /// Dasselbe Symbol wie beim „Dokumente"-Eintrag in `SidebarView`.
+    /// Dasselbe Symbol wie beim jeweiligen Eintrag in `SidebarView`.
     var systemImage: String {
         switch self {
         case .documents: return "folder.fill"
+        case .fuelPrices: return "fuelpump.circle"
         }
     }
 }
@@ -205,4 +251,5 @@ enum SettingsSection: String, CaseIterable, Identifiable {
 #Preview {
     SettingsView()
         .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+        .environment(FuelPricesViewModel())
 }
