@@ -231,14 +231,24 @@ private struct FuelPricesSettingsSection: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack(spacing: 12) {
+            VStack(spacing: 6) {
                 Slider(value: $vm.searchRadiusKm, in: 1...25, step: 0.5) {
                     Text("Suchradius")
+                } minimumValueLabel: {
+                    Text("1 km")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } maximumValueLabel: {
+                    Text("25 km")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
+                .labelsHidden()
+
                 Text(DisplayFormatter.radiusKmString(vm.searchRadiusKm))
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
-                    .frame(width: 60, alignment: .trailing)
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
         }
     }
