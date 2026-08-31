@@ -100,11 +100,24 @@ private struct DocumentsSettingsSection: View {
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)
                 .id(revision)
-            Button(isConfigured ? "Ändern…" : "Ordner wählen…") {
-                presentFolderPicker()
+            HStack(spacing: 10) {
+                Button(isConfigured ? "Ändern…" : "Ordner wählen…") {
+                    presentFolderPicker()
+                }
+                .buttonStyle(.bordered)
+                .pointerStyle(.link)
+
+                if isConfigured {
+                    Button {
+                        revealInFinder()
+                    } label: {
+                        Image(systemName: "folder")
+                    }
+                    .buttonStyle(.bordered)
+                    .pointerStyle(.link)
+                    .help("Im Finder anzeigen")
+                }
             }
-            .buttonStyle(.bordered)
-            .pointerStyle(.link)
         }
         .alert(
             hinweis?.titel ?? "",
@@ -139,6 +152,20 @@ private struct DocumentsSettingsSection: View {
                 isPresentingMigrationFailures = true
             } else if let warning = outcome.foreignFolderWarning {
                 hinweis = Hinweis(titel: "Fremde Belegordner im Verzeichnis", text: warning)
+            }
+        } catch {
+            hinweis = Hinweis(titel: "Fehler", text: error.localizedDescription)
+        }
+    }
+
+    /// Öffnet das Arbeitsverzeichnis selbst im Finder – der Zugriff muss
+    /// innerhalb von `withAccess` passieren, da der Security-Scope sonst mit
+    /// dessen Rückkehr endet (siehe gleichlautender Kommentar an
+    /// `Dokument.withResolvedURL`).
+    private func revealInFinder() {
+        do {
+            try WorkingDirectoryStore.withAccess { url in
+                NSWorkspace.shared.activateFileViewerSelecting([url])
             }
         } catch {
             hinweis = Hinweis(titel: "Fehler", text: error.localizedDescription)
