@@ -10,8 +10,8 @@ import Observation
 @MainActor
 @Observable
 final class AppCommands {
-    /// Löst im `ContentView` die Sicherheitsabfrage zum Löschen aller Daten aus.
-    var showDeleteAllDataConfirmation = false
+    /// Löst im `ContentView` die Sicherheitsabfrage zum Zurücksetzen der App aus.
+    var showResetAppConfirmation = false
 
     /// Öffnet den Datei-Dialog zum Exportieren aller Daten als JSON.
     var showExportDialog = false

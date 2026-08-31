@@ -114,7 +114,7 @@ final class PinnedFuelPricesViewModel {
     }
 
     /// Löscht Auswahl und Cache (nicht das Intervall, das ist eine
-    /// generelle Präferenz) – aufgerufen von „Alle Daten löschen".
+    /// generelle Präferenz) – aufgerufen von „App zurücksetzen".
     func resetPinnedSelections() {
         pinnedSelections = []
         snapshots = [:]

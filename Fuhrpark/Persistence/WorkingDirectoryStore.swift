@@ -30,14 +30,6 @@ enum WorkingDirectoryStore {
 
     static var isConfigured: Bool { displayPath != nil }
 
-    /// Vergisst Pfad und Bookmark wieder – rührt keine Dateien im
-    /// Arbeitsverzeichnis selbst an, nur die Zuordnung dazu. Von „Alle Daten
-    /// löschen“ aufgerufen, damit danach wirklich bei null angefangen wird.
-    static func clear() {
-        UserDefaults.standard.removeObject(forKey: pathKey)
-        UserDefaults.standard.removeObject(forKey: bookmarkKey)
-    }
-
     /// Speichert ein neu gewähltes Arbeitsverzeichnis (URL aus einem
     /// `.fileImporter(allowedContentTypes: [.folder])`-Callback).
     static func set(url: URL) throws {

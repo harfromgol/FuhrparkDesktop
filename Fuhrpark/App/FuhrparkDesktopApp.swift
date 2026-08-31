@@ -57,7 +57,7 @@ struct FuhrparkDesktopApp: App {
         // erzeugtes Binding liest/schreibt wirklich live auf die
         // `@Observable`-Speicherung – ein händisches Binding wurde von
         // SwiftUI bei dieser Szene nicht zuverlässig neu ausgewertet, sodass
-        // ein `isMenuBarVisible = false` (z. B. bei „Alle Daten löschen")
+        // ein `isMenuBarVisible = false` (z. B. bei „App zurücksetzen")
         // das Icon nicht entfernte.
         @Bindable var pinnedFuelPricesBindable = pinnedFuelPricesViewModel
         MenuBarExtra(isInserted: $pinnedFuelPricesBindable.isMenuBarVisible) {
@@ -202,8 +202,8 @@ struct AppMenuCommands: Commands {
 
             Divider()
 
-            Button("Alle Daten löschen", systemImage: "trash") {
-                appCommands.showDeleteAllDataConfirmation = true
+            Button("App zurücksetzen", systemImage: "arrow.counterclockwise") {
+                appCommands.showResetAppConfirmation = true
             }
         }
     }
