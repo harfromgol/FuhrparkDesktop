@@ -88,6 +88,9 @@ struct ContentView: View {
         } message: {
             Text("Alle Fahrzeuge, Betankungen, sonstigen Ausgaben, Kategorien, Erinnerungen, Notizen und die gespeicherten Belege/Fahrzeugbilder werden unwiderruflich gelöscht. Zusätzlich werden sämtliche Einstellungen zurückgesetzt: Tankerkönig-API-Schlüssel, angepinnte Spritpreise, das festgelegte Arbeitsverzeichnis, alle Filter, Sortierungen und Fenstergrößen. Die App beendet sich danach und startet beim nächsten Öffnen wie frisch installiert. Dieser Vorgang kann nicht rückgängig gemacht werden.")
         }
+        .sheet(isPresented: $appCommands.showSettings) {
+            SettingsView()
+        }
         // Export/Import laufen bewusst NICHT über `.fileExporter`/`.fileImporter`,
         // sondern über direkte `NSSavePanel`/`NSOpenPanel` (siehe
         // `presentExportPanel`/`presentImportPanel`): Beide SwiftUI-Modifier

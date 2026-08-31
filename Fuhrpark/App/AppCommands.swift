@@ -13,6 +13,9 @@ final class AppCommands {
     /// Löst im `ContentView` die Sicherheitsabfrage zum Zurücksetzen der App aus.
     var showResetAppConfirmation = false
 
+    /// Öffnet das Einstellungsfenster (`SettingsView`) als Sheet über dem Hauptfenster.
+    var showSettings = false
+
     /// Öffnet den Datei-Dialog zum Exportieren aller Daten als JSON.
     var showExportDialog = false
 
