@@ -65,6 +65,14 @@ final class FuelPricesViewModel {
         didSet { FuelTypeFilterStore.set(enabledFuelKinds) }
     }
 
+    /// Suchradius (km) der Umkreissuche, einstellbar in den Einstellungen
+    /// (Sektion „Spritpreise“) zwischen 1 und 25 km in 0,5-km-Schritten.
+    /// Vorbelegt aus den UserDefaults, jede Änderung wird sofort
+    /// zurückgespeichert – analog zu `enabledFuelKinds`.
+    var searchRadiusKm: Double = FuelSearchRadiusStore.get() {
+        didSet { FuelSearchRadiusStore.set(searchRadiusKm) }
+    }
+
     private var running = false
     private var lastFetchAt: Date?
 
@@ -160,7 +168,7 @@ final class FuelPricesViewModel {
             stations = try await TankerkoenigService.stations(
                 lat: coordinate.latitude,
                 lng: coordinate.longitude,
-                radiusKm: 5,
+                radiusKm: searchRadiusKm,
                 apiKey: apiKey
             )
             lastFetchAt = Date()

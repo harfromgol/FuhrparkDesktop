@@ -184,13 +184,13 @@ private struct DocumentsSettingsSection: View {
 }
 
 /// Inhalt der Sektion „Spritpreise“: Eingabe des Tankerkönig-API-Schlüssels
-/// – vormals direkt in `FuelPricesView`, jetzt zentral hier, damit die
-/// eigentliche Ansicht sich auf Karte/Ergebnisse konzentrieren kann. Nutzt
-/// dasselbe, App-weit geteilte `FuelPricesViewModel` wie `FuelPricesView`
-/// selbst (als Environment-Objekt injiziert, siehe `FuhrparkDesktopApp`) –
-/// ein hier gespeicherter Schlüssel startet deshalb auch sofort den
-/// Ladevorgang, dessen Ergebnis beim nächsten Besuch von „Spritpreise“ im
-/// Hauptfenster bereits steht.
+/// und des Suchradius der Umkreissuche – vormals direkt in `FuelPricesView`,
+/// jetzt zentral hier, damit die eigentliche Ansicht sich auf
+/// Karte/Ergebnisse konzentrieren kann. Nutzt dasselbe, App-weit geteilte
+/// `FuelPricesViewModel` wie `FuelPricesView` selbst (als Environment-Objekt
+/// injiziert, siehe `FuhrparkDesktopApp`) – ein hier gespeicherter Schlüssel
+/// startet deshalb auch sofort den Ladevorgang, dessen Ergebnis beim
+/// nächsten Besuch von „Spritpreise“ im Hauptfenster bereits steht.
 private struct FuelPricesSettingsSection: View {
     @Environment(FuelPricesViewModel.self) private var vm
 
@@ -219,6 +219,26 @@ private struct FuelPricesSettingsSection: View {
                 .buttonStyle(.borderedProminent)
                 .disabled(!vm.isKeyFieldValid || cooldownActive)
                 .pointerStyle(vm.isKeyFieldValid && !cooldownActive ? .link : nil)
+            }
+
+            Divider()
+                .padding(.vertical, 4)
+
+            Text("Suchradius")
+                .font(.headline)
+            Text("Wie weit die Umkreissuche nach Tankstellen reicht.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 12) {
+                Slider(value: $vm.searchRadiusKm, in: 1...25, step: 0.5) {
+                    Text("Suchradius")
+                }
+                Text(DisplayFormatter.radiusKmString(vm.searchRadiusKm))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .frame(width: 60, alignment: .trailing)
             }
         }
     }
