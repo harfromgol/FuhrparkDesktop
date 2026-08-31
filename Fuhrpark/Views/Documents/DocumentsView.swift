@@ -11,6 +11,7 @@ import AppKit
 /// später ändert.
 struct DocumentsView: View {
     @Environment(\.managedObjectContext) private var viewContext
+    @Environment(AppCommands.self) private var appCommands
 
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Dokument.createdAt, ascending: false)],
@@ -41,9 +42,6 @@ struct DocumentsView: View {
     @State private var hinweis: Hinweis?
     @State private var pendingDeletion: Dokument?
 
-    @State private var isPresentingWorkingDirectoryPopover = false
-    @State private var migrationFailures: [DocumentMigration.Failure] = []
-
     /// Gespiegelter Zustand von `WorkingDirectoryStore.isConfigured`. Der
     /// Store ist reines UserDefaults ohne SwiftUI-Reaktivität – ohne diesen
     /// `@State`-Spiegel würde die Ansicht nach `WorkingDirectoryStore.set(url:)`
@@ -71,13 +69,11 @@ struct DocumentsView: View {
     private enum SheetKind: Identifiable {
         case assignment(path: String, bookmark: Data)
         case reassignment(Dokument)
-        case migrationFailures
 
         var id: String {
             switch self {
             case .assignment(let path, _): "assignment:\(path)"
             case .reassignment(let document): "reassignment:\(document.objectID.uriRepresentation())"
-            case .migrationFailures: "migrationFailures"
             }
         }
     }
@@ -203,8 +199,6 @@ struct DocumentsView: View {
                     onCancel: closeAssignmentSheet,
                     onError: { hinweis = .fehler($0) }
                 )
-            case .migrationFailures:
-                MigrationFailuresSheet(failures: migrationFailures, onDismiss: { activeSheet = nil })
             }
         }
         .alert(
@@ -251,21 +245,31 @@ struct DocumentsView: View {
                 self.selectedCategoryFilter = nil
             }
         }
+        // Das Zahnrad-Symbol öffnet das Arbeitsverzeichnis jetzt direkt im
+        // Einstellungsfenster (siehe `addButtonRow`) statt im früheren
+        // Popover dieser Ansicht – dort kann es sich ändern, während diese
+        // Ansicht selbst weiter im Hintergrund besteht. Nach dem Schließen
+        // die eigenen Spiegel auffrischen, aus demselben Grund wie bei
+        // `isWorkingDirectoryConfigured` oben: UserDefaults ist für SwiftUI
+        // unsichtbar.
+        .onChange(of: appCommands.showSettings) { _, isShown in
+            guard !isShown else { return }
+            isWorkingDirectoryConfigured = WorkingDirectoryStore.isConfigured
+            workingDirectoryRevision += 1
+        }
     }
 
     private var addButtonRow: some View {
         HStack {
             Button {
-                isPresentingWorkingDirectoryPopover = true
+                appCommands.settingsInitialSection = .documents
+                appCommands.showSettings = true
             } label: {
                 Image(systemName: "gearshape")
             }
             .buttonStyle(.borderless)
             .pointerStyle(.link)
             .help("Arbeitsverzeichnis konfigurieren")
-            .popover(isPresented: $isPresentingWorkingDirectoryPopover) {
-                workingDirectoryPopover
-            }
 
             Button {
                 isPresentingFilterPopover = true
@@ -300,26 +304,6 @@ struct DocumentsView: View {
             .buttonStyle(.glassProminent)
             .pointerStyle(.link)
         }
-    }
-
-    private var workingDirectoryPopover: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Arbeitsverzeichnis")
-                .font(.headline)
-            Text(WorkingDirectoryStore.displayPath ?? "Kein Arbeitsverzeichnis festgelegt")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-                .truncationMode(.middle)
-            Button(isWorkingDirectoryConfigured ? "Ändern…" : "Ordner wählen…") {
-                isPresentingWorkingDirectoryPopover = false
-                presentFolderPicker()
-            }
-            .buttonStyle(.bordered)
-            .pointerStyle(.link)
-        }
-        .padding(16)
-        .frame(width: 280, alignment: .leading)
     }
 
     private var documentListSection: some View {
@@ -359,22 +343,10 @@ struct DocumentsView: View {
         presentDocumentFilePicker()
     }
 
-    /// Öffnet den Ordner-Auswahldialog direkt über AppKit statt über
+    /// Öffnet den Datei-Auswahldialog direkt über AppKit statt über
     /// `.fileImporter`: Letzteres zeigt den Dialog als Sheet an, das am
     /// Fenster verankert und nicht frei verschiebbar ist. `NSOpenPanel`
     /// erzeugt stattdessen ein eigenständiges, verschiebbares Fenster.
-    private func presentFolderPicker() {
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.allowsMultipleSelection = false
-        panel.prompt = "Wählen"
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        handleFolderSelection(.success(url))
-    }
-
-    /// Dieselbe Begründung wie bei `presentFolderPicker`, hier für die
-    /// Dokument-Datei selbst.
     private func presentDocumentFilePicker() {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = false
@@ -401,22 +373,5 @@ struct DocumentsView: View {
             return
         }
         activeSheet = .assignment(path: url.path, bookmark: bookmark)
-    }
-
-    private func handleFolderSelection(_ result: Result<URL, Error>) {
-        guard case .success(let url) = result else { return }
-        do {
-            let outcome = try WorkingDirectoryChange.apply(url: url, in: viewContext)
-            isWorkingDirectoryConfigured = true
-            workingDirectoryRevision += 1
-            if !outcome.migrationFailures.isEmpty {
-                migrationFailures = outcome.migrationFailures
-                activeSheet = .migrationFailures
-            } else if let warning = outcome.foreignFolderWarning {
-                hinweis = Hinweis(titel: "Fremde Belegordner im Verzeichnis", text: warning)
-            }
-        } catch {
-            hinweis = .fehler(error.localizedDescription)
-        }
     }
 }

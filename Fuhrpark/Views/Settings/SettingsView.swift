@@ -11,7 +11,15 @@ import AppKit
 /// Einstellungsfenster nie größer werden als das Hauptfenster.
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var selection: SettingsSection = .documents
+    @State private var selection: SettingsSection
+
+    /// `initialSection` legt fest, welcher Abschnitt beim Öffnen bereits
+    /// ausgewählt ist – z. B. „Dokumente“, wenn das Zahnrad-Symbol in
+    /// `DocumentsView` dieses Fenster direkt öffnet (siehe
+    /// `AppCommands.settingsInitialSection`).
+    init(initialSection: SettingsSection = .documents) {
+        _selection = State(initialValue: initialSection)
+    }
 
     /// `List(selection:)` erwartet eine optionale Bindung; ein `nil` von der
     /// Liste (z. B. bei Klick ins Leere) fällt auf den ersten Abschnitt
