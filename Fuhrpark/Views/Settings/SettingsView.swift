@@ -11,6 +11,8 @@ import AppKit
 /// Einstellungsfenster nie größer werden als das Hauptfenster.
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(FuelPricesViewModel.self) private var fuelPricesViewModel
+    @Environment(AppCommands.self) private var appCommands
     @State private var selection: SettingsSection
 
     /// `initialSection` legt fest, welcher Abschnitt beim Öffnen bereits
@@ -55,7 +57,7 @@ struct SettingsView: View {
             .navigationTitle("Einstellungen")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Fertig") { dismiss() }
+                    Button("Fertig") { finish() }
                 }
             }
         }
@@ -70,6 +72,22 @@ struct SettingsView: View {
         case .fuelPrices:
             FuelPricesSettingsSection()
         }
+    }
+
+    /// Ersetzt den früheren „Speichern & Laden“-Button der Spritpreise-
+    /// Sektion: Der Tankerkönig-Schlüssel wird beim Schließen gespeichert
+    /// (falls gültig) – ist „Spritpreise“ im Hauptfenster gerade aktiv, lädt
+    /// `onAppear()` dort automatisch neu, aber nur wenn noch nichts geladen
+    /// ist oder die Abklingzeit bereits abgelaufen ist (siehe dessen
+    /// Doc-Kommentar). Ist eine andere Sektion aktiv, passiert bewusst
+    /// nichts weiter – der nächste Besuch von „Spritpreise“ lädt dann über
+    /// dasselbe `onAppear()` ohnehin bei Bedarf neu.
+    private func finish() {
+        fuelPricesViewModel.saveKeyIfValid()
+        if appCommands.isFuelPricesSectionActive {
+            fuelPricesViewModel.onAppear()
+        }
+        dismiss()
     }
 }
 
@@ -188,9 +206,9 @@ private struct DocumentsSettingsSection: View {
 /// jetzt zentral hier, damit die eigentliche Ansicht sich auf
 /// Karte/Ergebnisse konzentrieren kann. Nutzt dasselbe, App-weit geteilte
 /// `FuelPricesViewModel` wie `FuelPricesView` selbst (als Environment-Objekt
-/// injiziert, siehe `FuhrparkDesktopApp`) – ein hier gespeicherter Schlüssel
-/// startet deshalb auch sofort den Ladevorgang, dessen Ergebnis beim
-/// nächsten Besuch von „Spritpreise“ im Hauptfenster bereits steht.
+/// injiziert, siehe `FuhrparkDesktopApp`). Kein eigener Speichern-Button
+/// mehr – `SettingsView.finish()` speichert den Schlüssel beim Klick auf
+/// „Fertig“ und lädt bei Bedarf automatisch neu, siehe dessen Doc-Kommentar.
 private struct FuelPricesSettingsSection: View {
     @Environment(FuelPricesViewModel.self) private var vm
 
@@ -210,16 +228,6 @@ private struct FuelPricesSettingsSection: View {
                 kind: .apiKey,
                 isValidBinding: $vm.isKeyFieldValid
             )
-
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                let cooldownActive = vm.secondsRemaining(asOf: context.date) != nil
-                Button("Speichern & Laden") {
-                    vm.saveKeyAndStart()
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(!vm.isKeyFieldValid || cooldownActive)
-                .pointerStyle(vm.isKeyFieldValid && !cooldownActive ? .link : nil)
-            }
 
             Divider()
                 .padding(.vertical, 4)
@@ -282,4 +290,5 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     SettingsView()
         .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
         .environment(FuelPricesViewModel())
+        .environment(AppCommands())
 }

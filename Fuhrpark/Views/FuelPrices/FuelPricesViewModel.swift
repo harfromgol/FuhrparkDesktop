@@ -121,12 +121,16 @@ final class FuelPricesViewModel {
         start()
     }
 
-    /// Speichert einen neu eingegebenen/geänderten Schlüssel und startet den
-    /// Ablauf. Wird über den „Speichern & Laden"-Button ausgelöst.
-    func saveKeyAndStart() {
-        guard isKeyFieldValid else { return }
+    /// Speichert den aktuellen Schlüssel dauerhaft, wenn er gültig ist –
+    /// unabhängig von `isKeyFieldValid`, das nur bei tatsächlicher Eingabe im
+    /// Textfeld gesetzt wird (siehe `ValidatedField`) und deshalb bei einem
+    /// bereits gültig vorbelegten, aber unberührten Feld noch `false` wäre.
+    /// Wird vom „Fertig"-Button des Einstellungsfensters aufgerufen; das
+    /// eigentliche (Neu-)Laden übernimmt dort direkt danach `onAppear()`,
+    /// aber nur wenn im Hauptfenster gerade „Spritpreise" aktiv ist.
+    func saveKeyIfValid() {
+        guard UUID(uuidString: apiKey) != nil else { return }
         TankerkoenigKeyStore.set(apiKey)
-        start()
     }
 
     /// Manuelles Aktualisieren, respektiert die Abklingzeit (siehe `start()`).
