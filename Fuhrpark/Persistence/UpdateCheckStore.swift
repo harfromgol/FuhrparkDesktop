@@ -12,11 +12,13 @@ enum UpdateCheckStore {
 
     /// Ob beim Start automatisch geprüft werden soll.
     ///
-    /// **Dreiwertig**: `nil` heißt „noch nie gefragt" und löst die einmalige
-    /// Rückfrage aus (siehe `UpdateChecker.checkAutomatically`). Deshalb
+    /// **Dreiwertig**: `nil` heißt „noch nie gefragt" – das wertet
+    /// `SetupWizardStore.shouldShowWizard()` aus, um zu entscheiden, ob der
+    /// Einrichtungsassistent automatisch erscheinen soll. Deshalb
     /// `object(forKey:)` statt `bool(forKey:)` – letzteres liefert für „nie
-    /// gesetzt" dasselbe `false` wie für ein bewusstes Nein, und die App
-    /// würde entweder ewig nachfragen oder ungefragt ins Netz gehen.
+    /// gesetzt" dasselbe `false` wie für ein bewusstes Nein, und Bestands-
+    /// installationen ließen sich dann nicht mehr von echten Erstinstalla-
+    /// tionen unterscheiden.
     static func automaticCheckPreference() -> Bool? {
         UserDefaults.standard.object(forKey: automaticKey) as? Bool
     }

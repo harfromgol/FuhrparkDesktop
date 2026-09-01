@@ -150,15 +150,16 @@ struct AppMenuCommands: Commands {
     @Bindable var updateChecker: UpdateChecker
 
     var body: some Commands {
-        // Direkt unter „Über FuhrparkDesktop“, gefolgt von der Update-Prüfung
+        // Direkt unter „Über FuhrparkDesktop”, gefolgt von der Update-Prüfung
         // – dort suchen macOS-Nutzer beides. Zwei separate
         // `CommandGroup(after: .appInfo)`-Blöcke würden ohne Trennlinie
         // dazwischen verschmelzen (live geprüft); die vom Nutzer gewünschten
-        // Trennlinien um „Einstellungen …“ müssen deshalb explizit als
+        // Trennlinien um „Einstellungen …” müssen deshalb explizit als
         // `Divider()` in derselben Gruppe stehen, wie schon im Tools-Menü
         // unten. Der Haken beim Update-Toggle ist der einzige Weg zurück,
-        // wenn die einmalige Rückfrage beim Erststart mit „Nein“ beantwortet
-        // wurde.
+        // wenn der Einrichtungsassistent (`SetupWizardView`, siehe
+        // `ContentView.swift`) oder eine spätere Abwahl das automatische
+        // Prüfen ausgeschaltet hat.
         CommandGroup(after: .appInfo) {
             Divider()
 

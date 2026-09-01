@@ -138,6 +138,7 @@ struct ContentView: View {
             onRestoreRequested: presentRestoreFilePanel,
             onRestoreConfirmed: performRestore
         ))
+        .modifier(SetupWizardModifier(updateChecker: updateChecker))
     }
 
     /// Dateiname-Vorschlag ohne Endung; `fileExporter` ergänzt „.json".
@@ -308,7 +309,7 @@ struct ContentView: View {
     }
 }
 
-/// Bündelt die vier Präsentationen der Update-Prüfung in einem eigenen
+/// Bündelt die drei Präsentationen der Update-Prüfung in einem eigenen
 /// `ViewModifier` – hält `body` schlank genug für den Type-Checker (sonst
 /// „unable to type-check this expression in reasonable time", siehe
 /// `FuelEntryListAlertsModifier` in `FuelEntryListWindow.swift` für dasselbe
@@ -326,28 +327,6 @@ private struct UpdateNoticeModifier: ViewModifier {
                     onSkip: { updateChecker.skipOfferedRelease() },
                     onDismiss: { updateChecker.availableRelease = nil }
                 )
-            }
-            .confirmationDialog(
-                "Nach neuen Versionen suchen?",
-                isPresented: $updateChecker.showsPermissionQuestion,
-                titleVisibility: .visible
-            ) {
-                Button("Ja, beim Start nachsehen") {
-                    Task { await updateChecker.answerPermissionQuestion(allowed: true) }
-                }
-                Button("Nein", role: .cancel) {
-                    Task { await updateChecker.answerPermissionQuestion(allowed: false) }
-                }
-            } message: {
-                Text("""
-                    FuhrparkDesktop kann beim Start höchstens einmal täglich nachsehen, \
-                    ob eine neue Version vorliegt. Dabei wird nur eine kleine Datei von \
-                    fuhrpark-macos.gerd-klaus.de geladen – es werden keine Angaben über \
-                    dich oder deinen Fuhrpark übertragen, auch nicht die verwendete \
-                    Version.
-
-                    Die Einstellung lässt sich jederzeit im Menü „FuhrparkDesktop“ ändern.
-                    """)
             }
             .alert("Du hast die neueste Version", isPresented: $updateChecker.showsUpToDateConfirmation) {
                 Button("OK", role: .cancel) { }
