@@ -91,6 +91,13 @@ struct ContentView: View {
         .sheet(isPresented: $appCommands.showSettings) {
             SettingsView(initialSection: appCommands.settingsInitialSection)
         }
+        // Pflegt `appCommands.isFuelPricesSectionActive` mit, damit der
+        // „Fertig“-Button im Einstellungsfenster weiß, ob „Spritpreise“
+        // gerade sichtbar ist – `initial: true` setzt ihn auch beim ersten
+        // Erscheinen korrekt, nicht erst bei der nächsten Auswahländerung.
+        .onChange(of: selection, initial: true) { _, newValue in
+            appCommands.isFuelPricesSectionActive = (newValue == .fuelPrices)
+        }
         // Export/Import laufen bewusst NICHT über `.fileExporter`/`.fileImporter`,
         // sondern über direkte `NSSavePanel`/`NSOpenPanel` (siehe
         // `presentExportPanel`/`presentImportPanel`): Beide SwiftUI-Modifier

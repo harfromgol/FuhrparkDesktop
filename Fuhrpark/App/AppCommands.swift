@@ -57,6 +57,13 @@ final class AppCommands {
     /// über `onAppear`/`onDisappear` gepflegt.
     var isMainWindowOpen = false
 
+    /// Ob im Hauptfenster gerade der Sidebar-Eintrag „Spritpreise“ aktiv ist.
+    /// Von `ContentView` über `onChange(of: selection)` gepflegt; der
+    /// „Fertig“-Button im Einstellungsfenster (`SettingsView`) liest das,
+    /// um nur dann automatisch neu zu laden, wenn der Nutzer die Ansicht
+    /// gerade tatsächlich sieht.
+    var isFuelPricesSectionActive = false
+
     /// Ändert sich einmal täglich um Mitternacht (siehe `scheduleDailyDueCheck`).
     /// `Erinnerung.isDue`/`isOverdue` sind reine Momentaufnahmen ohne eigene
     /// Änderungsbenachrichtigung; Views, die davon abhängen (Sidebar-Badge,

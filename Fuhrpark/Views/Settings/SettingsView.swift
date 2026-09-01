@@ -11,6 +11,8 @@ import AppKit
 /// Einstellungsfenster nie größer werden als das Hauptfenster.
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(FuelPricesViewModel.self) private var fuelPricesViewModel
+    @Environment(AppCommands.self) private var appCommands
     @State private var selection: SettingsSection
 
     /// `initialSection` legt fest, welcher Abschnitt beim Öffnen bereits
@@ -55,7 +57,7 @@ struct SettingsView: View {
             .navigationTitle("Einstellungen")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Fertig") { dismiss() }
+                    Button("Fertig") { finish() }
                 }
             }
         }
@@ -67,7 +69,25 @@ struct SettingsView: View {
         switch section {
         case .documents:
             DocumentsSettingsSection()
+        case .fuelPrices:
+            FuelPricesSettingsSection()
         }
+    }
+
+    /// Ersetzt den früheren „Speichern & Laden“-Button der Spritpreise-
+    /// Sektion: Der Tankerkönig-Schlüssel wird beim Schließen gespeichert
+    /// (falls gültig) – ist „Spritpreise“ im Hauptfenster gerade aktiv, lädt
+    /// `onAppear()` dort automatisch neu, aber nur wenn noch nichts geladen
+    /// ist oder die Abklingzeit bereits abgelaufen ist (siehe dessen
+    /// Doc-Kommentar). Ist eine andere Sektion aktiv, passiert bewusst
+    /// nichts weiter – der nächste Besuch von „Spritpreise“ lädt dann über
+    /// dasselbe `onAppear()` ohnehin bei Bedarf neu.
+    private func finish() {
+        fuelPricesViewModel.saveKeyIfValid()
+        if appCommands.isFuelPricesSectionActive {
+            fuelPricesViewModel.onAppear()
+        }
+        dismiss()
     }
 }
 
@@ -181,23 +201,87 @@ private struct DocumentsSettingsSection: View {
     }
 }
 
+/// Inhalt der Sektion „Spritpreise“: Eingabe des Tankerkönig-API-Schlüssels
+/// und des Suchradius der Umkreissuche – vormals direkt in `FuelPricesView`,
+/// jetzt zentral hier, damit die eigentliche Ansicht sich auf
+/// Karte/Ergebnisse konzentrieren kann. Nutzt dasselbe, App-weit geteilte
+/// `FuelPricesViewModel` wie `FuelPricesView` selbst (als Environment-Objekt
+/// injiziert, siehe `FuhrparkDesktopApp`). Kein eigener Speichern-Button
+/// mehr – `SettingsView.finish()` speichert den Schlüssel beim Klick auf
+/// „Fertig“ und lädt bei Bedarf automatisch neu, siehe dessen Doc-Kommentar.
+private struct FuelPricesSettingsSection: View {
+    @Environment(FuelPricesViewModel.self) private var vm
+
+    var body: some View {
+        @Bindable var vm = vm
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Tankerkönig-API-Schlüssel")
+                .font(.headline)
+            Text("Wird für die Umkreissuche nach Spritpreisen in der Nähe benötigt.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            ValidatedField(
+                title: "API-Schlüssel",
+                text: $vm.apiKey,
+                kind: .apiKey,
+                isValidBinding: $vm.isKeyFieldValid
+            )
+
+            Divider()
+                .padding(.vertical, 4)
+
+            Text("Suchradius")
+                .font(.headline)
+            Text("Wie weit die Umkreissuche nach Tankstellen reicht.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            VStack(spacing: 6) {
+                Slider(value: $vm.searchRadiusKm, in: 1...25, step: 0.5) {
+                    Text("Suchradius")
+                } minimumValueLabel: {
+                    Text("1 km")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } maximumValueLabel: {
+                    Text("25 km")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .labelsHidden()
+
+                Text(DisplayFormatter.radiusKmString(vm.searchRadiusKm))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
+        }
+    }
+}
+
 /// Abschnitte im Einstellungsfenster: links als Liste, rechts der
 /// zugehörige Inhalt. Weitere Abschnitte ergänzen hier einfach einen Fall.
 enum SettingsSection: String, CaseIterable, Identifiable {
     case documents
+    case fuelPrices
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .documents: return "Dokumente"
+        case .fuelPrices: return "Spritpreise"
         }
     }
 
-    /// Dasselbe Symbol wie beim „Dokumente"-Eintrag in `SidebarView`.
+    /// Dasselbe Symbol wie beim jeweiligen Eintrag in `SidebarView`.
     var systemImage: String {
         switch self {
         case .documents: return "folder.fill"
+        case .fuelPrices: return "fuelpump.circle"
         }
     }
 }
@@ -205,4 +289,6 @@ enum SettingsSection: String, CaseIterable, Identifiable {
 #Preview {
     SettingsView()
         .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+        .environment(FuelPricesViewModel())
+        .environment(AppCommands())
 }

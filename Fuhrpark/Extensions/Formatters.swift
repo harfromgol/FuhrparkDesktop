@@ -89,4 +89,19 @@ enum DisplayFormatter {
     static func countdownString(_ seconds: Int) -> String {
         String(format: "%d:%02d", seconds / 60, seconds % 60)
     }
+
+    /// Distanz mit einer Nachkommastelle, z. B. „5,5 km" – für den
+    /// einstellbaren Suchradius der Spritpreise-Umkreissuche.
+    static let radiusKm: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = Locale(identifier: "de_DE")
+        formatter.minimumFractionDigits = 1
+        formatter.maximumFractionDigits = 1
+        return formatter
+    }()
+
+    static func radiusKmString(_ value: Double) -> String {
+        (radiusKm.string(from: NSNumber(value: value)) ?? "\(value)") + " km"
+    }
 }

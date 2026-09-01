@@ -65,6 +65,14 @@ final class FuelPricesViewModel {
         didSet { FuelTypeFilterStore.set(enabledFuelKinds) }
     }
 
+    /// Suchradius (km) der Umkreissuche, einstellbar in den Einstellungen
+    /// (Sektion „Spritpreise“) zwischen 1 und 25 km in 0,5-km-Schritten.
+    /// Vorbelegt aus den UserDefaults, jede Änderung wird sofort
+    /// zurückgespeichert – analog zu `enabledFuelKinds`.
+    var searchRadiusKm: Double = FuelSearchRadiusStore.get() {
+        didSet { FuelSearchRadiusStore.set(searchRadiusKm) }
+    }
+
     private var running = false
     private var lastFetchAt: Date?
 
@@ -113,12 +121,16 @@ final class FuelPricesViewModel {
         start()
     }
 
-    /// Speichert einen neu eingegebenen/geänderten Schlüssel und startet den
-    /// Ablauf. Wird über den „Speichern & Laden"-Button ausgelöst.
-    func saveKeyAndStart() {
-        guard isKeyFieldValid else { return }
+    /// Speichert den aktuellen Schlüssel dauerhaft, wenn er gültig ist –
+    /// unabhängig von `isKeyFieldValid`, das nur bei tatsächlicher Eingabe im
+    /// Textfeld gesetzt wird (siehe `ValidatedField`) und deshalb bei einem
+    /// bereits gültig vorbelegten, aber unberührten Feld noch `false` wäre.
+    /// Wird vom „Fertig"-Button des Einstellungsfensters aufgerufen; das
+    /// eigentliche (Neu-)Laden übernimmt dort direkt danach `onAppear()`,
+    /// aber nur wenn im Hauptfenster gerade „Spritpreise" aktiv ist.
+    func saveKeyIfValid() {
+        guard UUID(uuidString: apiKey) != nil else { return }
         TankerkoenigKeyStore.set(apiKey)
-        start()
     }
 
     /// Manuelles Aktualisieren, respektiert die Abklingzeit (siehe `start()`).
@@ -160,7 +172,7 @@ final class FuelPricesViewModel {
             stations = try await TankerkoenigService.stations(
                 lat: coordinate.latitude,
                 lng: coordinate.longitude,
-                radiusKm: 5,
+                radiusKm: searchRadiusKm,
                 apiKey: apiKey
             )
             lastFetchAt = Date()

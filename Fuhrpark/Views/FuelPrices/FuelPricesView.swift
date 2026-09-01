@@ -3,19 +3,17 @@ import MapKit
 import CoreLocation
 import AppKit
 
-/// Spritpreise in der Umgebung: API-Key-Eingabe → Standort → Tankerkönig-
-/// Umkreissuche → Karte mit Preis-Markierungen.
+/// Spritpreise in der Umgebung: Standort → Tankerkönig-Umkreissuche → Karte
+/// mit Preis-Markierungen. Der API-Schlüssel wird in den Einstellungen
+/// eingegeben (Sektion „Spritpreise“, siehe `SettingsView`), nicht mehr hier.
 struct FuelPricesView: View {
     @Environment(FuelPricesViewModel.self) private var vm
+    @Environment(AppCommands.self) private var appCommands
     @Environment(\.openWindow) private var openWindow
     @State private var camera: MapCameraPosition = .automatic
 
     var body: some View {
-        @Bindable var vm = vm
-
-        VStack(alignment: .leading, spacing: 16) {
-            keyCard(vm: vm)
-
+        Group {
             switch vm.phase {
             case .needsKey:
                 needsKeyHint
@@ -49,38 +47,24 @@ struct FuelPricesView: View {
         }
     }
 
-    private func keyCard(vm: FuelPricesViewModel) -> some View {
-        @Bindable var vm = vm
-        return GlassCard(title: "Tankerkönig-API-Schlüssel") {
-            HStack(alignment: .top, spacing: 12) {
-                ValidatedField(
-                    title: "API-Schlüssel",
-                    text: $vm.apiKey,
-                    kind: .apiKey,
-                    isValidBinding: $vm.isKeyFieldValid
-                )
-                TimelineView(.periodic(from: .now, by: 1)) { context in
-                    let cooldownActive = vm.secondsRemaining(asOf: context.date) != nil
-                    Button("Speichern & Laden") {
-                        vm.saveKeyAndStart()
-                    }
-                    .buttonStyle(.glassProminent)
-                    .disabled(!vm.isKeyFieldValid || cooldownActive)
-                    .pointerStyle(vm.isKeyFieldValid && !cooldownActive ? .link : nil)
-                    .padding(.top, 20)
-                }
-            }
-        }
-    }
-
+    /// Der API-Schlüssel wird jetzt zentral in den Einstellungen (Sektion
+    /// „Spritpreise“, siehe `SettingsView`) eingegeben statt hier direkt –
+    /// der Button öffnet sie mit bereits ausgewähltem Abschnitt.
     private var needsKeyHint: some View {
         ContentUnavailableView {
             Label("Kein API-Schlüssel", systemImage: "key")
         } description: {
             VStack(spacing: 4) {
-                Text("Hinterlege oben deinen Tankerkönig-API-Schlüssel, um Spritpreise in deiner Umgebung zu sehen.")
+                Text("Hinterlege in den Einstellungen deinen Tankerkönig-API-Schlüssel, um Spritpreise in deiner Umgebung zu sehen.")
                 Link("Kostenlos registrieren unter tankerkoenig.de", destination: URL(string: "https://creativecommons.tankerkoenig.de")!)
             }
+        } actions: {
+            Button("Einstellungen öffnen") {
+                appCommands.settingsInitialSection = .fuelPrices
+                appCommands.showSettings = true
+            }
+            .buttonStyle(.glass)
+            .pointerStyle(.link)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
