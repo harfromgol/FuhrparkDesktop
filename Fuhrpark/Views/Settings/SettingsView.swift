@@ -18,8 +18,9 @@ struct SettingsView: View {
     /// `initialSection` legt fest, welcher Abschnitt beim Öffnen bereits
     /// ausgewählt ist – z. B. „Dokumente“, wenn das Zahnrad-Symbol in
     /// `DocumentsView` dieses Fenster direkt öffnet (siehe
-    /// `AppCommands.settingsInitialSection`).
-    init(initialSection: SettingsSection = .documents) {
+    /// `AppCommands.settingsInitialSection`). Ohne konkreten Anlass (App-Menü)
+    /// startet das Fenster beim ersten Abschnitt „Erscheinungsbild“.
+    init(initialSection: SettingsSection = .appearance) {
         _selection = State(initialValue: initialSection)
     }
 
@@ -67,6 +68,8 @@ struct SettingsView: View {
     @ViewBuilder
     private func content(for section: SettingsSection) -> some View {
         switch section {
+        case .appearance:
+            AppearanceSettingsSection()
         case .documents:
             DocumentsSettingsSection()
         case .fuelPrices:
@@ -88,6 +91,35 @@ struct SettingsView: View {
             fuelPricesViewModel.onAppear()
         }
         dismiss()
+    }
+}
+
+/// Inhalt der Sektion „Erscheinungsbild“: Hell/Dunkel/System, angewendet
+/// über das geteilte `AppearanceSettings` (siehe dessen Doc-Kommentar zu
+/// `NSApp.appearance` – wirkt dadurch sofort auf alle Fenster, nicht nur
+/// auf das Einstellungsfenster selbst).
+private struct AppearanceSettingsSection: View {
+    @Environment(AppearanceSettings.self) private var settings
+
+    var body: some View {
+        @Bindable var settings = settings
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Erscheinungsbild")
+                .font(.headline)
+            Text("Legt fest, ob FuhrparkDesktop hell, dunkel oder wie das System erscheint.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Picker("Erscheinungsbild", selection: $settings.mode) {
+                ForEach(AppearanceMode.allCases) { mode in
+                    Text(mode.title).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(maxWidth: 320)
+        }
     }
 }
 
@@ -265,6 +297,7 @@ private struct FuelPricesSettingsSection: View {
 /// Abschnitte im Einstellungsfenster: links als Liste, rechts der
 /// zugehörige Inhalt. Weitere Abschnitte ergänzen hier einfach einen Fall.
 enum SettingsSection: String, CaseIterable, Identifiable {
+    case appearance
     case documents
     case fuelPrices
 
@@ -272,14 +305,18 @@ enum SettingsSection: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
+        case .appearance: return "Erscheinungsbild"
         case .documents: return "Dokumente"
         case .fuelPrices: return "Spritpreise"
         }
     }
 
-    /// Dasselbe Symbol wie beim jeweiligen Eintrag in `SidebarView`.
+    /// Dasselbe Symbol wie beim jeweiligen Eintrag in `SidebarView` – nur
+    /// „Erscheinungsbild“ hat dort keine Entsprechung, da es keinen eigenen
+    /// Sidebar-Eintrag im Hauptfenster gibt.
     var systemImage: String {
         switch self {
+        case .appearance: return "circle.lefthalf.filled"
         case .documents: return "folder.fill"
         case .fuelPrices: return "fuelpump.circle"
         }
@@ -291,4 +328,5 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
         .environment(FuelPricesViewModel())
         .environment(AppCommands())
+        .environment(AppearanceSettings())
 }

@@ -21,7 +21,7 @@ final class AppCommands {
     /// `DocumentsView` das Fenster direkt dort öffnet. Bleibt zwischen zwei
     /// Aufrufen stehen, das Fenster merkt sich so den zuletzt gezeigten
     /// Abschnitt, wenn es allgemein über das App-Menü geöffnet wird.
-    var settingsInitialSection: SettingsSection = .documents
+    var settingsInitialSection: SettingsSection = .appearance
 
     /// Öffnet den Datei-Dialog zum Exportieren aller Daten als JSON.
     var showExportDialog = false
