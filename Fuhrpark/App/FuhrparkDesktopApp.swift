@@ -14,6 +14,9 @@ struct FuhrparkDesktopApp: App {
     @State private var fuelPricesViewModel = FuelPricesViewModel()
     @State private var pinnedFuelPricesViewModel = PinnedFuelPricesViewModel()
     @State private var updateChecker = UpdateChecker()
+    /// Wendet das gespeicherte Erscheinungsbild an, sobald der App-Start
+    /// abgeschlossen ist (siehe dessen `init()` zum Grund für die Verzögerung).
+    @State private var appearanceSettings = AppearanceSettings()
 
     var body: some Scene {
         // Einzelfenster-Szene: kann per Menü geschlossen und wieder geöffnet
@@ -26,6 +29,7 @@ struct FuhrparkDesktopApp: App {
                 .environment(fuelPricesViewModel)
                 .environment(pinnedFuelPricesViewModel)
                 .environment(updateChecker)
+                .environment(appearanceSettings)
                 .frame(minWidth: 800, idealWidth: 1000, minHeight: 500, idealHeight: 650)
                 .onAppear { appCommands.isMainWindowOpen = true }
                 .onDisappear { appCommands.isMainWindowOpen = false }
