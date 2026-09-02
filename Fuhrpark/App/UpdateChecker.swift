@@ -32,12 +32,13 @@ final class UpdateChecker {
     let currentVersion = UpdateCheckService.currentVersion
 
     /// Spiegelt die Einstellung aus `UpdateCheckStore` als beobachtbare
-    /// Eigenschaft, damit der Haken im Menü und der Schalter im Hinweis
+    /// Eigenschaft, damit die Checkbox in den Einstellungen (Abschnitt
+    /// „Updates”, siehe `SettingsView.swift`) und der Schalter im Hinweis
     /// dieselbe Quelle haben und sofort umspringen. Schreibt jede Änderung
     /// durch. `false` als Ausgangswert gilt nur, bevor der
-    /// Einrichtungsassistent (`SetupWizardView`) oder das Menü sie zum
-    /// ersten Mal setzen; `checkAutomatically` behandelt `nil` und `false`
-    /// inzwischen gleich.
+    /// Einrichtungsassistent (`SetupWizardView`) oder die Einstellungen sie
+    /// zum ersten Mal setzen; `checkAutomatically` behandelt `nil` und
+    /// `false` inzwischen gleich.
     var automaticChecksEnabled: Bool = UpdateCheckStore.automaticCheckPreference() ?? false {
         didSet { UpdateCheckStore.setAutomaticCheckPreference(automaticChecksEnabled) }
     }

@@ -156,10 +156,11 @@ struct AppMenuCommands: Commands {
         // dazwischen verschmelzen (live geprüft); die vom Nutzer gewünschten
         // Trennlinien um „Einstellungen …” müssen deshalb explizit als
         // `Divider()` in derselben Gruppe stehen, wie schon im Tools-Menü
-        // unten. Der Haken beim Update-Toggle ist der einzige Weg zurück,
-        // wenn der Einrichtungsassistent (`SetupWizardView`, siehe
-        // `ContentView.swift`) oder eine spätere Abwahl das automatische
-        // Prüfen ausgeschaltet hat.
+        // unten. Der frühere Toggle „Automatisch nach Updates suchen” liegt
+        // jetzt in den Einstellungen (Abschnitt „Updates”, siehe
+        // `SettingsView.swift`) – dort auch der Weg zurück, falls der
+        // Einrichtungsassistent (`SetupWizardView`, siehe `ContentView.swift`)
+        // oder eine spätere Abwahl das automatische Prüfen ausgeschaltet hat.
         CommandGroup(after: .appInfo) {
             Divider()
 
@@ -174,8 +175,6 @@ struct AppMenuCommands: Commands {
                 Task { await updateChecker.checkManually() }
             }
             .disabled(updateChecker.isChecking)
-
-            Toggle("Automatisch nach Updates suchen", isOn: $updateChecker.automaticChecksEnabled)
         }
 
         // Ablage-Menü: Hauptfenster öffnen bzw. jeweils fokussiertes Fenster schließen.
