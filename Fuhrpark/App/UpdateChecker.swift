@@ -28,21 +28,16 @@ final class UpdateChecker {
     /// „Du hast bereits die neueste Version" nach manueller Prüfung.
     var showsUpToDateConfirmation = false
 
-    /// Einmalige Rückfrage beim ersten Start, ob automatisch geprüft werden
-    /// darf. Die App verspricht, keine Daten aus der Hand zu geben – also
-    /// wird auch der Update-Abruf erst nach ausdrücklicher Zustimmung
-    /// eingeschaltet, statt ihn stillschweigend vorzugeben.
-    var showsPermissionQuestion = false
-
     /// Version dieser Installation, für die Gegenüberstellung im Hinweis.
     let currentVersion = UpdateCheckService.currentVersion
 
     /// Spiegelt die Einstellung aus `UpdateCheckStore` als beobachtbare
     /// Eigenschaft, damit der Haken im Menü und der Schalter im Hinweis
     /// dieselbe Quelle haben und sofort umspringen. Schreibt jede Änderung
-    /// durch. `false` als Ausgangswert ist nur der Zustand vor der einmaligen
-    /// Rückfrage – die Dreiwertigkeit („noch nie gefragt") wertet
-    /// `checkAutomatically` direkt am Store aus.
+    /// durch. `false` als Ausgangswert gilt nur, bevor der
+    /// Einrichtungsassistent (`SetupWizardView`) oder das Menü sie zum
+    /// ersten Mal setzen; `checkAutomatically` behandelt `nil` und `false`
+    /// inzwischen gleich.
     var automaticChecksEnabled: Bool = UpdateCheckStore.automaticCheckPreference() ?? false {
         didSet { UpdateCheckStore.setAutomaticCheckPreference(automaticChecksEnabled) }
     }
@@ -50,17 +45,12 @@ final class UpdateChecker {
     /// Stiller Lauf beim App-Start.
     ///
     /// Läuft bewusst auch im Testbau: Der Debug-Container bringt eigene
-    /// UserDefaults mit, ein einmaliges „Nein" auf die Rückfrage stellt ihn
-    /// dort dauerhaft ruhig. Ein Riegel über `AppVariant.isTestContainer`
-    /// wäre bequemer, machte die Funktion aber in genau dem Build unsichtbar,
-    /// in dem sie geprüft wird.
+    /// UserDefaults mit, ein einmaliges „Nein" im Einrichtungsassistenten
+    /// stellt ihn dort dauerhaft ruhig. Ein Riegel über
+    /// `AppVariant.isTestContainer` wäre bequemer, machte die Funktion aber
+    /// in genau dem Build unsichtbar, in dem sie geprüft wird.
     func checkAutomatically() async {
-        guard let isEnabled = UpdateCheckStore.automaticCheckPreference() else {
-            // Noch nie gefragt: erst um Erlaubnis bitten, diesmal nichts abrufen.
-            showsPermissionQuestion = true
-            return
-        }
-        guard isEnabled else { return }
+        guard UpdateCheckStore.automaticCheckPreference() == true else { return }
 
         if let last = UpdateCheckStore.lastCheckDate(), Calendar.current.isDateInToday(last) {
             return
@@ -97,14 +87,6 @@ final class UpdateChecker {
         } catch {
             manualCheckError = error.localizedDescription
         }
-    }
-
-    /// Beantwortet die einmalige Rückfrage und prüft bei Zustimmung gleich.
-    func answerPermissionQuestion(allowed: Bool) async {
-        automaticChecksEnabled = allowed
-        showsPermissionQuestion = false
-        guard allowed else { return }
-        await checkAutomatically()
     }
 
     /// Merkt sich die angebotene Version als übersprungen und schließt den Hinweis.
