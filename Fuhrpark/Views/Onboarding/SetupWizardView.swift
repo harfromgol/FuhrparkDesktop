@@ -145,17 +145,20 @@ private struct SetupWizardView: View {
     }
 }
 
-/// Schritt 1: wortgleich zur früheren einmaligen Rückfrage aus
+/// Schritt 1: inhaltlich die frühere einmalige Rückfrage aus
 /// `UpdateNoticeModifier` (deren `.confirmationDialog` entfällt) – nur jetzt
-/// als Assistent-Schritt statt als Dialog. Schreibt direkt auf
-/// `updateChecker.automaticChecksEnabled` – als `@Observable`-Klasse braucht
-/// eine einmalige Zuweisung kein `@Bindable`, das ist nur für `$`-Bindings
-/// nötig. Schaltet bewusst NICHT selbst weiter – das übernimmt einheitlich
-/// der „Weiter"-Pfeil in `SetupWizardView`.
+/// als Assistent-Schritt statt als Dialog, mit derselben Checkbox wie im
+/// Menü „FuhrparkDesktop" (`Toggle("Automatisch nach Updates suchen", ...)`
+/// in `FuhrparkDesktopApp.swift`) statt zweier Ja/Nein-Buttons. `@Bindable`
+/// nötig, weil `$updateChecker.automaticChecksEnabled` hier ein echtes
+/// `$`-Binding für den Toggle braucht (eine einmalige Zuweisung käme ohne
+/// aus). Rührt sich der Toggle nicht, bleibt die Einstellung unverändert –
+/// beim Erststart also `nil` im Store, der Schritt bleibt so überspringbar.
 private struct UpdateCheckStepView: View {
     @Environment(UpdateChecker.self) private var updateChecker
 
     var body: some View {
+        @Bindable var updateChecker = updateChecker
         VStack(alignment: .leading, spacing: 16) {
             Text("Nach neuen Versionen suchen?")
                 .font(.title2.bold())
@@ -173,17 +176,8 @@ private struct UpdateCheckStepView: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack {
-                Button("Ja, beim Start nachsehen") {
-                    updateChecker.automaticChecksEnabled = true
-                }
-                .pointerStyle(.link)
-
-                Button("Nein") {
-                    updateChecker.automaticChecksEnabled = false
-                }
-                .pointerStyle(.link)
-            }
+            Toggle("Automatisch nach Updates suchen", isOn: $updateChecker.automaticChecksEnabled)
+                .toggleStyle(.checkbox)
         }
     }
 }
