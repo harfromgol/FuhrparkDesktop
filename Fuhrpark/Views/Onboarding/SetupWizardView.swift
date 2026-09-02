@@ -47,20 +47,34 @@ private enum WizardStep: Int, CaseIterable {
     case workingDirectory
 }
 
-/// Jeder Schritt ist einzeln überspringbar, der ganze Assistent jederzeit
-/// abbrechbar – beides merkt ihn in `SetupWizardStore` als abgeschlossen,
-/// damit er beim nächsten Start nicht erneut erscheint.
+/// Navigation (Zurück/Weiter) ist unabhängig von den Schritt-Inhalten: Ein
+/// Klick auf „Ja"/„Nein" in Schritt 1 setzt nur noch die Einstellung, ohne
+/// selbst weiterzuschalten – das erledigen ausschließlich die Pfeile hier.
+/// Jeder Schritt bleibt so einzeln überspringbar (weiterblättern ohne zu
+/// antworten), der ganze Assistent jederzeit abbrechbar/abschließbar über
+/// den Button unten – beides merkt ihn in `SetupWizardStore` als
+/// abgeschlossen, damit er beim nächsten Start nicht erneut erscheint.
 private struct SetupWizardView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var step: WizardStep = .updateCheck
 
+    private var isLastStep: Bool { step.rawValue == WizardStep.allCases.count - 1 }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Schritt \(step.rawValue + 1) von \(WizardStep.allCases.count)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding(.top, 20)
-                .padding(.horizontal, 20)
+            ZStack {
+                Text("Schritt \(step.rawValue + 1) von \(WizardStep.allCases.count)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                HStack {
+                    backButton
+                    Spacer()
+                    forwardButton
+                }
+            }
+            .padding(.top, 20)
+            .padding(.horizontal, 20)
 
             ScrollView {
                 stepContent
@@ -71,20 +85,10 @@ private struct SetupWizardView: View {
             Divider()
 
             HStack {
-                Button("Abbrechen") { abbrechen() }
-                    .keyboardShortcut(.cancelAction)
-                    .pointerStyle(.link)
-
                 Spacer()
-
-                if step == .workingDirectory {
-                    Button("Fertig") { weiterOderFertig() }
-                        .keyboardShortcut(.defaultAction)
-                        .pointerStyle(.link)
-                } else {
-                    Button("Überspringen") { weiterOderFertig() }
-                        .pointerStyle(.link)
-                }
+                Button(isLastStep ? "Fertig" : "Abbrechen") { close() }
+                    .keyboardShortcut(isLastStep ? .defaultAction : .cancelAction)
+                    .pointerStyle(.link)
             }
             .padding(16)
         }
@@ -95,27 +99,49 @@ private struct SetupWizardView: View {
     private var stepContent: some View {
         switch step {
         case .updateCheck:
-            UpdateCheckStepView(onAnswered: { step = .workingDirectory })
+            UpdateCheckStepView()
         case .workingDirectory:
             WorkingDirectoryStepView()
         }
     }
 
-    private func abbrechen() {
-        SetupWizardStore.markCompleted()
-        dismiss()
+    /// Nur sichtbar, wenn es einen vorherigen Schritt gibt.
+    @ViewBuilder
+    private var backButton: some View {
+        if let previous = WizardStep(rawValue: step.rawValue - 1) {
+            Button {
+                step = previous
+            } label: {
+                Image(systemName: "chevron.left")
+            }
+            .buttonStyle(.borderless)
+            .pointerStyle(.link)
+            .help("Zurück")
+        }
     }
 
-    /// Auf Schritt 1: „Überspringen" – geht ohne gespeicherte Antwort weiter.
-    /// Auf Schritt 2 (letzter Schritt): „Fertig" – schließt den Assistenten.
-    private func weiterOderFertig() {
-        switch step {
-        case .updateCheck:
-            step = .workingDirectory
-        case .workingDirectory:
-            SetupWizardStore.markCompleted()
-            dismiss()
+    /// Nur sichtbar, wenn es einen weiteren Schritt gibt – auf dem letzten
+    /// Schritt übernimmt der „Fertig"-Button unten den Abschluss.
+    @ViewBuilder
+    private var forwardButton: some View {
+        if let next = WizardStep(rawValue: step.rawValue + 1) {
+            Button {
+                step = next
+            } label: {
+                Image(systemName: "chevron.right")
+            }
+            .buttonStyle(.borderless)
+            .pointerStyle(.link)
+            .help("Weiter")
         }
+    }
+
+    /// Sowohl „Abbrechen" (noch nicht am letzten Schritt) als auch „Fertig"
+    /// (letzter Schritt) beenden den Assistenten gleich: Bereits getroffene
+    /// Antworten bleiben stehen, es gibt nichts zurückzurollen.
+    private func close() {
+        SetupWizardStore.markCompleted()
+        dismiss()
     }
 }
 
@@ -124,10 +150,10 @@ private struct SetupWizardView: View {
 /// als Assistent-Schritt statt als Dialog. Schreibt direkt auf
 /// `updateChecker.automaticChecksEnabled` – als `@Observable`-Klasse braucht
 /// eine einmalige Zuweisung kein `@Bindable`, das ist nur für `$`-Bindings
-/// nötig.
+/// nötig. Schaltet bewusst NICHT selbst weiter – das übernimmt einheitlich
+/// der „Weiter"-Pfeil in `SetupWizardView`.
 private struct UpdateCheckStepView: View {
     @Environment(UpdateChecker.self) private var updateChecker
-    let onAnswered: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -150,14 +176,11 @@ private struct UpdateCheckStepView: View {
             HStack {
                 Button("Ja, beim Start nachsehen") {
                     updateChecker.automaticChecksEnabled = true
-                    onAnswered()
                 }
-                .keyboardShortcut(.defaultAction)
                 .pointerStyle(.link)
 
                 Button("Nein") {
                     updateChecker.automaticChecksEnabled = false
-                    onAnswered()
                 }
                 .pointerStyle(.link)
             }
