@@ -74,6 +74,8 @@ struct SettingsView: View {
             DocumentsSettingsSection()
         case .fuelPrices:
             FuelPricesSettingsSection()
+        case .updates:
+            UpdatesSettingsSection()
         }
     }
 
@@ -294,12 +296,45 @@ private struct FuelPricesSettingsSection: View {
     }
 }
 
+/// Inhalt der Sektion „Updates“: vormals der Toggle „Automatisch nach
+/// Updates suchen“ im App-Menü (siehe `AppMenuCommands` in
+/// `FuhrparkDesktopApp.swift`), jetzt hierher verschoben. Derselbe Text wie
+/// in Schritt 1 des Einrichtungsassistenten (`SetupWizardView`), da beide
+/// dieselbe Frage stellen. Der Menüpunkt „Nach Updates suchen …“ (manuelle
+/// Prüfung) bleibt bewusst im Menü – das ist eine Aktion, keine
+/// Einstellung.
+private struct UpdatesSettingsSection: View {
+    @Environment(UpdateChecker.self) private var updateChecker
+
+    var body: some View {
+        @Bindable var updateChecker = updateChecker
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Updates")
+                .font(.headline)
+            Text("""
+                FuhrparkDesktop kann beim Start höchstens einmal täglich nachsehen, \
+                ob eine neue Version vorliegt. Dabei wird nur eine kleine Datei von \
+                fuhrpark-macos.gerd-klaus.de geladen – es werden keine Angaben über \
+                dich oder deinen Fuhrpark übertragen, auch nicht die verwendete \
+                Version.
+                """)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Toggle("Automatisch nach Updates suchen", isOn: $updateChecker.automaticChecksEnabled)
+                .toggleStyle(.checkbox)
+        }
+    }
+}
+
 /// Abschnitte im Einstellungsfenster: links als Liste, rechts der
 /// zugehörige Inhalt. Weitere Abschnitte ergänzen hier einfach einen Fall.
 enum SettingsSection: String, CaseIterable, Identifiable {
     case appearance
     case documents
     case fuelPrices
+    case updates
 
     var id: String { rawValue }
 
@@ -308,17 +343,19 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .appearance: return "Erscheinungsbild"
         case .documents: return "Dokumente"
         case .fuelPrices: return "Spritpreise"
+        case .updates: return "Updates"
         }
     }
 
     /// Dasselbe Symbol wie beim jeweiligen Eintrag in `SidebarView` – nur
-    /// „Erscheinungsbild“ hat dort keine Entsprechung, da es keinen eigenen
-    /// Sidebar-Eintrag im Hauptfenster gibt.
+    /// „Erscheinungsbild“ und „Updates“ haben dort keine Entsprechung, da
+    /// sie keinen eigenen Sidebar-Eintrag im Hauptfenster haben.
     var systemImage: String {
         switch self {
         case .appearance: return "circle.lefthalf.filled"
         case .documents: return "folder.fill"
         case .fuelPrices: return "fuelpump.circle"
+        case .updates: return "arrow.down.circle"
         }
     }
 }
@@ -329,4 +366,5 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         .environment(FuelPricesViewModel())
         .environment(AppCommands())
         .environment(AppearanceSettings())
+        .environment(UpdateChecker())
 }
