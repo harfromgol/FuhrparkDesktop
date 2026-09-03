@@ -19,6 +19,7 @@ struct NotesView: View {
     @State private var isPresentingNewNote = false
     @State private var noteToEdit: Notiz?
     @State private var pendingDeletion: Notiz?
+    @State private var errorMessage: String?
 
     @State private var selectedVehicleFilter: Vehicle?
     @State private var statusFilter: FahrzeugStatusFilter = .alle
@@ -126,6 +127,18 @@ struct NotesView: View {
                 self.selectedVehicleFilter = nil
             }
         }
+        .alert(
+            "Fehler",
+            isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            ),
+            presenting: errorMessage
+        ) { _ in
+            Button("OK", role: .cancel) { }
+        } message: { message in
+            Text(message)
+        }
     }
 
     private var addButtonRow: some View {
@@ -154,13 +167,21 @@ struct NotesView: View {
             Spacer()
 
             Button {
-                isPresentingNewNote = true
+                addNoteTapped()
             } label: {
                 Label("Neue Notiz", systemImage: "note.text.badge.plus")
             }
             .buttonStyle(.glassProminent)
             .pointerStyle(.link)
         }
+    }
+
+    private func addNoteTapped() {
+        if let message = NewItemPrerequisite.missingMessage(hasVehicles: !vehicles.isEmpty) {
+            errorMessage = message
+            return
+        }
+        isPresentingNewNote = true
     }
 
     private var noteListSection: some View {

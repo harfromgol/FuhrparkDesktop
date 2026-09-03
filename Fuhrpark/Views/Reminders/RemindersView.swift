@@ -18,6 +18,7 @@ struct RemindersView: View {
     @State private var isPresentingNewReminder = false
     @State private var reminderToEdit: Erinnerung?
     @State private var pendingDeletion: Erinnerung?
+    @State private var errorMessage: String?
 
     @State private var selectedVehicleFilter: Set<Vehicle> = []
     @State private var statusFilter: StatusFilter = .open
@@ -101,19 +102,39 @@ struct RemindersView: View {
         } message: { reminder in
             Text("„\(reminder.title ?? "")“ wird unwiderruflich gelöscht.")
         }
+        .alert(
+            "Fehler",
+            isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            ),
+            presenting: errorMessage
+        ) { _ in
+            Button("OK", role: .cancel) { }
+        } message: { message in
+            Text(message)
+        }
     }
 
     private var addButtonRow: some View {
         HStack {
             Spacer()
             Button {
-                isPresentingNewReminder = true
+                addReminderTapped()
             } label: {
                 Label("Neue Erinnerung", systemImage: "bell.badge.plus")
             }
             .buttonStyle(.glassProminent)
             .pointerStyle(.link)
         }
+    }
+
+    private func addReminderTapped() {
+        if let message = NewItemPrerequisite.missingMessage(hasVehicles: !vehicles.isEmpty) {
+            errorMessage = message
+            return
+        }
+        isPresentingNewReminder = true
     }
 
     private var vehicleFilterSection: some View {

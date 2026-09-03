@@ -336,8 +336,8 @@ struct DocumentsView: View {
     }
 
     private func addDocumentTapped() {
-        guard isWorkingDirectoryConfigured else {
-            hinweis = .fehler("Bevor du Dokumente hinzufügen kannst, lege über das Zahnrad-Symbol ein Arbeitsverzeichnis fest.")
+        if let message = NewItemPrerequisite.missingMessage(hasVehicles: !vehicles.isEmpty) {
+            hinweis = .fehler(message)
             return
         }
         presentDocumentFilePicker()
