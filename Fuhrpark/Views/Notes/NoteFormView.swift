@@ -147,20 +147,15 @@ struct NoteFormView: View {
                 }
             }
 
+            // Kein Arbeitsverzeichnis-Check mehr nötig: `NotesView.addNoteTapped()`
+            // lässt dieses Formular über `NewItemPrerequisite` erst gar nicht
+            // öffnen, solange keins konfiguriert ist.
             Button("Dokument auswählen", systemImage: "doc.badge.plus") {
-                addDocumentTapped()
+                presentDocumentFilePicker()
             }
             .buttonStyle(.glass)
             .pointerStyle(.link)
         }
-    }
-
-    private func addDocumentTapped() {
-        guard WorkingDirectoryStore.isConfigured else {
-            errorMessage = "Bevor du Dokumente hinzufügen kannst, lege im Bereich „Dokumente“ über das Zahnrad-Symbol ein Arbeitsverzeichnis fest."
-            return
-        }
-        presentDocumentFilePicker()
     }
 
     /// Direktes `NSOpenPanel` statt `.fileImporter`, aus demselben Grund wie
