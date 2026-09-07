@@ -1,7 +1,64 @@
 # Versionshistorie
 
 Alle nennenswerten Änderungen an FuhrparkDesktop, gruppiert nach Release.
-Die Versionen sind als Git-Tags (`v1.1` … `v1.9`) markiert.
+Die Versionen sind als Git-Tags (`v1.1` … `v1.10`) markiert.
+
+## [v1.10](https://github.com/harfromgol/FuhrparkDesktop/releases/tag/v1.10) – 2026-09-07
+
+### Neu
+- **Notizen**: neues fahrzeugbezogenes Feature analog zu Dokumenten –
+  Datum, Kennzeichen, mehrzeiliger Text (bis 250 Zeichen) und optional
+  angehängte Dokumente. Eigener Menüpunkt zwischen Dokumente und
+  Erinnerungen, ein-/ausblendbar wie die übrigen Allgemein-Einträge.
+  Dokumente können jetzt gleichzeitig einer Ausgabe **und** einer Notiz
+  zugeordnet sein; „Neues Dokument“/„Zuordnung bearbeiten“ bieten beides
+  gleichberechtigt an, umschaltbar per Segmented Picker statt beide
+  Listen untereinander anzuzeigen. Backup/Restore und JSON-Export/Import
+  führen Notizen samt Anhängen mit.
+- **Einstellungsfenster**: neuer Menüpunkt „Einstellungen …“ (⌘,) öffnet
+  ein zweispaltiges Fenster (Sektionen links, Inhalt rechts, analog zu
+  den Systemeinstellungen), fest am Hauptfenster verankert und nie größer
+  als dieses. Ersetzt mehrere bisher verstreute Stellen:
+  - **Erscheinungsbild**: Hell/Dunkel/System umschaltbar, unabhängig vom
+    Systemmodus – wirkt sofort auf alle Fenster, Sheets und das
+    Menüleisten-Popover.
+  - **Dokumente**: Arbeitsverzeichnis anzeigen, ändern und im Finder
+    anzeigen (vormals Zahnrad-Popover).
+  - **Spritpreise**: Tankerkönig-API-Schlüssel (vormals im Hauptfenster)
+    sowie ein neuer, einstellbarer Suchradius (1–25 km) für die
+    Umkreissuche – vormals fest auf 5 km codiert.
+  - **Updates**: automatische Update-Prüfung ein-/ausschaltbar (vormals
+    Menü-Toggle).
+- **Einrichtungsassistent**: startet automatisch beim allerersten
+  Programmstart und fragt in zwei Schritten (Update-Prüfung erlauben,
+  Arbeitsverzeichnis wählen) ab – jeder Schritt einzeln überspringbar,
+  der Assistent jederzeit abbrechbar. Ersetzt die bisherige einmalige
+  Rückfrage zur Update-Prüfung; Bestandsinstallationen sehen ihn nicht
+  erneut.
+- **Eigener Fahrzeug-Picker**: „Neue Notiz“/„Neue Erinnerung“/„Neues
+  Dokument“ zeigen die Fahrzeugauswahl jetzt gruppiert nach
+  Aktiv/Stillgelegt, je Fahrzeug zweizeilig mit Kennzeichen,
+  Hersteller/Modell und Kilometerstand – ein nativer Picker konnte das
+  nicht gleichzeitig.
+
+### Geändert
+- **„Alle Daten löschen“ → „App zurücksetzen“**: setzt jetzt den
+  kompletten Einstellungs-Container zurück (API-Schlüssel, angepinnte
+  Spritpreise, Arbeitsverzeichnis, Filter, Sortierungen, Fenstergrößen –
+  nicht mehr nur eine Handvoll einzeln aufgezählter Werte) und beendet
+  die App danach, statt sie neu zu starten, damit auch bereits geladener
+  Zustand sauber verschwindet.
+- „Neues Dokument“/„Neue Notiz“/„Neue Erinnerung“ prüfen jetzt vorab, ob
+  ein Arbeitsverzeichnis festgelegt und mindestens ein Fahrzeug angelegt
+  ist, und benennen bei Bedarf genau, was fehlt, statt erst mitten im
+  Formular zu scheitern.
+- Notizen/Erinnerungen: Bearbeiten läuft jetzt nur noch über das
+  Rechtsklick-Kontextmenü statt per Linksklick auf die Zeile, analog zu
+  Dokumenten.
+- Notizen: Klick auf die Anhang-Büroklammer öffnet ein einzelnes
+  Dokument direkt, bei mehreren zeigt ein Popover die Auswahl.
+- Der „Keine Daten“-Hinweis in der Statistik ist jetzt vertikal
+  zentriert statt am oberen Rand.
 
 ## [v1.9](https://github.com/harfromgol/FuhrparkDesktop/releases/tag/v1.9) – 2026-08-25
 
