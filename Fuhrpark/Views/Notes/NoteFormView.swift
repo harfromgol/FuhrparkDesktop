@@ -14,6 +14,10 @@ struct NoteFormView: View {
     /// Notiz, die bearbeitet wird; `nil` beim Anlegen einer neuen Notiz.
     let notizToEdit: Notiz?
 
+    /// Wenn gesetzt (Aufruf aus der Fahrzeugdetail-Ansicht), ist das Fahrzeug
+    /// fest vorgegeben und wird statt der Auswahl nur noch angezeigt.
+    let fixedVehicle: Vehicle?
+
     @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Vehicle.licensePlate, ascending: true)])
     private var vehicles: FetchedResults<Vehicle>
 
@@ -37,9 +41,10 @@ struct NoteFormView: View {
         var filename: String { (path as NSString).lastPathComponent }
     }
 
-    init(notizToEdit: Notiz? = nil) {
+    init(notizToEdit: Notiz? = nil, fixedVehicle: Vehicle? = nil) {
         self.notizToEdit = notizToEdit
-        _selectedVehicle = State(initialValue: notizToEdit?.vehicle)
+        self.fixedVehicle = fixedVehicle
+        _selectedVehicle = State(initialValue: notizToEdit?.vehicle ?? fixedVehicle)
         _dateText = State(initialValue: FieldValidator.string(from: notizToEdit?.date ?? Date()))
         _noteText = State(initialValue: notizToEdit?.text ?? "")
     }
@@ -64,7 +69,15 @@ struct NoteFormView: View {
                         }
 
                         GlassCard(title: "Kennzeichen") {
-                            VehiclePicker(vehicles: Array(vehicles), selection: $selectedVehicle)
+                            if let fixedVehicle {
+                                Text(fixedVehicle.licensePlate ?? "")
+                                    .font(.title3.bold())
+                                Text("\(fixedVehicle.manufacturer ?? "") \(fixedVehicle.model ?? "")")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                VehiclePicker(vehicles: Array(vehicles), selection: $selectedVehicle)
+                            }
                         }
 
                         documentsSection

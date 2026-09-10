@@ -11,11 +11,13 @@ struct VehicleDetailView: View {
 
     @State private var isPresentingNewFuelEntry = false
     @State private var isPresentingNewExpense = false
+    @State private var isPresentingNewNote = false
     @State private var isPresentingCardConfig = false
     @State private var isPresentingEditVehicle = false
     @State private var vehiclePendingDeletion: Vehicle?
     @State private var vehiclePendingDecommission: Vehicle?
     @State private var pdfExportErrorMessage: String?
+    @State private var noteErrorMessage: String?
     /// Spaltensortierung der drei Statistiktabellen, global für alle
     /// Fahrzeuge aus den UserDefaults vorbelegt (siehe `TableSortStore`).
     @State private var expenseCategorySort = TableSort<ExpenseCategorySortColumn>.initial(for: .expenseCategory)
@@ -167,6 +169,31 @@ struct VehicleDetailView: View {
                         expenseStatistics
                     }
 
+                    sectionHeader(title: "Notizen", systemImage: "note.text") {
+                        Button("Neue Notiz", systemImage: "plus") {
+                            addNoteTapped()
+                        }
+                        .buttonStyle(.glass)
+                        .pointerStyle(.link)
+                        if vehicle.sortedNotizen.count > 1 {
+                            Button("Liste anzeigen", systemImage: "list.bullet") {
+                                if let vehicleRef {
+                                    openWindow(id: "notes-list", value: vehicleRef)
+                                }
+                            }
+                            .buttonStyle(.glass)
+                            .pointerStyle(.link)
+                        }
+                    }
+
+                    if vehicle.sortedNotizen.isEmpty {
+                        Text("Noch keine Notizen erfasst.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        noteSummary
+                    }
+
                     sectionHeader(title: "Statistik", systemImage: "chart.bar.xaxis") {
                         Button {
                             isPresentingCardConfig = true
@@ -224,6 +251,9 @@ struct VehicleDetailView: View {
         .sheet(isPresented: $isPresentingNewExpense) {
             ExpenseFormView(vehicle: vehicle)
         }
+        .sheet(isPresented: $isPresentingNewNote) {
+            NoteFormView(fixedVehicle: vehicle)
+        }
         .sheet(isPresented: $isPresentingEditVehicle) {
             VehicleFormView(vehicleToEdit: vehicle)
         }
@@ -234,6 +264,18 @@ struct VehicleDetailView: View {
                 set: { if !$0 { pdfExportErrorMessage = nil } }
             ),
             presenting: pdfExportErrorMessage
+        ) { _ in
+            Button("OK", role: .cancel) { }
+        } message: { message in
+            Text(message)
+        }
+        .alert(
+            "Fehler",
+            isPresented: Binding(
+                get: { noteErrorMessage != nil },
+                set: { if !$0 { noteErrorMessage = nil } }
+            ),
+            presenting: noteErrorMessage
         ) { _ in
             Button("OK", role: .cancel) { }
         } message: { message in
@@ -284,6 +326,19 @@ struct VehicleDetailView: View {
 
     private func decommission(_ vehicle: Vehicle) {
         vehicle.decommission(in: viewContext)
+    }
+
+    /// Öffnet das Formular für eine neue Notiz zu diesem Fahrzeug – vorher
+    /// dieselbe Voraussetzungsprüfung wie beim „Neue Notiz"-Button unter
+    /// „Allgemein → Notizen" (siehe `NotesView.addNoteTapped`). `hasVehicles`
+    /// ist hier immer erfüllt, in der Praxis prüft der Aufruf also nur das
+    /// Arbeitsverzeichnis.
+    private func addNoteTapped() {
+        if let message = NewItemPrerequisite.missingMessage(hasVehicles: true) {
+            noteErrorMessage = message
+            return
+        }
+        isPresentingNewNote = true
     }
 
     private var header: some View {
@@ -489,6 +544,36 @@ struct VehicleDetailView: View {
                     value: DisplayFormatter.costString(vehicle.totalExpenseCost),
                     systemImage: "eurosign"
                 )
+            }
+        }
+    }
+
+    /// Zwei Spalten: links die Anzahl der Notizen dieses Fahrzeugs, rechts
+    /// die aktuellste (neueste zuerst, siehe `Vehicle.sortedNotizen`). Wird
+    /// nur gezeigt, wenn mindestens eine Notiz vorhanden ist.
+    private var noteSummary: some View {
+        GlassCard {
+            HStack(alignment: .top, spacing: 16) {
+                StatTile(
+                    title: "Anzahl",
+                    value: "\(vehicle.sortedNotizen.count)",
+                    systemImage: "number"
+                )
+                Divider()
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("Aktuellste Notiz", systemImage: "note.text")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if let newest = vehicle.sortedNotizen.first {
+                        Text(FieldValidator.string(from: newest.date ?? Date()))
+                            .font(.title3.bold())
+                        Text(newest.text ?? "")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(3)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
