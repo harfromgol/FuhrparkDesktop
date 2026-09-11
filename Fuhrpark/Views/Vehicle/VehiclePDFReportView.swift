@@ -27,6 +27,9 @@ struct VehiclePDFReportView: View {
         if !vehicle.sortedExpenses.isEmpty {
             result.append(PDFReportSection(view: AnyView(expenseStatsSection), rowInfo: nil))
         }
+        if !vehicle.sortedNotizen.isEmpty {
+            result.append(PDFReportSection(view: AnyView(notesSection), rowInfo: nil))
+        }
         if enabledCards.contains(.consumption), !vehicle.sortedFuelEntries.isEmpty {
             result.append(PDFReportSection(view: AnyView(consumptionSection), rowInfo: nil))
         }
@@ -153,6 +156,30 @@ struct VehiclePDFReportView: View {
                     value: DisplayFormatter.costString(vehicle.totalExpenseCost),
                     systemImage: "eurosign"
                 )
+            }
+        }
+    }
+
+    /// Zwei Spalten wie `VehicleDetailView.noteSummary`: links die Anzahl der
+    /// Notizen, rechts die aktuellste – hier ohne Zeilenbegrenzung, da im PDF
+    /// (anders als in der Bildschirmkarte) genug Platz ist.
+    private var notesSection: some View {
+        PDFReportCard(title: "Notizen – Übersicht") {
+            HStack(alignment: .top, spacing: 16) {
+                StatTile(title: "Anzahl", value: "\(vehicle.sortedNotizen.count)", systemImage: "number")
+                if let newest = vehicle.sortedNotizen.first {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Letzte Notiz")
+                            .font(.caption)
+                            .foregroundStyle(.gray)
+                        Text(FieldValidator.string(from: newest.date ?? Date()))
+                            .font(.subheadline.bold())
+                        Text(newest.text ?? "")
+                            .font(.caption)
+                            .foregroundStyle(.gray)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
         }
     }
