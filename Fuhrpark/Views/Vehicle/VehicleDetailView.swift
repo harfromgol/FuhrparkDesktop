@@ -207,13 +207,13 @@ struct VehicleDetailView: View {
                     }
 
                     sectionHeader(title: "Erinnerungen", systemImage: "bell") {
-                        Button("Neu", systemImage: "plus") {
+                        Button("Neue Erinnerung", systemImage: "plus") {
                             addReminderTapped()
                         }
                         .buttonStyle(.glass)
                         .pointerStyle(.link)
                         if vehicle.sortedReminders.count > 1 {
-                            Button("Liste", systemImage: "list.bullet") {
+                            Button("Liste anzeigen", systemImage: "list.bullet") {
                                 if let vehicleRef {
                                     openWindow(id: "reminders-list", value: vehicleRef)
                                 }
