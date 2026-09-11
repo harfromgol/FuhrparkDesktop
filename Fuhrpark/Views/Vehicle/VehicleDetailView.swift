@@ -586,7 +586,7 @@ struct VehicleDetailView: View {
                         Text(newest.text ?? "")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                            .lineLimit(3)
+                            .lineLimit(5)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
