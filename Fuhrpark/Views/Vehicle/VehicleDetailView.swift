@@ -22,7 +22,7 @@ struct VehicleDetailView: View {
     /// 30:70-Spaltenaufteilung, für die diese Breite gebraucht wird.
     @State private var noteSummaryWidth: CGFloat = 0
     /// Anteil der linken Spalte („Anzahl") in `noteSummary`.
-    private static let noteCountColumnRatio: CGFloat = 0.3
+    private static let noteCountColumnRatio: CGFloat = 0.2
     /// Spaltensortierung der drei Statistiktabellen, global für alle
     /// Fahrzeuge aus den UserDefaults vorbelegt (siehe `TableSortStore`).
     @State private var expenseCategorySort = TableSort<ExpenseCategorySortColumn>.initial(for: .expenseCategory)
@@ -553,7 +553,7 @@ struct VehicleDetailView: View {
         }
     }
 
-    /// Zwei Spalten im Verhältnis `noteCountColumnRatio` (30:70): links die
+    /// Zwei Spalten im Verhältnis `noteCountColumnRatio` (20:80): links die
     /// Anzahl der Notizen dieses Fahrzeugs, rechts die aktuellste (neueste
     /// zuerst, siehe `Vehicle.sortedNotizen`). Wird nur gezeigt, wenn
     /// mindestens eine Notiz vorhanden ist.
