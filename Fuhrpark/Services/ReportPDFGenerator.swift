@@ -133,9 +133,8 @@ enum ReportPDFGenerator {
             }
             // Kopf- (Titel/Spaltenköpfe) und Zeilenhöhe lassen sich aus einer
             // Karte nicht direkt auslesen – deshalb dieselbe Karte einmal
-            // ohne Zeilen vermessen; die Differenz zur vollen Höhe, geteilt
-            // durch die Zeilenanzahl, ergibt die (bei gleich hohen Zeilen
-            // exakte) Höhe einer einzelnen Zeile.
+            // ohne Zeilen vermessen; die Differenz zur vollen Höhe ergibt die
+            // Kopfhöhe.
             //
             // `chromeHeight` misst dabei eine EIGENSTÄNDIGE, vollständige
             // Karte mit 0 Zeilen – ihr unteres `cardPadding` sitzt also
@@ -145,6 +144,23 @@ enum ReportPDFGenerator {
             // Zeilenumbruch-Kandidat um dieses Padding zu weit in den
             // Inhalt hineinragen und die jeweils nächste Zeile anschneiden.
             let chromeHeight = measure(rowInfo.chromeOnly) - PDFReportLayout.cardPadding
+
+            if let singleRow = rowInfo.singleRow {
+                // Zeilen können unterschiedlich hoch sein (z. B. mehrzeiliger
+                // Text) – jede Zeile einzeln vermessen statt eine über alle
+                // Zeilen gemittelte Höhe anzunehmen, sonst läge ein
+                // Umbruch-Kandidat bei ungleich hohen Zeilen mitten in einer
+                // Zeile.
+                var rowBreaks: [CGFloat] = []
+                var cursor = chromeHeight
+                for index in 0..<(rowInfo.rowCount - 1) {
+                    let rowHeight = max(measure(singleRow(index)) - PDFReportLayout.cardPadding - chromeHeight, 0)
+                    cursor += rowHeight
+                    rowBreaks.append(cursor)
+                }
+                return Measured(height: height, rowBreaks: rowBreaks)
+            }
+
             let rowHeight = (height - PDFReportLayout.cardPadding - chromeHeight) / CGFloat(rowInfo.rowCount)
             guard rowHeight > 0 else { return Measured(height: height, rowBreaks: []) }
             let rowBreaks = (1..<rowInfo.rowCount).map { chromeHeight + CGFloat($0) * rowHeight }

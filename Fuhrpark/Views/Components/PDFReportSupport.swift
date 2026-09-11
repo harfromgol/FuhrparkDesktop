@@ -40,6 +40,20 @@ struct PDFReportSection {
         /// Dieselbe Karte, aber mit null Zeilen – für die separate Messung
         /// von Kopf- (Titel/Spaltenköpfe) vs. Zeilenhöhe.
         let chromeOnly: AnyView
+        /// Nur nötig, wenn Zeilen UNTERSCHIEDLICH hoch sein können (z. B.
+        /// mehrzeiliger Text wie bei `NoteListPDFReportView`): liefert für
+        /// einen Zeilenindex dieselbe Karte, aber mit genau dieser einen
+        /// Zeile – `ReportPDFGenerator` misst daraus die tatsächliche Höhe
+        /// jeder Zeile einzeln statt (wie sonst) die Gesamthöhe gleichmäßig
+        /// über alle Zeilen zu mitteln. `nil` bei gleich hohen Zeilen
+        /// (Standardfall, z. B. `FuelEntryListPDFReportView`).
+        var singleRow: ((Int) -> AnyView)?
+
+        init(rowCount: Int, chromeOnly: AnyView, singleRow: ((Int) -> AnyView)? = nil) {
+            self.rowCount = rowCount
+            self.chromeOnly = chromeOnly
+            self.singleRow = singleRow
+        }
     }
 }
 
