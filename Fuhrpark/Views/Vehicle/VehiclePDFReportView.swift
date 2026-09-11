@@ -30,6 +30,9 @@ struct VehiclePDFReportView: View {
         if !vehicle.sortedNotizen.isEmpty {
             result.append(PDFReportSection(view: AnyView(notesSection), rowInfo: nil))
         }
+        if !vehicle.sortedReminders.isEmpty {
+            result.append(PDFReportSection(view: AnyView(remindersSection), rowInfo: nil))
+        }
         if enabledCards.contains(.consumption), !vehicle.sortedFuelEntries.isEmpty {
             result.append(PDFReportSection(view: AnyView(consumptionSection), rowInfo: nil))
         }
@@ -188,12 +191,41 @@ struct VehiclePDFReportView: View {
         }
     }
 
-    /// Breite der linken „Anzahl"-Spalte in `notesSection`: Kartenbreite
-    /// (Seitenbreite abzüglich Rand und Karten-Innenabstand) minus dem
-    /// `HStack`-Spacing, davon `VehicleDetailView.noteCountColumnRatio`.
+    /// Breite der linken „Anzahl"-Spalte in `notesSection`/`remindersSection`:
+    /// Kartenbreite (Seitenbreite abzüglich Rand und Karten-Innenabstand)
+    /// minus dem `HStack`-Spacing, davon `VehicleDetailView.noteCountColumnRatio`
+    /// – dieselbe Breite passt für beide Karten, da sie identisch aufgebaut sind.
     private var noteCountColumnWidth: CGFloat {
         let cardContentWidth = PDFReportLayout.contentWidth - PDFReportLayout.cardPadding * 2
         return (cardContentWidth - 16) * VehicleDetailView.noteCountColumnRatio
+    }
+
+    /// Zwei Spalten wie `VehicleDetailView.reminderSummary`, im selben
+    /// `noteCountColumnRatio`-Verhältnis (20:80): links die Anzahl, rechts die
+    /// nächste fällige Erinnerung (`vehicle.sortedReminders` ist nach
+    /// Fälligkeitsdatum aufsteigend sortiert, `first` also die nächste).
+    private var remindersSection: some View {
+        PDFReportCard(title: "Erinnerungen – Übersicht") {
+            HStack(alignment: .top, spacing: 16) {
+                StatTile(title: "Anzahl", value: "\(vehicle.sortedReminders.count)", systemImage: "number")
+                    .frame(width: noteCountColumnWidth, alignment: .leading)
+                if let next = vehicle.sortedReminders.first {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Nächste Erinnerung")
+                            .font(.caption)
+                            .foregroundStyle(.gray)
+                        Text(next.title ?? "")
+                            .font(.subheadline.bold())
+                        if let due = next.dueDate {
+                            Text(FieldValidator.string(from: due))
+                                .font(.caption)
+                                .foregroundStyle(.gray)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
     }
 
     private var priceSection: some View {
