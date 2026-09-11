@@ -18,6 +18,11 @@ struct VehicleDetailView: View {
     @State private var vehiclePendingDecommission: Vehicle?
     @State private var pdfExportErrorMessage: String?
     @State private var noteErrorMessage: String?
+    /// Gemessene Breite der `noteSummary`-Karte – siehe dort für die
+    /// 30:70-Spaltenaufteilung, für die diese Breite gebraucht wird.
+    @State private var noteSummaryWidth: CGFloat = 0
+    /// Anteil der linken Spalte („Anzahl") in `noteSummary`.
+    private static let noteCountColumnRatio: CGFloat = 0.3
     /// Spaltensortierung der drei Statistiktabellen, global für alle
     /// Fahrzeuge aus den UserDefaults vorbelegt (siehe `TableSortStore`).
     @State private var expenseCategorySort = TableSort<ExpenseCategorySortColumn>.initial(for: .expenseCategory)
@@ -548,9 +553,19 @@ struct VehicleDetailView: View {
         }
     }
 
-    /// Zwei Spalten: links die Anzahl der Notizen dieses Fahrzeugs, rechts
-    /// die aktuellste (neueste zuerst, siehe `Vehicle.sortedNotizen`). Wird
-    /// nur gezeigt, wenn mindestens eine Notiz vorhanden ist.
+    /// Zwei Spalten im Verhältnis `noteCountColumnRatio` (30:70): links die
+    /// Anzahl der Notizen dieses Fahrzeugs, rechts die aktuellste (neueste
+    /// zuerst, siehe `Vehicle.sortedNotizen`). Wird nur gezeigt, wenn
+    /// mindestens eine Notiz vorhanden ist.
+    ///
+    /// `StatTile` selbst verlangt intern `maxWidth: .infinity` – ohne feste
+    /// Breite würden sich beide Spalten in einer `HStack` den verfügbaren
+    /// Platz automatisch 50:50 teilen. Die tatsächliche Kartenbreite wird
+    /// deshalb wie bei `ValidatedField`s Vorschlags-Popup per
+    /// Hintergrund-`GeometryReader` gemessen (`NoteSummaryWidthKey`) und die
+    /// linke Spalte darauf auf `noteCountColumnRatio` fixiert – im allerersten
+    /// Layout-Durchgang (Breite noch 0) fällt sie auf die intrinsische Breite
+    /// zurück.
     private var noteSummary: some View {
         GlassCard {
             HStack(alignment: .top, spacing: 16) {
@@ -559,6 +574,7 @@ struct VehicleDetailView: View {
                     value: "\(vehicle.sortedNotizen.count)",
                     systemImage: "number"
                 )
+                .frame(width: noteSummaryColumnWidth, alignment: .leading)
                 Divider()
                 VStack(alignment: .leading, spacing: 4) {
                     Label("Aktuellste Notiz", systemImage: "note.text")
@@ -575,7 +591,18 @@ struct VehicleDetailView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .background(
+                GeometryReader { proxy in
+                    Color.clear.preference(key: NoteSummaryWidthKey.self, value: proxy.size.width)
+                }
+            )
+            .onPreferenceChange(NoteSummaryWidthKey.self) { noteSummaryWidth = $0 }
         }
+    }
+
+    private var noteSummaryColumnWidth: CGFloat? {
+        guard noteSummaryWidth > 0 else { return nil }
+        return (noteSummaryWidth - 16 - 1) * Self.noteCountColumnRatio
     }
 
     /// `vehicle.expenseCostByCategory`, umsortiert nach der vom Nutzer
@@ -838,6 +865,15 @@ struct VehicleDetailView: View {
 
     /// Akzentfarbe der Abschnitts-Überschriften (Icon + Titel). Licht-/dunkeladaptiv.
     private static let sectionHeaderColor = Color.orange
+}
+
+/// Misst die Breite der `noteSummary`-Karte für deren 30:70-Spaltenaufteilung
+/// – gleiches Muster wie `FieldWidthKey` in `ValidatedField.swift`.
+private struct NoteSummaryWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
 }
 
 #Preview {
