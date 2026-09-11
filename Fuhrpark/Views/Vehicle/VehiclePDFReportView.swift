@@ -202,21 +202,22 @@ struct VehiclePDFReportView: View {
 
     /// Zwei Spalten wie `VehicleDetailView.reminderSummary`, im selben
     /// `noteCountColumnRatio`-Verhältnis (20:80): links die Anzahl, rechts die
-    /// nächste fällige Erinnerung (`vehicle.sortedReminders` ist nach
-    /// Fälligkeitsdatum aufsteigend sortiert, `first` also die nächste).
+    /// aktuellste Erinnerung (die mit dem spätesten Datum, analog zur
+    /// „Notizen – Übersicht"-Karte) – `vehicle.sortedReminders` ist nach
+    /// Fälligkeitsdatum aufsteigend sortiert, `last` also die mit dem spätesten.
     private var remindersSection: some View {
         PDFReportCard(title: "Erinnerungen – Übersicht") {
             HStack(alignment: .top, spacing: 16) {
                 StatTile(title: "Anzahl", value: "\(vehicle.sortedReminders.count)", systemImage: "number")
                     .frame(width: noteCountColumnWidth, alignment: .leading)
-                if let next = vehicle.sortedReminders.first {
+                if let latest = vehicle.sortedReminders.last {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Nächste Erinnerung")
+                        Text("Aktuellste Erinnerung")
                             .font(.caption)
                             .foregroundStyle(.gray)
-                        Text(next.title ?? "")
+                        Text(latest.title ?? "")
                             .font(.subheadline.bold())
-                        if let due = next.dueDate {
+                        if let due = latest.dueDate {
                             Text(FieldValidator.string(from: due))
                                 .font(.caption)
                                 .foregroundStyle(.gray)
