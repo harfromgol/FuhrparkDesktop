@@ -7,7 +7,7 @@ import CoreData
 /// vorhanden ist). Bearbeiten/Löschen jeweils per Rechtsklick auf die Zeile
 /// (`ReminderRow`), Erledigt-Umschalten per Klick auf die Checkbox; neue
 /// Erinnerungen legt man weiterhin in der Fahrzeugdetail-Ansicht an – analog
-/// zu `NoteListWindow`.
+/// zu `NoteListWindow`, inklusive PDF-Export über die Werkzeuge-Menü-Taste.
 struct ReminderListWindow: View {
     @Environment(\.managedObjectContext) private var viewContext
 
@@ -17,6 +17,7 @@ struct ReminderListWindow: View {
     @FetchRequest private var vehicles: FetchedResults<Vehicle>
     @State private var reminderToEdit: Erinnerung?
     @State private var pendingDeletion: Erinnerung?
+    @State private var pdfExportErrorMessage: String?
 
     init(vehicleRef: VehicleRef) {
         self.vehicleRef = vehicleRef
@@ -65,6 +66,7 @@ struct ReminderListWindow: View {
         }
         .frame(minWidth: 340, minHeight: 400)
         .navigationTitle("Erinnerungen – \(vehicleRef.licensePlate)")
+        .toolbar { toolbarContent }
         .sheet(isPresented: Binding(
             get: { reminderToEdit != nil },
             set: { if !$0 { reminderToEdit = nil } }
@@ -73,21 +75,88 @@ struct ReminderListWindow: View {
                 ReminderFormView(reminderToEdit: reminderToEdit, fixedVehicle: vehicle)
             }
         }
-        .confirmationDialog(
-            "Erinnerung wirklich löschen?",
-            isPresented: Binding(
-                get: { pendingDeletion != nil },
-                set: { if !$0 { pendingDeletion = nil } }
-            ),
-            presenting: pendingDeletion
-        ) { reminder in
-            Button("Löschen", role: .destructive) {
+        .modifier(ReminderListAlertsModifier(
+            pendingDeletion: $pendingDeletion,
+            pdfExportErrorMessage: $pdfExportErrorMessage,
+            onDelete: { reminder in
                 viewContext.delete(reminder)
                 PersistenceController.shared.save(context: viewContext)
             }
-            Button("Abbrechen", role: .cancel) { }
-        } message: { reminder in
-            Text("„\(reminder.title ?? "")“ wird unwiderruflich gelöscht.")
+        ))
+    }
+
+    private func exportPDF() {
+        do {
+            let reportView = ReminderListPDFReportView(
+                vehicleRef: vehicleRef,
+                reminders: Array(reminders)
+            )
+            let url = try ReportPDFGenerator.generate(
+                reportView,
+                sections: reportView.sections,
+                filenamePrefix: "Erinnerungen_\(vehicleRef.licensePlate)"
+            )
+            Task {
+                do {
+                    try await ReportPDFGenerator.openInPreview(url)
+                } catch {
+                    pdfExportErrorMessage = error.localizedDescription
+                }
+            }
+        } catch {
+            pdfExportErrorMessage = error.localizedDescription
         }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem {
+            Menu {
+                Button("PDF-Export") { exportPDF() }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+            }
+            .pointerStyle(.link)
+            .help("Weitere Aktionen")
+        }
+    }
+}
+
+/// Bündelt Lösch-Bestätigung und PDF-Fehler-Alert in einem eigenen
+/// `ViewModifier` – hält `body` schlank genug für den Type-Checker (sonst
+/// „unable to type-check this expression in reasonable time", siehe
+/// `NoteListAlertsModifier` in `NoteListWindow.swift` für dasselbe Muster).
+private struct ReminderListAlertsModifier: ViewModifier {
+    @Binding var pendingDeletion: Erinnerung?
+    @Binding var pdfExportErrorMessage: String?
+    let onDelete: (Erinnerung) -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .confirmationDialog(
+                "Erinnerung wirklich löschen?",
+                isPresented: Binding(
+                    get: { pendingDeletion != nil },
+                    set: { if !$0 { pendingDeletion = nil } }
+                ),
+                presenting: pendingDeletion
+            ) { reminder in
+                Button("Löschen", role: .destructive) { onDelete(reminder) }
+                Button("Abbrechen", role: .cancel) { }
+            } message: { reminder in
+                Text("„\(reminder.title ?? "")“ wird unwiderruflich gelöscht.")
+            }
+            .alert(
+                "PDF-Erstellung fehlgeschlagen",
+                isPresented: Binding(
+                    get: { pdfExportErrorMessage != nil },
+                    set: { if !$0 { pdfExportErrorMessage = nil } }
+                ),
+                presenting: pdfExportErrorMessage
+            ) { _ in
+                Button("OK", role: .cancel) { }
+            } message: { message in
+                Text(message)
+            }
     }
 }
