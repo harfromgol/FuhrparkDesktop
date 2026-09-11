@@ -21,8 +21,10 @@ struct VehicleDetailView: View {
     /// Gemessene Breite der `noteSummary`-Karte – siehe dort für die
     /// 30:70-Spaltenaufteilung, für die diese Breite gebraucht wird.
     @State private var noteSummaryWidth: CGFloat = 0
-    /// Anteil der linken Spalte („Anzahl") in `noteSummary`.
-    private static let noteCountColumnRatio: CGFloat = 0.2
+    /// Anteil der linken Spalte („Anzahl") in `noteSummary`. Nicht `private`,
+    /// da `VehiclePDFReportView.notesSection` dieselbe Aufteilung für die
+    /// entsprechende Karte im PDF-Export übernimmt.
+    static let noteCountColumnRatio: CGFloat = 0.2
     /// Spaltensortierung der drei Statistiktabellen, global für alle
     /// Fahrzeuge aus den UserDefaults vorbelegt (siehe `TableSortStore`).
     @State private var expenseCategorySort = TableSort<ExpenseCategorySortColumn>.initial(for: .expenseCategory)

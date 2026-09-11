@@ -160,13 +160,17 @@ struct VehiclePDFReportView: View {
         }
     }
 
-    /// Zwei Spalten wie `VehicleDetailView.noteSummary`: links die Anzahl der
-    /// Notizen, rechts die aktuellste – hier ohne Zeilenbegrenzung, da im PDF
-    /// (anders als in der Bildschirmkarte) genug Platz ist.
+    /// Zwei Spalten wie `VehicleDetailView.noteSummary`, im selben
+    /// `noteCountColumnRatio`-Verhältnis (20:80) – hier ohne
+    /// Zeilenbegrenzung, da im PDF (anders als in der Bildschirmkarte) genug
+    /// Platz ist. Anders als dort per fester statt per `GeometryReader`
+    /// gemessener Breite: die PDF-Seite hat keine variable Fensterbreite,
+    /// `PDFReportLayout.pageWidth` steht schon zur Compile-Zeit fest.
     private var notesSection: some View {
         PDFReportCard(title: "Notizen – Übersicht") {
             HStack(alignment: .top, spacing: 16) {
                 StatTile(title: "Anzahl", value: "\(vehicle.sortedNotizen.count)", systemImage: "number")
+                    .frame(width: noteCountColumnWidth, alignment: .leading)
                 if let newest = vehicle.sortedNotizen.first {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Letzte Notiz")
@@ -182,6 +186,14 @@ struct VehiclePDFReportView: View {
                 }
             }
         }
+    }
+
+    /// Breite der linken „Anzahl"-Spalte in `notesSection`: Kartenbreite
+    /// (Seitenbreite abzüglich Rand und Karten-Innenabstand) minus dem
+    /// `HStack`-Spacing, davon `VehicleDetailView.noteCountColumnRatio`.
+    private var noteCountColumnWidth: CGFloat {
+        let cardContentWidth = PDFReportLayout.contentWidth - PDFReportLayout.cardPadding * 2
+        return (cardContentWidth - 16) * VehicleDetailView.noteCountColumnRatio
     }
 
     private var priceSection: some View {
