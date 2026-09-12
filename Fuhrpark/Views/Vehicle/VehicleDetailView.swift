@@ -12,12 +12,14 @@ struct VehicleDetailView: View {
     @State private var isPresentingNewFuelEntry = false
     @State private var isPresentingNewExpense = false
     @State private var isPresentingNewNote = false
+    @State private var isPresentingNewReminder = false
     @State private var isPresentingCardConfig = false
     @State private var isPresentingEditVehicle = false
     @State private var vehiclePendingDeletion: Vehicle?
     @State private var vehiclePendingDecommission: Vehicle?
     @State private var pdfExportErrorMessage: String?
     @State private var noteErrorMessage: String?
+    @State private var reminderErrorMessage: String?
     /// Gemessene Breite der `noteSummary`-Karte – siehe dort für die
     /// 30:70-Spaltenaufteilung, für die diese Breite gebraucht wird.
     @State private var noteSummaryWidth: CGFloat = 0
@@ -25,6 +27,9 @@ struct VehicleDetailView: View {
     /// da `VehiclePDFReportView.notesSection` dieselbe Aufteilung für die
     /// entsprechende Karte im PDF-Export übernimmt.
     static let noteCountColumnRatio: CGFloat = 0.2
+    /// Gemessene Breite der `reminderSummary`-Karte – gleiches Muster wie
+    /// `noteSummaryWidth`.
+    @State private var reminderSummaryWidth: CGFloat = 0
     /// Spaltensortierung der drei Statistiktabellen, global für alle
     /// Fahrzeuge aus den UserDefaults vorbelegt (siehe `TableSortStore`).
     @State private var expenseCategorySort = TableSort<ExpenseCategorySortColumn>.initial(for: .expenseCategory)
@@ -42,10 +47,24 @@ struct VehicleDetailView: View {
     /// hier automatisch den richtigen Stand.
     @State private var enabledCards: Set<StatisticsCard>
 
+    /// Eigener `@FetchRequest` statt `vehicle.sortedReminders`: Core Data
+    /// löst `objectWillChange` für `vehicle` nur aus, wenn sich dessen EIGENE
+    /// Relationship-Mitgliedschaft ändert (neue/gelöschte Erinnerung) – nicht
+    /// wenn nur ein Attribut einer bereits verknüpften Erinnerung geändert
+    /// wird (z. B. `isDone` beim Erledigt-Toggle im `ReminderListWindow`).
+    /// `reminderSummary` bliebe damit veraltet stehen, solange dieses
+    /// Fenster offen bleibt. `FetchedResults` beobachtet dagegen jede
+    /// passende Objektänderung im Kontext direkt und aktualisiert sich immer.
+    @FetchRequest private var reminders: FetchedResults<Erinnerung>
+
     init(vehicle: Vehicle, onDelete: @escaping () -> Void) {
         self.vehicle = vehicle
         self.onDelete = onDelete
         _enabledCards = State(initialValue: vehicle.id.map(StatisticsCardVisibilityStore.enabledCards(for:)) ?? Set(StatisticsCard.allCases))
+        _reminders = FetchRequest(
+            sortDescriptors: [NSSortDescriptor(keyPath: \Erinnerung.dueDate, ascending: true)],
+            predicate: vehicle.id.map { NSPredicate(format: "vehicle.id == %@", $0 as NSUUID) } ?? NSPredicate(value: false)
+        )
     }
 
     private var vehicleRef: VehicleRef? {
@@ -201,6 +220,31 @@ struct VehicleDetailView: View {
                         noteSummary
                     }
 
+                    sectionHeader(title: "Erinnerungen", systemImage: "bell") {
+                        Button("Neue Erinnerung", systemImage: "plus") {
+                            addReminderTapped()
+                        }
+                        .buttonStyle(.glass)
+                        .pointerStyle(.link)
+                        if reminders.count > 1 {
+                            Button("Liste anzeigen", systemImage: "list.bullet") {
+                                if let vehicleRef {
+                                    openWindow(id: "reminders-list", value: vehicleRef)
+                                }
+                            }
+                            .buttonStyle(.glass)
+                            .pointerStyle(.link)
+                        }
+                    }
+
+                    if reminders.isEmpty {
+                        Text("Noch keine Erinnerungen erfasst.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        reminderSummary
+                    }
+
                     sectionHeader(title: "Statistik", systemImage: "chart.bar.xaxis") {
                         Button {
                             isPresentingCardConfig = true
@@ -261,6 +305,9 @@ struct VehicleDetailView: View {
         .sheet(isPresented: $isPresentingNewNote) {
             NoteFormView(fixedVehicle: vehicle)
         }
+        .sheet(isPresented: $isPresentingNewReminder) {
+            ReminderFormView(fixedVehicle: vehicle)
+        }
         .sheet(isPresented: $isPresentingEditVehicle) {
             VehicleFormView(vehicleToEdit: vehicle)
         }
@@ -283,6 +330,18 @@ struct VehicleDetailView: View {
                 set: { if !$0 { noteErrorMessage = nil } }
             ),
             presenting: noteErrorMessage
+        ) { _ in
+            Button("OK", role: .cancel) { }
+        } message: { message in
+            Text(message)
+        }
+        .alert(
+            "Fehler",
+            isPresented: Binding(
+                get: { reminderErrorMessage != nil },
+                set: { if !$0 { reminderErrorMessage = nil } }
+            ),
+            presenting: reminderErrorMessage
         ) { _ in
             Button("OK", role: .cancel) { }
         } message: { message in
@@ -346,6 +405,19 @@ struct VehicleDetailView: View {
             return
         }
         isPresentingNewNote = true
+    }
+
+    /// Öffnet das Formular für eine neue Erinnerung zu diesem Fahrzeug –
+    /// vorher dieselbe Voraussetzungsprüfung wie beim „Neue Erinnerung"-Button
+    /// unter „Allgemein → Erinnerungen" (siehe `RemindersView.addReminderTapped`).
+    /// `hasVehicles` ist hier immer erfüllt, in der Praxis prüft der Aufruf
+    /// also nur das Arbeitsverzeichnis.
+    private func addReminderTapped() {
+        if let message = NewItemPrerequisite.missingMessage(hasVehicles: true) {
+            reminderErrorMessage = message
+            return
+        }
+        isPresentingNewReminder = true
     }
 
     private var header: some View {
@@ -605,6 +677,61 @@ struct VehicleDetailView: View {
     private var noteSummaryColumnWidth: CGFloat? {
         guard noteSummaryWidth > 0 else { return nil }
         return (noteSummaryWidth - 16 - 1) * Self.noteCountColumnRatio
+    }
+
+    /// Erledigte Erinnerungen sind für `reminderSummary` uninteressant –
+    /// weder in „Fällige / Offen" noch als „nächste fällige" sollen sie
+    /// mitzählen.
+    private var openReminders: [Erinnerung] {
+        reminders.filter { !$0.isDone }
+    }
+
+    /// Zwei Spalten im selben Verhältnis wie `noteSummary` (`noteCountColumnRatio`,
+    /// 20:80): links „Fällige / Offen" (`Erinnerung.isDue`, gegen
+    /// `openReminders` statt aller Erinnerungen), rechts die nächste fällige
+    /// unter den offenen – `reminders` ist nach Fälligkeitsdatum aufsteigend
+    /// sortiert, `openReminders` behält diese Reihenfolge bei, `first` also
+    /// die nächste (nicht zwingend die zuletzt angelegte). Wird nur gezeigt,
+    /// wenn mindestens eine Erinnerung vorhanden ist – auch wenn alle
+    /// erledigt sind (dann zeigt die Karte 0/0 und keine „nächste fällige").
+    private var reminderSummary: some View {
+        GlassCard {
+            HStack(alignment: .top, spacing: 16) {
+                StatTile(
+                    title: "Anzahl",
+                    value: "\(openReminders.filter(\.isDue).count) / \(openReminders.count)",
+                    systemImage: "number"
+                )
+                .frame(width: reminderSummaryColumnWidth, alignment: .leading)
+                Divider()
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("Nächste fällige Erinnerung", systemImage: "bell")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if let next = openReminders.first {
+                        Text(next.title ?? "")
+                            .font(.title3.bold())
+                        if let due = next.dueDate {
+                            Text(FieldValidator.string(from: due))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .background(
+                GeometryReader { proxy in
+                    Color.clear.preference(key: ReminderSummaryWidthKey.self, value: proxy.size.width)
+                }
+            )
+            .onPreferenceChange(ReminderSummaryWidthKey.self) { reminderSummaryWidth = $0 }
+        }
+    }
+
+    private var reminderSummaryColumnWidth: CGFloat? {
+        guard reminderSummaryWidth > 0 else { return nil }
+        return (reminderSummaryWidth - 16 - 1) * Self.noteCountColumnRatio
     }
 
     /// `vehicle.expenseCostByCategory`, umsortiert nach der vom Nutzer
@@ -872,6 +999,14 @@ struct VehicleDetailView: View {
 /// Misst die Breite der `noteSummary`-Karte für deren 30:70-Spaltenaufteilung
 /// – gleiches Muster wie `FieldWidthKey` in `ValidatedField.swift`.
 private struct NoteSummaryWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+/// Misst die Breite der `reminderSummary`-Karte für deren 20:80-Spaltenaufteilung.
+private struct ReminderSummaryWidthKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = max(value, nextValue())

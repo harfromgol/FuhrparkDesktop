@@ -100,6 +100,22 @@ struct FuhrparkDesktopApp: App {
         }
         .defaultSize(width: 400, height: 520)
 
+        WindowGroup("Erinnerungen", id: "reminders-list", for: VehicleRef.self) { $vehicleRef in
+            if let vehicleRef {
+                ReminderListWindow(vehicleRef: vehicleRef)
+                    .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                    // ReminderRow braucht AppCommands (dailyDueCheckTick für die
+                    // Fälligkeits-Farbe) – anders als FuelEntryRow/ExpenseRow/NoteRow
+                    // in den übrigen Listenfenstern, die ohne auskommen. Ohne diese
+                    // Zeile crasht das Fenster beim Öffnen („No Observable object of
+                    // type AppCommands found“), da WindowGroups nicht automatisch die
+                    // Umgebung des Hauptfensters erben.
+                    .environment(appCommands)
+                    .persistWindowFrame("reminders-list")
+            }
+        }
+        .defaultSize(width: 400, height: 520)
+
         WindowGroup("Spritpreis-Verlauf", id: "price-chart", for: VehicleRef.self) { $vehicleRef in
             if let vehicleRef {
                 PriceChartWindow(vehicleRef: vehicleRef)

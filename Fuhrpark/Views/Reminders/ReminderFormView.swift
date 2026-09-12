@@ -8,6 +8,10 @@ struct ReminderFormView: View {
     /// Erinnerung, die bearbeitet wird; `nil` beim Anlegen einer neuen Erinnerung.
     let reminderToEdit: Erinnerung?
 
+    /// Wenn gesetzt (Aufruf aus der Fahrzeugdetail-Ansicht), ist das Fahrzeug
+    /// fest vorgegeben und wird statt der Auswahl nur noch angezeigt.
+    let fixedVehicle: Vehicle?
+
     @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Vehicle.licensePlate, ascending: true)])
     private var vehicles: FetchedResults<Vehicle>
 
@@ -24,11 +28,12 @@ struct ReminderFormView: View {
     @State private var dueDateValid = false
     @State private var repeatIntervalValid = true
 
-    init(reminderToEdit: Erinnerung? = nil) {
+    init(reminderToEdit: Erinnerung? = nil, fixedVehicle: Vehicle? = nil) {
         self.reminderToEdit = reminderToEdit
+        self.fixedVehicle = fixedVehicle
         _title = State(initialValue: reminderToEdit?.title ?? "")
         _dueDateText = State(initialValue: FieldValidator.string(from: reminderToEdit?.dueDate ?? Date()))
-        _selectedVehicle = State(initialValue: reminderToEdit?.vehicle)
+        _selectedVehicle = State(initialValue: reminderToEdit?.vehicle ?? fixedVehicle)
         _isDone = State(initialValue: reminderToEdit?.isDone ?? false)
         let currentUnit = reminderToEdit?.repeatUnit ?? .none
         _isRecurring = State(initialValue: currentUnit != .none)
@@ -66,7 +71,15 @@ struct ReminderFormView: View {
                         }
 
                         GlassCard(title: "Kennzeichen") {
-                            VehiclePicker(vehicles: Array(vehicles), selection: $selectedVehicle)
+                            if let fixedVehicle {
+                                Text(fixedVehicle.licensePlate ?? "")
+                                    .font(.title3.bold())
+                                Text("\(fixedVehicle.manufacturer ?? "") \(fixedVehicle.model ?? "")")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                VehiclePicker(vehicles: Array(vehicles), selection: $selectedVehicle)
+                            }
                         }
 
                         GlassCard(title: "Wiederholung") {
