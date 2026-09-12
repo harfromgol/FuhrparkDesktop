@@ -667,11 +667,9 @@ struct VehicleDetailView: View {
 
     /// Zwei Spalten im selben Verhältnis wie `noteSummary` (`noteCountColumnRatio`,
     /// 20:80): links die Anzahl der Erinnerungen dieses Fahrzeugs, rechts die
-    /// aktuellste – analog zu `noteSummary`s „Aktuellste Notiz" die mit dem
-    /// SPÄTESTEN Datum, nicht die zeitlich nächste fällige. `vehicle.sortedReminders`
-    /// ist nach Fälligkeitsdatum aufsteigend sortiert (Grundlage für Listen/
-    /// Sidebar, wo die nächste fällige zuerst stehen soll), `last` also die mit
-    /// dem spätesten Datum. Wird nur gezeigt, wenn mindestens eine Erinnerung
+    /// nächste fällige – `vehicle.sortedReminders` ist nach Fälligkeitsdatum
+    /// aufsteigend sortiert, `first` also die nächste (nicht zwingend die
+    /// zuletzt angelegte). Wird nur gezeigt, wenn mindestens eine Erinnerung
     /// vorhanden ist.
     private var reminderSummary: some View {
         GlassCard {
@@ -684,13 +682,13 @@ struct VehicleDetailView: View {
                 .frame(width: reminderSummaryColumnWidth, alignment: .leading)
                 Divider()
                 VStack(alignment: .leading, spacing: 4) {
-                    Label("Aktuellste Erinnerung", systemImage: "bell")
+                    Label("Nächste Erinnerung", systemImage: "bell")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    if let latest = vehicle.sortedReminders.last {
-                        Text(latest.title ?? "")
+                    if let next = vehicle.sortedReminders.first {
+                        Text(next.title ?? "")
                             .font(.title3.bold())
-                        if let due = latest.dueDate {
+                        if let due = next.dueDate {
                             Text(FieldValidator.string(from: due))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
