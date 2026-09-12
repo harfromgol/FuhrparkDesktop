@@ -10,6 +10,10 @@ import SwiftUI
 struct VehiclePDFReportView: View {
     let vehicle: Vehicle
     let enabledCards: Set<StatisticsCard>
+    /// Welche Abschnitte in der Bildschirmansicht sichtbar sind (siehe
+    /// `VehicleDetailSectionVisibilityStore`) – ein dort ausgeblendeter
+    /// Abschnitt taucht auch im PDF-Export nicht auf.
+    let visibleSections: Set<VehicleDetailSection>
 
     /// Alle sichtbaren Abschnitte in Reihenfolge. Als eigene, von außen
     /// lesbare Liste (statt eines direkt in `body` verschachtelten
@@ -21,18 +25,19 @@ struct VehiclePDFReportView: View {
             PDFReportSection(view: AnyView(reportHeader), rowInfo: nil),
             PDFReportSection(view: AnyView(headerStatsSection), rowInfo: nil)
         ]
-        if !vehicle.sortedFuelEntries.isEmpty {
+        if visibleSections.contains(.fuelEntries), !vehicle.sortedFuelEntries.isEmpty {
             result.append(PDFReportSection(view: AnyView(fuelStatsSection), rowInfo: nil))
         }
-        if !vehicle.sortedExpenses.isEmpty {
+        if visibleSections.contains(.expenses), !vehicle.sortedExpenses.isEmpty {
             result.append(PDFReportSection(view: AnyView(expenseStatsSection), rowInfo: nil))
         }
-        if !vehicle.sortedNotizen.isEmpty {
+        if visibleSections.contains(.notes), !vehicle.sortedNotizen.isEmpty {
             result.append(PDFReportSection(view: AnyView(notesSection), rowInfo: nil))
         }
-        if !vehicle.sortedReminders.isEmpty {
+        if visibleSections.contains(.reminders), !vehicle.sortedReminders.isEmpty {
             result.append(PDFReportSection(view: AnyView(remindersSection), rowInfo: nil))
         }
+        guard visibleSections.contains(.statistics) else { return result }
         if enabledCards.contains(.consumption), !vehicle.sortedFuelEntries.isEmpty {
             result.append(PDFReportSection(view: AnyView(consumptionSection), rowInfo: nil))
         }

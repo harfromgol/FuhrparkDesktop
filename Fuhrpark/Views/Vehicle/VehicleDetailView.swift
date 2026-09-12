@@ -467,7 +467,7 @@ struct VehicleDetailView: View {
 
     private func exportPDF() {
         do {
-            let reportView = VehiclePDFReportView(vehicle: vehicle, enabledCards: enabledCards)
+            let reportView = VehiclePDFReportView(vehicle: vehicle, enabledCards: enabledCards, visibleSections: visibleSections)
             let url = try ReportPDFGenerator.generate(
                 reportView,
                 sections: reportView.sections,
