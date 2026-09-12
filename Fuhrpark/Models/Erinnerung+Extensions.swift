@@ -107,24 +107,37 @@ extension Erinnerung {
     /// Markiert die Erinnerung als erledigt. Bei einer **nicht wiederkehrenden**
     /// Erinnerung ist das ein dauerhafter Endzustand (Toggle wie gewohnt). Bei
     /// einer **wiederkehrenden** Erinnerung springt sie stattdessen sofort auf
-    /// den nächsten Fälligkeitstermin und bleibt offen (`isDone` bleibt `false`)
-    /// – kein Verlauf einzelner Erledigungen, analog zu Apples Erinnerungen-App.
-    /// Die Checkbox ist damit bei wiederkehrenden Erinnerungen nur ein UI-Trigger.
+    /// den nächsten Fälligkeitstermin und bleibt offen (`isDone` bleibt
+    /// `false`) – zusätzlich wird für den alten Termin eine erledigte Kopie
+    /// angelegt, damit sichtbar bleibt, dass dieser Termin erledigt wurde
+    /// (siehe `advanceToNextOccurrence`). Die Checkbox ist damit bei
+    /// wiederkehrenden Erinnerungen nur ein UI-Trigger.
     func toggleDone(in context: NSManagedObjectContext) {
         if isRecurring {
-            advanceToNextOccurrence()
+            advanceToNextOccurrence(in: context)
         } else {
             isDone.toggle()
         }
         PersistenceController.shared.save(context: context)
     }
 
-    /// Setzt `dueDate` auf den nächsten Termin (aktuelles Fälligkeitsdatum +
-    /// ein Wiederholungsintervall). Bewusst ein einzelner Sprung (kein
+    /// Legt für den alten Fälligkeitstermin eine erledigte, nicht
+    /// wiederkehrende Kopie an (Verlaufseintrag) und setzt `dueDate` danach
+    /// auf den nächsten Termin (aktuelles Fälligkeitsdatum + ein
+    /// Wiederholungsintervall). Bewusst ein einzelner Sprung (kein
     /// Nachhol-Loop bis zu einem zukünftigen Datum) – entspricht dem Verhalten
     /// von Apples Erinnerungen-App bei verspätet erledigten Wiederholungen.
-    private func advanceToNextOccurrence() {
+    private func advanceToNextOccurrence(in context: NSManagedObjectContext) {
         guard let due = dueDate, let component = repeatUnit.calendarComponent else { return }
+
+        let completedOccurrence = Erinnerung(context: context)
+        completedOccurrence.id = UUID()
+        completedOccurrence.createdAt = Date()
+        completedOccurrence.title = title
+        completedOccurrence.dueDate = due
+        completedOccurrence.vehicle = vehicle
+        completedOccurrence.isDone = true
+
         dueDate = Calendar.current.date(byAdding: component, value: Int(repeatIntervalValue), to: due) ?? due
         isDone = false
     }
