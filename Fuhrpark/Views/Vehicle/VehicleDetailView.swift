@@ -14,6 +14,7 @@ struct VehicleDetailView: View {
     @State private var isPresentingNewNote = false
     @State private var isPresentingNewReminder = false
     @State private var isPresentingCardConfig = false
+    @State private var isPresentingSectionVisibility = false
     @State private var isPresentingEditVehicle = false
     @State private var vehiclePendingDeletion: Vehicle?
     @State private var vehiclePendingDecommission: Vehicle?
@@ -46,6 +47,18 @@ struct VehicleDetailView: View {
     /// erzeugt wird (`.id(vehicle.objectID)` in ContentView), lädt `init`
     /// hier automatisch den richtigen Stand.
     @State private var enabledCards: Set<StatisticsCard>
+    /// Welche Abschnitte (Betankungen/Sonstige Ausgaben/Notizen/Erinnerungen/
+    /// Statistik – jeweils Überschrift + Karte) sichtbar sind, umschaltbar
+    /// über „Sichtbare Elemente" im Kopfzeilen-Menü (öffnet
+    /// `sectionVisibilityPopover`). Effektiver Stand aus
+    /// `VehicleDetailSectionVisibilityStore` – globale Einstellung, sofern
+    /// dieses Fahrzeug keinen eigenen Override hat (siehe
+    /// `hasCustomSectionVisibility`).
+    @State private var visibleSections: Set<VehicleDetailSection>
+    /// Ob dieses Fahrzeug einen eigenen Override der Abschnitts-Sichtbarkeit
+    /// hat (an) oder der globalen Einstellung folgt (aus). Umschaltbar über
+    /// den Kippschalter oben in `sectionVisibilityPopover`.
+    @State private var hasCustomSectionVisibility: Bool
 
     /// Eigener `@FetchRequest` statt `vehicle.sortedReminders`: Core Data
     /// löst `objectWillChange` für `vehicle` nur aus, wenn sich dessen EIGENE
@@ -61,6 +74,8 @@ struct VehicleDetailView: View {
         self.vehicle = vehicle
         self.onDelete = onDelete
         _enabledCards = State(initialValue: vehicle.id.map(StatisticsCardVisibilityStore.enabledCards(for:)) ?? Set(StatisticsCard.allCases))
+        _visibleSections = State(initialValue: vehicle.id.map(VehicleDetailSectionVisibilityStore.visibleSections(for:)) ?? Set(VehicleDetailSection.allCases))
+        _hasCustomSectionVisibility = State(initialValue: vehicle.id.flatMap(VehicleDetailSectionVisibilityStore.vehicleOverride(for:)) != nil)
         _reminders = FetchRequest(
             sortDescriptors: [NSSortDescriptor(keyPath: \Erinnerung.dueDate, ascending: true)],
             predicate: vehicle.id.map { NSPredicate(format: "vehicle.id == %@", $0 as NSUUID) } ?? NSPredicate(value: false)
@@ -107,6 +122,47 @@ struct VehicleDetailView: View {
         )
     }
 
+    /// Ein-/Ausschalten eines Abschnitts, sofort persistiert – abhängig vom
+    /// Zustand des Kippschalters entweder als globale Einstellung (wirkt auf
+    /// alle Fahrzeuge ohne eigenen Override) oder als Override nur für
+    /// dieses Fahrzeug.
+    private func sectionBinding(_ section: VehicleDetailSection) -> Binding<Bool> {
+        Binding(
+            get: { visibleSections.contains(section) },
+            set: { isOn in
+                if isOn { visibleSections.insert(section) } else { visibleSections.remove(section) }
+                if hasCustomSectionVisibility {
+                    if let id = vehicle.id {
+                        VehicleDetailSectionVisibilityStore.setVehicleOverride(visibleSections, for: id)
+                    }
+                } else {
+                    VehicleDetailSectionVisibilityStore.setGlobalVisibleSections(visibleSections)
+                }
+            }
+        )
+    }
+
+    /// Kippschalter „Eigene Einstellung für dieses Fahrzeug" oben in
+    /// `sectionVisibilityPopover`. Beim Einschalten wird der aktuell
+    /// sichtbare Stand als Override für dieses Fahrzeug übernommen; beim
+    /// Ausschalten wird der Override gelöscht und die Anzeige fällt auf die
+    /// globale Einstellung zurück.
+    private var sectionVisibilityScopeBinding: Binding<Bool> {
+        Binding(
+            get: { hasCustomSectionVisibility },
+            set: { isOn in
+                guard let id = vehicle.id else { return }
+                if isOn {
+                    VehicleDetailSectionVisibilityStore.setVehicleOverride(visibleSections, for: id)
+                } else {
+                    VehicleDetailSectionVisibilityStore.setVehicleOverride(nil, for: id)
+                    visibleSections = VehicleDetailSectionVisibilityStore.globalVisibleSections()
+                }
+                hasCustomSectionVisibility = isOn
+            }
+        )
+    }
+
     private func cardTitle(_ card: StatisticsCard) -> String {
         switch card {
         case .consumption: return "Verbrauch"
@@ -130,6 +186,40 @@ struct VehicleDetailView: View {
         .frame(width: 260, alignment: .leading)
     }
 
+    /// Popover statt Untermenü: ein `Menu`/Untermenü schließt sich auf macOS
+    /// bei jedem Klick auf einen Eintrag – auch bei einem toggelnden mit
+    /// Häkchen –, was mehrere Auswahlen umständlich macht. Ein Popover mit
+    /// Checkbox-Togglen bleibt dagegen offen, bis man daneben klickt –
+    /// dasselbe Muster wie `cardVisibilityPopover`. Die Einstellung gilt per
+    /// Default global für alle Fahrzeuge; der Kippschalter oben erlaubt
+    /// einen Override nur für dieses Fahrzeug (siehe
+    /// `sectionVisibilityScopeBinding`).
+    private var sectionVisibilityPopover: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Sichtbare Elemente")
+                .font(.headline)
+
+            Toggle("Eigene Einstellung für dieses Fahrzeug", isOn: sectionVisibilityScopeBinding)
+                .toggleStyle(.checkbox)
+
+            Divider()
+
+            ForEach(VehicleDetailSection.allCases) { section in
+                Toggle(section.title, isOn: sectionBinding(section))
+                    .toggleStyle(.checkbox)
+            }
+
+            if !hasCustomSectionVisibility {
+                Text("Gilt global für alle Fahrzeuge ohne eigene Einstellung.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(16)
+        .frame(width: 260, alignment: .leading)
+    }
+
     var body: some View {
         ScrollView {
             GlassEffectContainer {
@@ -143,150 +233,160 @@ struct VehicleDetailView: View {
 
                     header
 
-                    sectionHeader(title: vehicle.engineType.refuelNounPlural, systemImage: "fuelpump.fill") {
-                        if !vehicle.decommissioned {
-                            Button(vehicle.engineType.newRefuelTitle, systemImage: "plus") {
-                                isPresentingNewFuelEntry = true
+                    if visibleSections.contains(.fuelEntries) {
+                        sectionHeader(title: vehicle.engineType.refuelNounPlural, systemImage: "fuelpump.fill") {
+                            if !vehicle.decommissioned {
+                                Button(vehicle.engineType.newRefuelTitle, systemImage: "plus") {
+                                    isPresentingNewFuelEntry = true
+                                }
+                                .buttonStyle(.glass)
+                                .pointerStyle(.link)
+                            }
+                            if !vehicle.sortedFuelEntries.isEmpty {
+                                Button("Liste anzeigen", systemImage: "list.bullet") {
+                                    if let vehicleRef {
+                                        openWindow(id: "fuel-list", value: vehicleRef)
+                                    }
+                                }
+                                .buttonStyle(.glass)
+                                .pointerStyle(.link)
+                            }
+                        }
+
+                        if vehicle.sortedFuelEntries.isEmpty {
+                            Text("Noch keine \(vehicle.engineType.refuelNounPlural) erfasst.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            fuelStatistics
+                        }
+                    }
+
+                    if visibleSections.contains(.expenses) {
+                        sectionHeader(title: "Sonstige Ausgaben", systemImage: "eurosign.circle.fill") {
+                            Button("Neue Ausgabe", systemImage: "plus") {
+                                isPresentingNewExpense = true
                             }
                             .buttonStyle(.glass)
                             .pointerStyle(.link)
+                            if !vehicle.sortedExpenses.isEmpty {
+                                Button("Liste anzeigen", systemImage: "list.bullet") {
+                                    if let vehicleRef {
+                                        openWindow(id: "expense-list", value: vehicleRef)
+                                    }
+                                }
+                                .buttonStyle(.glass)
+                                .pointerStyle(.link)
+                            }
                         }
-                        if !vehicle.sortedFuelEntries.isEmpty {
-                            Button("Liste anzeigen", systemImage: "list.bullet") {
-                                if let vehicleRef {
-                                    openWindow(id: "fuel-list", value: vehicleRef)
+
+                        if vehicle.sortedExpenses.isEmpty {
+                            Text("Noch keine Ausgaben erfasst.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            expenseStatistics
+                        }
+                    }
+
+                    if visibleSections.contains(.notes) {
+                        sectionHeader(title: "Notizen", systemImage: "note.text") {
+                            Button("Neue Notiz", systemImage: "plus") {
+                                addNoteTapped()
+                            }
+                            .buttonStyle(.glass)
+                            .pointerStyle(.link)
+                            if vehicle.sortedNotizen.count > 1 {
+                                Button("Liste anzeigen", systemImage: "list.bullet") {
+                                    if let vehicleRef {
+                                        openWindow(id: "notes-list", value: vehicleRef)
+                                    }
+                                }
+                                .buttonStyle(.glass)
+                                .pointerStyle(.link)
+                            }
+                        }
+
+                        if vehicle.sortedNotizen.isEmpty {
+                            Text("Noch keine Notizen erfasst.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            noteSummary
+                        }
+                    }
+
+                    if visibleSections.contains(.reminders) {
+                        sectionHeader(title: "Erinnerungen", systemImage: "bell") {
+                            Button("Neue Erinnerung", systemImage: "plus") {
+                                addReminderTapped()
+                            }
+                            .buttonStyle(.glass)
+                            .pointerStyle(.link)
+                            if reminders.count > 1 {
+                                Button("Liste anzeigen", systemImage: "list.bullet") {
+                                    if let vehicleRef {
+                                        openWindow(id: "reminders-list", value: vehicleRef)
+                                    }
+                                }
+                                .buttonStyle(.glass)
+                                .pointerStyle(.link)
+                            }
+                        }
+
+                        if reminders.isEmpty {
+                            Text("Noch keine Erinnerungen erfasst.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            reminderSummary
+                        }
+                    }
+
+                    if visibleSections.contains(.statistics) {
+                        sectionHeader(title: "Statistik", systemImage: "chart.bar.xaxis") {
+                            Button {
+                                isPresentingCardConfig = true
+                            } label: {
+                                Image(systemName: "gearshape")
+                            }
+                            .buttonStyle(.borderless)
+                            .pointerStyle(.link)
+                            .help("Sichtbare Statistiken konfigurieren")
+                            .popover(isPresented: $isPresentingCardConfig) {
+                                cardVisibilityPopover
+                            }
+                        }
+
+                        if vehicle.sortedFuelEntries.isEmpty && vehicle.sortedExpenses.isEmpty {
+                            Text("Noch keine \(vehicle.engineType.refuelNounPlural) oder sonstigen Ausgaben erfasst.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else if enabledCards.isEmpty {
+                            Text("Alle Statistik-Karten sind ausgeblendet. Über das Zahnrad-Symbol oben können sie wieder eingeblendet werden.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            if !vehicle.sortedFuelEntries.isEmpty {
+                                if enabledCards.contains(.consumption) {
+                                    consumptionStatistics
+                                }
+                                if enabledCards.contains(.price) {
+                                    priceStatistics
                                 }
                             }
-                            .buttonStyle(.glass)
-                            .pointerStyle(.link)
-                        }
-                    }
 
-                    if vehicle.sortedFuelEntries.isEmpty {
-                        Text("Noch keine \(vehicle.engineType.refuelNounPlural) erfasst.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        fuelStatistics
-                    }
-
-                    sectionHeader(title: "Sonstige Ausgaben", systemImage: "eurosign.circle.fill") {
-                        Button("Neue Ausgabe", systemImage: "plus") {
-                            isPresentingNewExpense = true
-                        }
-                        .buttonStyle(.glass)
-                        .pointerStyle(.link)
-                        if !vehicle.sortedExpenses.isEmpty {
-                            Button("Liste anzeigen", systemImage: "list.bullet") {
-                                if let vehicleRef {
-                                    openWindow(id: "expense-list", value: vehicleRef)
-                                }
+                            if !vehicle.sortedExpenses.isEmpty && enabledCards.contains(.expenseCategory) {
+                                expenseCategoryStatistics
                             }
-                            .buttonStyle(.glass)
-                            .pointerStyle(.link)
-                        }
-                    }
 
-                    if vehicle.sortedExpenses.isEmpty {
-                        Text("Noch keine Ausgaben erfasst.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        expenseStatistics
-                    }
-
-                    sectionHeader(title: "Notizen", systemImage: "note.text") {
-                        Button("Neue Notiz", systemImage: "plus") {
-                            addNoteTapped()
-                        }
-                        .buttonStyle(.glass)
-                        .pointerStyle(.link)
-                        if vehicle.sortedNotizen.count > 1 {
-                            Button("Liste anzeigen", systemImage: "list.bullet") {
-                                if let vehicleRef {
-                                    openWindow(id: "notes-list", value: vehicleRef)
-                                }
+                            if !vehicle.costsByYear.isEmpty && enabledCards.contains(.yearlyCost) {
+                                yearlyCostStatistics
                             }
-                            .buttonStyle(.glass)
-                            .pointerStyle(.link)
-                        }
-                    }
 
-                    if vehicle.sortedNotizen.isEmpty {
-                        Text("Noch keine Notizen erfasst.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        noteSummary
-                    }
-
-                    sectionHeader(title: "Erinnerungen", systemImage: "bell") {
-                        Button("Neue Erinnerung", systemImage: "plus") {
-                            addReminderTapped()
-                        }
-                        .buttonStyle(.glass)
-                        .pointerStyle(.link)
-                        if reminders.count > 1 {
-                            Button("Liste anzeigen", systemImage: "list.bullet") {
-                                if let vehicleRef {
-                                    openWindow(id: "reminders-list", value: vehicleRef)
-                                }
+                            if !vehicle.kilometersByYear.isEmpty && enabledCards.contains(.yearlyDistance) {
+                                kilometersByYearStatistics
                             }
-                            .buttonStyle(.glass)
-                            .pointerStyle(.link)
-                        }
-                    }
-
-                    if reminders.isEmpty {
-                        Text("Noch keine Erinnerungen erfasst.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        reminderSummary
-                    }
-
-                    sectionHeader(title: "Statistik", systemImage: "chart.bar.xaxis") {
-                        Button {
-                            isPresentingCardConfig = true
-                        } label: {
-                            Image(systemName: "gearshape")
-                        }
-                        .buttonStyle(.borderless)
-                        .pointerStyle(.link)
-                        .help("Sichtbare Statistiken konfigurieren")
-                        .popover(isPresented: $isPresentingCardConfig) {
-                            cardVisibilityPopover
-                        }
-                    }
-
-                    if vehicle.sortedFuelEntries.isEmpty && vehicle.sortedExpenses.isEmpty {
-                        Text("Noch keine \(vehicle.engineType.refuelNounPlural) oder sonstigen Ausgaben erfasst.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else if enabledCards.isEmpty {
-                        Text("Alle Statistik-Karten sind ausgeblendet. Über das Zahnrad-Symbol oben können sie wieder eingeblendet werden.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        if !vehicle.sortedFuelEntries.isEmpty {
-                            if enabledCards.contains(.consumption) {
-                                consumptionStatistics
-                            }
-                            if enabledCards.contains(.price) {
-                                priceStatistics
-                            }
-                        }
-
-                        if !vehicle.sortedExpenses.isEmpty && enabledCards.contains(.expenseCategory) {
-                            expenseCategoryStatistics
-                        }
-
-                        if !vehicle.costsByYear.isEmpty && enabledCards.contains(.yearlyCost) {
-                            yearlyCostStatistics
-                        }
-
-                        if !vehicle.kilometersByYear.isEmpty && enabledCards.contains(.yearlyDistance) {
-                            kilometersByYearStatistics
                         }
                     }
                 }
@@ -367,7 +467,7 @@ struct VehicleDetailView: View {
 
     private func exportPDF() {
         do {
-            let reportView = VehiclePDFReportView(vehicle: vehicle, enabledCards: enabledCards)
+            let reportView = VehiclePDFReportView(vehicle: vehicle, enabledCards: enabledCards, visibleSections: visibleSections)
             let url = try ReportPDFGenerator.generate(
                 reportView,
                 sections: reportView.sections,
@@ -448,6 +548,8 @@ struct VehicleDetailView: View {
                     Button("Löschen", role: .destructive) { vehiclePendingDeletion = vehicle }
                     Divider()
                     Button("PDF-Export") { exportPDF() }
+                    Divider()
+                    Button("Sichtbare Elemente") { isPresentingSectionVisibility = true }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -456,6 +558,9 @@ struct VehicleDetailView: View {
                 .fixedSize()
                 .pointerStyle(.link)
                 .help("Weitere Aktionen")
+                .popover(isPresented: $isPresentingSectionVisibility) {
+                    sectionVisibilityPopover
+                }
             }
 
             Divider()
