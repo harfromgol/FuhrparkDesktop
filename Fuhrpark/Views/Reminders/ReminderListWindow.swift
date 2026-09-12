@@ -7,7 +7,8 @@ import CoreData
 /// vorhanden ist). Bearbeiten/Löschen jeweils per Rechtsklick auf die Zeile
 /// (`ReminderRow`), Erledigt-Umschalten per Klick auf die Checkbox; neue
 /// Erinnerungen legt man weiterhin in der Fahrzeugdetail-Ansicht an – analog
-/// zu `NoteListWindow`, inklusive PDF-Export über die Werkzeuge-Menü-Taste.
+/// zu `NoteListWindow`, inklusive Status-Filter, einstellbarer Seitengröße
+/// mit Vor/Zurück-Blättern und PDF-Export über die Werkzeuge-Menü-Taste.
 struct ReminderListWindow: View {
     @Environment(\.managedObjectContext) private var viewContext
 
@@ -18,6 +19,10 @@ struct ReminderListWindow: View {
     @State private var reminderToEdit: Erinnerung?
     @State private var pendingDeletion: Erinnerung?
     @State private var pdfExportErrorMessage: String?
+
+    @State private var statusFilter: RemindersView.StatusFilter = .open
+    @State private var pageSize = ReminderPageSizeStore.get()
+    @State private var currentPage = 0
 
     init(vehicleRef: VehicleRef) {
         self.vehicleRef = vehicleRef
@@ -34,6 +39,24 @@ struct ReminderListWindow: View {
 
     private var vehicle: Vehicle? { vehicles.first }
 
+    private var filteredReminders: [Erinnerung] {
+        switch statusFilter {
+        case .all: return Array(reminders)
+        case .open: return reminders.filter { !$0.isDone }
+        case .done: return reminders.filter(\.isDone)
+        }
+    }
+
+    private var totalPages: Int {
+        max(1, Int(ceil(Double(filteredReminders.count) / Double(pageSize))))
+    }
+
+    private var pagedReminders: [Erinnerung] {
+        let start = currentPage * pageSize
+        guard start < filteredReminders.count else { return [] }
+        return Array(filteredReminders[start..<min(start + pageSize, filteredReminders.count)])
+    }
+
     var body: some View {
         ScrollView {
             GlassEffectContainer {
@@ -46,16 +69,30 @@ struct ReminderListWindow: View {
                         )
                         .padding(.top, 60)
                     } else {
-                        GlassCard(title: "Erinnerungen (\(reminders.count))") {
-                            VStack(alignment: .leading, spacing: 0) {
-                                ForEach(reminders) { reminder in
-                                    ReminderRow(
-                                        reminder: reminder,
-                                        onEdit: { reminderToEdit = reminder },
-                                        onDelete: { pendingDeletion = reminder }
-                                    )
-                                    Divider()
+                        displayOptions
+
+                        if filteredReminders.isEmpty {
+                            Text("Keine Erinnerungen im gewählten Status.")
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                                .padding(.top, 24)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        } else {
+                            GlassCard(title: "Erinnerungen (\(filteredReminders.count))") {
+                                VStack(alignment: .leading, spacing: 0) {
+                                    ForEach(pagedReminders) { reminder in
+                                        ReminderRow(
+                                            reminder: reminder,
+                                            onEdit: { reminderToEdit = reminder },
+                                            onDelete: { pendingDeletion = reminder }
+                                        )
+                                        Divider()
+                                    }
                                 }
+                            }
+
+                            if totalPages > 1 {
+                                PaginationControls(currentPage: $currentPage, totalPages: totalPages)
                             }
                         }
                     }
@@ -75,6 +112,14 @@ struct ReminderListWindow: View {
                 ReminderFormView(reminderToEdit: reminderToEdit, fixedVehicle: vehicle)
             }
         }
+        .onChange(of: statusFilter) { _, _ in currentPage = 0 }
+        .onChange(of: pageSize) { _, newValue in
+            ReminderPageSizeStore.set(newValue)
+            currentPage = 0
+        }
+        .onChange(of: totalPages) { _, newValue in
+            currentPage = min(currentPage, newValue - 1)
+        }
         .modifier(ReminderListAlertsModifier(
             pendingDeletion: $pendingDeletion,
             pdfExportErrorMessage: $pdfExportErrorMessage,
@@ -89,7 +134,7 @@ struct ReminderListWindow: View {
         do {
             let reportView = ReminderListPDFReportView(
                 vehicleRef: vehicleRef,
-                reminders: Array(reminders)
+                reminders: filteredReminders
             )
             let url = try ReportPDFGenerator.generate(
                 reportView,
@@ -118,6 +163,32 @@ struct ReminderListWindow: View {
             }
             .pointerStyle(.link)
             .help("Weitere Aktionen")
+        }
+    }
+
+    private var displayOptions: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Status")
+                    Spacer()
+                    Picker("Status", selection: $statusFilter) {
+                        ForEach(RemindersView.StatusFilter.allCases) { Text($0.rawValue).tag($0) }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .fixedSize()
+                }
+
+                Divider()
+
+                HStack {
+                    Text("Einträge pro Seite")
+                    Spacer()
+                    Stepper("\(pageSize)", value: $pageSize, in: 5...15)
+                        .fixedSize()
+                }
+            }
         }
     }
 }
