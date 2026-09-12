@@ -1,23 +1,13 @@
 import SwiftUI
 
-/// Filtereinstellungen für die Erinnerungen-Ansicht, aufgebaut wie
-/// `NotesFilterPopover`. Der Fahrzeugfilter erlaubt hier aber weiterhin eine
-/// Mehrfachauswahl (mehrere Kennzeichen gleichzeitig) – deshalb ein echtes
-/// `Menu` mit `Toggle`-Einträgen statt eines `Picker`s, der nur einen
-/// einzelnen Auswahlwert kennt.
+/// Filtereinstellungen für die Erinnerungen-Ansicht, identisch aufgebaut wie
+/// `NotesFilterPopover`/`DocumentsFilterPopover` – auch der Fahrzeugfilter
+/// als einfacher `Picker` mit Einfachauswahl.
 struct RemindersFilterPopover: View {
     @Binding var statusFilter: RemindersView.StatusFilter
-    @Binding var selectedVehicleFilter: Set<Vehicle>
+    @Binding var selectedVehicleFilter: Vehicle?
 
     let availableVehicles: [Vehicle]
-
-    private var vehicleFilterTitle: String {
-        switch selectedVehicleFilter.count {
-        case 0: return "Alle"
-        case 1: return selectedVehicleFilter.first?.licensePlate ?? "1 Fahrzeug"
-        default: return "\(selectedVehicleFilter.count) Fahrzeuge"
-        }
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -27,7 +17,7 @@ struct RemindersFilterPopover: View {
                 Spacer()
                 Button("Zurücksetzen") {
                     statusFilter = .all
-                    selectedVehicleFilter.removeAll()
+                    selectedVehicleFilter = nil
                 }
                 .buttonStyle(.borderless)
                 .pointerStyle(.link)
@@ -42,20 +32,14 @@ struct RemindersFilterPopover: View {
             }
 
             LabeledContent("Fahrzeug") {
-                Menu(vehicleFilterTitle) {
+                Picker("Fahrzeug", selection: $selectedVehicleFilter) {
+                    Text("Alle").tag(Vehicle?.none)
                     ForEach(availableVehicles) { vehicle in
-                        Toggle(vehicle.licensePlate ?? "", isOn: Binding(
-                            get: { selectedVehicleFilter.contains(vehicle) },
-                            set: { isOn in
-                                if isOn {
-                                    selectedVehicleFilter.insert(vehicle)
-                                } else {
-                                    selectedVehicleFilter.remove(vehicle)
-                                }
-                            }
-                        ))
+                        Text(vehicle.licensePlate ?? "").tag(Vehicle?.some(vehicle))
                     }
                 }
+                .labelsHidden()
+                .pickerStyle(.menu)
             }
         }
         .padding(16)

@@ -2,9 +2,9 @@ import SwiftUI
 import CoreData
 
 /// Fahrzeugübergreifende Liste aller Erinnerungen, mit Filter nach Kennzeichen
-/// (Mehrfachauswahl) und Status. Die Filter liegen hinter einem
-/// Filter-Icon-Button mit Popover statt fest sichtbarer Karten – analog zu
-/// `NotesView`/`DocumentsView` (siehe `RemindersFilterPopover`).
+/// und Status. Die Filter liegen hinter einem Filter-Icon-Button mit Popover
+/// – analog zu `NotesView`/`DocumentsView`, inklusive derselben
+/// Einfachauswahl-Picker für das Fahrzeug (siehe `RemindersFilterPopover`).
 struct RemindersView: View {
     @Environment(\.managedObjectContext) private var viewContext
 
@@ -22,7 +22,7 @@ struct RemindersView: View {
     @State private var pendingDeletion: Erinnerung?
     @State private var errorMessage: String?
 
-    @State private var selectedVehicleFilter: Set<Vehicle> = []
+    @State private var selectedVehicleFilter: Vehicle?
     @State private var statusFilter: StatusFilter = .open
     @State private var isPresentingFilterPopover = false
 
@@ -34,13 +34,12 @@ struct RemindersView: View {
     }
 
     private var isAnyFilterActive: Bool {
-        statusFilter != .all || !selectedVehicleFilter.isEmpty
+        statusFilter != .all || selectedVehicleFilter != nil
     }
 
     private var filteredReminders: [Erinnerung] {
         reminders.filter { reminder in
-            let vehicleMatch = selectedVehicleFilter.isEmpty
-                || reminder.vehicle.map(selectedVehicleFilter.contains) == true
+            let vehicleMatch = selectedVehicleFilter == nil || reminder.vehicle == selectedVehicleFilter
             let statusMatch: Bool
             switch statusFilter {
             case .all: statusMatch = true
