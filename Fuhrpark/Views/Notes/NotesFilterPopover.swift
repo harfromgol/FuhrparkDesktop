@@ -38,14 +38,7 @@ struct NotesFilterPopover: View {
             }
 
             LabeledContent("Fahrzeug") {
-                Picker("Fahrzeug", selection: $selectedVehicleFilter) {
-                    Text("Alle").tag(Vehicle?.none)
-                    ForEach(availableVehicles) { vehicle in
-                        Text(vehicle.licensePlate ?? "").tag(Vehicle?.some(vehicle))
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
+                VehiclePicker(vehicles: availableVehicles, selection: $selectedVehicleFilter, placeholder: "Alle")
             }
 
             VStack(alignment: .leading, spacing: 8) {

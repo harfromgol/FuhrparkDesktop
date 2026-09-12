@@ -2,7 +2,9 @@ import SwiftUI
 import CoreData
 
 /// Fahrzeugübergreifende Liste aller Erinnerungen, mit Filter nach Kennzeichen
-/// (Mehrfachauswahl) und Status. Aufbau angelehnt an `DocumentsView`.
+/// und Status. Die Filter liegen hinter einem Filter-Icon-Button mit Popover
+/// – analog zu `NotesView`/`DocumentsView`, inklusive derselben
+/// Einfachauswahl-Picker für das Fahrzeug (siehe `RemindersFilterPopover`).
 struct RemindersView: View {
     @Environment(\.managedObjectContext) private var viewContext
 
@@ -20,8 +22,9 @@ struct RemindersView: View {
     @State private var pendingDeletion: Erinnerung?
     @State private var errorMessage: String?
 
-    @State private var selectedVehicleFilter: Set<Vehicle> = []
+    @State private var selectedVehicleFilter: Vehicle?
     @State private var statusFilter: StatusFilter = .open
+    @State private var isPresentingFilterPopover = false
 
     enum StatusFilter: String, CaseIterable, Identifiable {
         case all = "Alle"
@@ -30,10 +33,13 @@ struct RemindersView: View {
         var id: String { rawValue }
     }
 
+    private var isAnyFilterActive: Bool {
+        statusFilter != .all || selectedVehicleFilter != nil
+    }
+
     private var filteredReminders: [Erinnerung] {
         reminders.filter { reminder in
-            let vehicleMatch = selectedVehicleFilter.isEmpty
-                || reminder.vehicle.map(selectedVehicleFilter.contains) == true
+            let vehicleMatch = selectedVehicleFilter == nil || reminder.vehicle == selectedVehicleFilter
             let statusMatch: Bool
             switch statusFilter {
             case .all: statusMatch = true
@@ -63,10 +69,6 @@ struct RemindersView: View {
                     GlassEffectContainer {
                         VStack(alignment: .leading, spacing: 20) {
                             addButtonRow
-                            if !vehicles.isEmpty {
-                                vehicleFilterSection
-                            }
-                            statusFilterSection
                             reminderListSection
                         }
                         .padding(20)
@@ -118,7 +120,26 @@ struct RemindersView: View {
 
     private var addButtonRow: some View {
         HStack {
+            Button {
+                isPresentingFilterPopover = true
+            } label: {
+                Image(systemName: isAnyFilterActive
+                    ? "line.3.horizontal.decrease.circle.fill"
+                    : "line.3.horizontal.decrease.circle")
+            }
+            .buttonStyle(.borderless)
+            .pointerStyle(.link)
+            .help("Erinnerungen filtern")
+            .popover(isPresented: $isPresentingFilterPopover) {
+                RemindersFilterPopover(
+                    statusFilter: $statusFilter,
+                    selectedVehicleFilter: $selectedVehicleFilter,
+                    availableVehicles: Array(vehicles)
+                )
+            }
+
             Spacer()
+
             Button {
                 addReminderTapped()
             } label: {
@@ -135,62 +156,6 @@ struct RemindersView: View {
             return
         }
         isPresentingNewReminder = true
-    }
-
-    private var vehicleFilterSection: some View {
-        GlassCard(title: "Nach Kennzeichen filtern") {
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 90), spacing: 8, alignment: .leading)],
-                alignment: .leading,
-                spacing: 8
-            ) {
-                filterChip(title: "Alle", selected: selectedVehicleFilter.isEmpty) {
-                    selectedVehicleFilter.removeAll()
-                }
-                ForEach(vehicles) { vehicle in
-                    filterChip(
-                        title: vehicle.licensePlate ?? "",
-                        selected: selectedVehicleFilter.contains(vehicle)
-                    ) {
-                        if selectedVehicleFilter.contains(vehicle) {
-                            selectedVehicleFilter.remove(vehicle)
-                        } else {
-                            selectedVehicleFilter.insert(vehicle)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private var statusFilterSection: some View {
-        GlassCard(title: "Status") {
-            Picker("Status", selection: $statusFilter) {
-                ForEach(StatusFilter.allCases) { Text($0.rawValue).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-        }
-    }
-
-    private func filterChip(title: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.caption)
-                .lineLimit(1)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .frame(maxWidth: .infinity)
-                .background(
-                    selected ? Color.accentColor.opacity(0.25) : Color.secondary.opacity(0.12),
-                    in: Capsule()
-                )
-                .overlay(
-                    Capsule().strokeBorder(selected ? Color.accentColor : .clear, lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
-        .pointerStyle(.link)
     }
 
     private var reminderListSection: some View {
