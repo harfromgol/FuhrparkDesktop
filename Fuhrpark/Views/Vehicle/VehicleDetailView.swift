@@ -666,7 +666,7 @@ struct VehicleDetailView: View {
     }
 
     /// Zwei Spalten im selben Verhältnis wie `noteSummary` (`noteCountColumnRatio`,
-    /// 20:80): links die Anzahl der Erinnerungen dieses Fahrzeugs, rechts die
+    /// 20:80): links „Fällige / Gesamt" (`Erinnerung.isDue`), rechts die
     /// nächste fällige – `vehicle.sortedReminders` ist nach Fälligkeitsdatum
     /// aufsteigend sortiert, `first` also die nächste (nicht zwingend die
     /// zuletzt angelegte). Wird nur gezeigt, wenn mindestens eine Erinnerung
@@ -676,13 +676,13 @@ struct VehicleDetailView: View {
             HStack(alignment: .top, spacing: 16) {
                 StatTile(
                     title: "Anzahl",
-                    value: "\(vehicle.sortedReminders.count)",
+                    value: "\(vehicle.sortedReminders.filter(\.isDue).count) / \(vehicle.sortedReminders.count)",
                     systemImage: "number"
                 )
                 .frame(width: reminderSummaryColumnWidth, alignment: .leading)
                 Divider()
                 VStack(alignment: .leading, spacing: 4) {
-                    Label("Nächste Erinnerung", systemImage: "bell")
+                    Label("Nächste fällige Erinnerung", systemImage: "bell")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     if let next = vehicle.sortedReminders.first {
