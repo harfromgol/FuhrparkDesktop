@@ -50,10 +50,15 @@ struct VehicleDetailView: View {
     /// Welche Abschnitte (Betankungen/Sonstige Ausgaben/Notizen/Erinnerungen/
     /// Statistik – jeweils Überschrift + Karte) sichtbar sind, umschaltbar
     /// über „Sichtbare Elemente" im Kopfzeilen-Menü (öffnet
-    /// `sectionVisibilityPopover`). Aus den UserDefaults vorbelegt (siehe
-    /// `VehicleDetailSectionVisibilityStore`), je Fahrzeug separat
-    /// gespeichert – analog zu `enabledCards`.
+    /// `sectionVisibilityPopover`). Effektiver Stand aus
+    /// `VehicleDetailSectionVisibilityStore` – globale Einstellung, sofern
+    /// dieses Fahrzeug keinen eigenen Override hat (siehe
+    /// `hasCustomSectionVisibility`).
     @State private var visibleSections: Set<VehicleDetailSection>
+    /// Ob dieses Fahrzeug einen eigenen Override der Abschnitts-Sichtbarkeit
+    /// hat (an) oder der globalen Einstellung folgt (aus). Umschaltbar über
+    /// den Kippschalter oben in `sectionVisibilityPopover`.
+    @State private var hasCustomSectionVisibility: Bool
 
     /// Eigener `@FetchRequest` statt `vehicle.sortedReminders`: Core Data
     /// löst `objectWillChange` für `vehicle` nur aus, wenn sich dessen EIGENE
@@ -70,6 +75,7 @@ struct VehicleDetailView: View {
         self.onDelete = onDelete
         _enabledCards = State(initialValue: vehicle.id.map(StatisticsCardVisibilityStore.enabledCards(for:)) ?? Set(StatisticsCard.allCases))
         _visibleSections = State(initialValue: vehicle.id.map(VehicleDetailSectionVisibilityStore.visibleSections(for:)) ?? Set(VehicleDetailSection.allCases))
+        _hasCustomSectionVisibility = State(initialValue: vehicle.id.flatMap(VehicleDetailSectionVisibilityStore.vehicleOverride(for:)) != nil)
         _reminders = FetchRequest(
             sortDescriptors: [NSSortDescriptor(keyPath: \Erinnerung.dueDate, ascending: true)],
             predicate: vehicle.id.map { NSPredicate(format: "vehicle.id == %@", $0 as NSUUID) } ?? NSPredicate(value: false)
@@ -116,15 +122,43 @@ struct VehicleDetailView: View {
         )
     }
 
-    /// Ein-/Ausschalten eines Abschnitts, sofort persistiert.
+    /// Ein-/Ausschalten eines Abschnitts, sofort persistiert – abhängig vom
+    /// Zustand des Kippschalters entweder als globale Einstellung (wirkt auf
+    /// alle Fahrzeuge ohne eigenen Override) oder als Override nur für
+    /// dieses Fahrzeug.
     private func sectionBinding(_ section: VehicleDetailSection) -> Binding<Bool> {
         Binding(
             get: { visibleSections.contains(section) },
             set: { isOn in
                 if isOn { visibleSections.insert(section) } else { visibleSections.remove(section) }
-                if let id = vehicle.id {
-                    VehicleDetailSectionVisibilityStore.setVisibleSections(visibleSections, for: id)
+                if hasCustomSectionVisibility {
+                    if let id = vehicle.id {
+                        VehicleDetailSectionVisibilityStore.setVehicleOverride(visibleSections, for: id)
+                    }
+                } else {
+                    VehicleDetailSectionVisibilityStore.setGlobalVisibleSections(visibleSections)
                 }
+            }
+        )
+    }
+
+    /// Kippschalter „Eigene Einstellung für dieses Fahrzeug" oben in
+    /// `sectionVisibilityPopover`. Beim Einschalten wird der aktuell
+    /// sichtbare Stand als Override für dieses Fahrzeug übernommen; beim
+    /// Ausschalten wird der Override gelöscht und die Anzeige fällt auf die
+    /// globale Einstellung zurück.
+    private var sectionVisibilityScopeBinding: Binding<Bool> {
+        Binding(
+            get: { hasCustomSectionVisibility },
+            set: { isOn in
+                guard let id = vehicle.id else { return }
+                if isOn {
+                    VehicleDetailSectionVisibilityStore.setVehicleOverride(visibleSections, for: id)
+                } else {
+                    VehicleDetailSectionVisibilityStore.setVehicleOverride(nil, for: id)
+                    visibleSections = VehicleDetailSectionVisibilityStore.globalVisibleSections()
+                }
+                hasCustomSectionVisibility = isOn
             }
         )
     }
@@ -156,18 +190,34 @@ struct VehicleDetailView: View {
     /// bei jedem Klick auf einen Eintrag – auch bei einem toggelnden mit
     /// Häkchen –, was mehrere Auswahlen umständlich macht. Ein Popover mit
     /// Checkbox-Togglen bleibt dagegen offen, bis man daneben klickt –
-    /// dasselbe Muster wie `cardVisibilityPopover`.
+    /// dasselbe Muster wie `cardVisibilityPopover`. Die Einstellung gilt per
+    /// Default global für alle Fahrzeuge; der Kippschalter oben erlaubt
+    /// einen Override nur für dieses Fahrzeug (siehe
+    /// `sectionVisibilityScopeBinding`).
     private var sectionVisibilityPopover: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Sichtbare Elemente")
                 .font(.headline)
+
+            Toggle("Eigene Einstellung für dieses Fahrzeug", isOn: sectionVisibilityScopeBinding)
+                .toggleStyle(.checkbox)
+
+            Divider()
+
             ForEach(VehicleDetailSection.allCases) { section in
                 Toggle(section.title, isOn: sectionBinding(section))
                     .toggleStyle(.checkbox)
             }
+
+            if !hasCustomSectionVisibility {
+                Text("Gilt global für alle Fahrzeuge ohne eigene Einstellung.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(16)
-        .frame(width: 220, alignment: .leading)
+        .frame(width: 260, alignment: .leading)
     }
 
     var body: some View {

@@ -137,7 +137,7 @@ extension Vehicle {
     func delete(in context: NSManagedObjectContext) {
         if let id {
             StatisticsCardVisibilityStore.removeEnabledCards(for: id)
-            VehicleDetailSectionVisibilityStore.removeVisibleSections(for: id)
+            VehicleDetailSectionVisibilityStore.setVehicleOverride(nil, for: id)
         }
         context.delete(self)
         // Räumt die Belege der gelöschten Ausgaben mit ab – samt ihrer

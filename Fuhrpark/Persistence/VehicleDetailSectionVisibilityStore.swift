@@ -1,8 +1,8 @@
 import Foundation
 
 /// Einer der optionalen Abschnitte (Überschrift + Karte) in
-/// `VehicleDetailView`, die der Nutzer über das „Sichtbare Elemente"-
-/// Untermenü im Kopfzeilen-Menü ein-/ausblenden kann.
+/// `VehicleDetailView`, die der Nutzer über „Sichtbare Elemente" im
+/// Kopfzeilen-Menü ein-/ausblenden kann.
 enum VehicleDetailSection: String, CaseIterable, Identifiable {
     case fuelEntries
     case expenses
@@ -23,35 +23,54 @@ enum VehicleDetailSection: String, CaseIterable, Identifiable {
     }
 }
 
-/// Speichert je Fahrzeug, welche Abschnitte in `VehicleDetailView` sichtbar
-/// sein sollen, in den UserDefaults – analog zu
-/// `StatisticsCardVisibilityStore`.
+/// Speichert, welche Abschnitte in `VehicleDetailView` sichtbar sein
+/// sollen – global für alle Fahrzeuge, mit optionalem Override je
+/// Fahrzeug. Ein Fahrzeug ohne eigenen Override folgt der globalen
+/// Einstellung; `visibleSections(for:)` liefert für die Anzeige direkt den
+/// bereits aufgelösten, effektiven Stand.
 enum VehicleDetailSectionVisibilityStore {
-    private static let defaultsKey = "vehicleDetailSectionVisibilityByVehicle"
+    private static let globalDefaultsKey = "vehicleDetailSectionVisibilityGlobal"
+    private static let perVehicleDefaultsKey = "vehicleDetailSectionVisibilityByVehicle"
 
-    /// Alle Abschnitte sichtbar, wenn für dieses Fahrzeug noch nichts
-    /// gespeichert wurde (Standard für neue wie bereits bestehende Fahrzeuge).
-    static func visibleSections(for vehicleID: UUID) -> Set<VehicleDetailSection> {
-        guard
-            let all = UserDefaults.standard.dictionary(forKey: defaultsKey) as? [String: [String]],
-            let rawValues = all[vehicleID.uuidString]
-        else {
+    /// Globale Standardeinstellung – alle Abschnitte sichtbar, wenn noch
+    /// nichts gespeichert wurde.
+    static func globalVisibleSections() -> Set<VehicleDetailSection> {
+        guard let rawValues = UserDefaults.standard.array(forKey: globalDefaultsKey) as? [String] else {
             return Set(VehicleDetailSection.allCases)
         }
         return Set(rawValues.compactMap(VehicleDetailSection.init(rawValue:)))
     }
 
-    static func setVisibleSections(_ sections: Set<VehicleDetailSection>, for vehicleID: UUID) {
-        var all = (UserDefaults.standard.dictionary(forKey: defaultsKey) as? [String: [String]]) ?? [:]
-        all[vehicleID.uuidString] = sections.map(\.rawValue)
-        UserDefaults.standard.set(all, forKey: defaultsKey)
+    static func setGlobalVisibleSections(_ sections: Set<VehicleDetailSection>) {
+        UserDefaults.standard.set(sections.map(\.rawValue), forKey: globalDefaultsKey)
     }
 
-    /// Entfernt die gespeicherte Konfiguration eines gelöschten Fahrzeugs, damit
-    /// keine Karteileiche in den UserDefaults zurückbleibt.
-    static func removeVisibleSections(for vehicleID: UUID) {
-        var all = (UserDefaults.standard.dictionary(forKey: defaultsKey) as? [String: [String]]) ?? [:]
-        all.removeValue(forKey: vehicleID.uuidString)
-        UserDefaults.standard.set(all, forKey: defaultsKey)
+    /// Eigene Einstellung eines Fahrzeugs, oder `nil`, wenn es (noch) keinen
+    /// Override hat und damit der globalen Einstellung folgt.
+    static func vehicleOverride(for vehicleID: UUID) -> Set<VehicleDetailSection>? {
+        guard
+            let all = UserDefaults.standard.dictionary(forKey: perVehicleDefaultsKey) as? [String: [String]],
+            let rawValues = all[vehicleID.uuidString]
+        else {
+            return nil
+        }
+        return Set(rawValues.compactMap(VehicleDetailSection.init(rawValue:)))
+    }
+
+    /// Setzt (oder entfernt mit `nil`) den Override eines Fahrzeugs.
+    static func setVehicleOverride(_ sections: Set<VehicleDetailSection>?, for vehicleID: UUID) {
+        var all = (UserDefaults.standard.dictionary(forKey: perVehicleDefaultsKey) as? [String: [String]]) ?? [:]
+        if let sections {
+            all[vehicleID.uuidString] = sections.map(\.rawValue)
+        } else {
+            all.removeValue(forKey: vehicleID.uuidString)
+        }
+        UserDefaults.standard.set(all, forKey: perVehicleDefaultsKey)
+    }
+
+    /// Effektiv sichtbare Abschnitte für ein Fahrzeug: eigener Override,
+    /// sonst die globale Einstellung.
+    static func visibleSections(for vehicleID: UUID) -> Set<VehicleDetailSection> {
+        vehicleOverride(for: vehicleID) ?? globalVisibleSections()
     }
 }
