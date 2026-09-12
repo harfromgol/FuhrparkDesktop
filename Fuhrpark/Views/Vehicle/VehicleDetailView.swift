@@ -47,10 +47,24 @@ struct VehicleDetailView: View {
     /// hier automatisch den richtigen Stand.
     @State private var enabledCards: Set<StatisticsCard>
 
+    /// Eigener `@FetchRequest` statt `vehicle.sortedReminders`: Core Data
+    /// löst `objectWillChange` für `vehicle` nur aus, wenn sich dessen EIGENE
+    /// Relationship-Mitgliedschaft ändert (neue/gelöschte Erinnerung) – nicht
+    /// wenn nur ein Attribut einer bereits verknüpften Erinnerung geändert
+    /// wird (z. B. `isDone` beim Erledigt-Toggle im `ReminderListWindow`).
+    /// `reminderSummary` bliebe damit veraltet stehen, solange dieses
+    /// Fenster offen bleibt. `FetchedResults` beobachtet dagegen jede
+    /// passende Objektänderung im Kontext direkt und aktualisiert sich immer.
+    @FetchRequest private var reminders: FetchedResults<Erinnerung>
+
     init(vehicle: Vehicle, onDelete: @escaping () -> Void) {
         self.vehicle = vehicle
         self.onDelete = onDelete
         _enabledCards = State(initialValue: vehicle.id.map(StatisticsCardVisibilityStore.enabledCards(for:)) ?? Set(StatisticsCard.allCases))
+        _reminders = FetchRequest(
+            sortDescriptors: [NSSortDescriptor(keyPath: \Erinnerung.dueDate, ascending: true)],
+            predicate: vehicle.id.map { NSPredicate(format: "vehicle.id == %@", $0 as NSUUID) } ?? NSPredicate(value: false)
+        )
     }
 
     private var vehicleRef: VehicleRef? {
@@ -212,7 +226,7 @@ struct VehicleDetailView: View {
                         }
                         .buttonStyle(.glass)
                         .pointerStyle(.link)
-                        if vehicle.sortedReminders.count > 1 {
+                        if reminders.count > 1 {
                             Button("Liste anzeigen", systemImage: "list.bullet") {
                                 if let vehicleRef {
                                     openWindow(id: "reminders-list", value: vehicleRef)
@@ -223,7 +237,7 @@ struct VehicleDetailView: View {
                         }
                     }
 
-                    if vehicle.sortedReminders.isEmpty {
+                    if reminders.isEmpty {
                         Text("Noch keine Erinnerungen erfasst.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -667,16 +681,16 @@ struct VehicleDetailView: View {
 
     /// Zwei Spalten im selben Verhältnis wie `noteSummary` (`noteCountColumnRatio`,
     /// 20:80): links „Fällige / Gesamt" (`Erinnerung.isDue`), rechts die
-    /// nächste fällige – `vehicle.sortedReminders` ist nach Fälligkeitsdatum
-    /// aufsteigend sortiert, `first` also die nächste (nicht zwingend die
-    /// zuletzt angelegte). Wird nur gezeigt, wenn mindestens eine Erinnerung
-    /// vorhanden ist.
+    /// nächste fällige – `reminders` ist nach Fälligkeitsdatum aufsteigend
+    /// sortiert, `first` also die nächste (nicht zwingend die zuletzt
+    /// angelegte). Wird nur gezeigt, wenn mindestens eine Erinnerung vorhanden
+    /// ist.
     private var reminderSummary: some View {
         GlassCard {
             HStack(alignment: .top, spacing: 16) {
                 StatTile(
                     title: "Anzahl",
-                    value: "\(vehicle.sortedReminders.filter(\.isDue).count) / \(vehicle.sortedReminders.count)",
+                    value: "\(reminders.filter(\.isDue).count) / \(reminders.count)",
                     systemImage: "number"
                 )
                 .frame(width: reminderSummaryColumnWidth, alignment: .leading)
@@ -685,7 +699,7 @@ struct VehicleDetailView: View {
                     Label("Nächste fällige Erinnerung", systemImage: "bell")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    if let next = vehicle.sortedReminders.first {
+                    if let next = reminders.first {
                         Text(next.title ?? "")
                             .font(.title3.bold())
                         if let due = next.dueDate {
