@@ -131,11 +131,13 @@ extension Vehicle {
     // MARK: - Mutationen
 
     /// Löscht dieses Fahrzeug inkl. aller zugehörigen Betankungen/Ausgaben
-    /// (Core-Data-Cascade) und räumt die gespeicherte Statistik-Karten-
-    /// Konfiguration auf, die sonst als Karteileiche zurückbliebe.
+    /// (Core-Data-Cascade) und räumt die gespeicherte Statistik-Karten- sowie
+    /// Abschnitts-Sichtbarkeits-Konfiguration auf, die sonst als Karteileiche
+    /// zurückbliebe.
     func delete(in context: NSManagedObjectContext) {
         if let id {
             StatisticsCardVisibilityStore.removeEnabledCards(for: id)
+            VehicleDetailSectionVisibilityStore.removeVisibleSections(for: id)
         }
         context.delete(self)
         // Räumt die Belege der gelöschten Ausgaben mit ab – samt ihrer
