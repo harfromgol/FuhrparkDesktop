@@ -14,6 +14,7 @@ struct VehicleDetailView: View {
     @State private var isPresentingNewNote = false
     @State private var isPresentingNewReminder = false
     @State private var isPresentingCardConfig = false
+    @State private var isPresentingSectionVisibility = false
     @State private var isPresentingEditVehicle = false
     @State private var vehiclePendingDeletion: Vehicle?
     @State private var vehiclePendingDecommission: Vehicle?
@@ -48,9 +49,10 @@ struct VehicleDetailView: View {
     @State private var enabledCards: Set<StatisticsCard>
     /// Welche Abschnitte (Betankungen/Sonstige Ausgaben/Notizen/Erinnerungen/
     /// Statistik – jeweils Überschrift + Karte) sichtbar sind, umschaltbar
-    /// über das „Sichtbare Elemente"-Untermenü im Kopfzeilen-Menü. Aus den
-    /// UserDefaults vorbelegt (siehe `VehicleDetailSectionVisibilityStore`),
-    /// je Fahrzeug separat gespeichert – analog zu `enabledCards`.
+    /// über „Sichtbare Elemente" im Kopfzeilen-Menü (öffnet
+    /// `sectionVisibilityPopover`). Aus den UserDefaults vorbelegt (siehe
+    /// `VehicleDetailSectionVisibilityStore`), je Fahrzeug separat
+    /// gespeichert – analog zu `enabledCards`.
     @State private var visibleSections: Set<VehicleDetailSection>
 
     /// Eigener `@FetchRequest` statt `vehicle.sortedReminders`: Core Data
@@ -148,6 +150,24 @@ struct VehicleDetailView: View {
         }
         .padding(16)
         .frame(width: 260, alignment: .leading)
+    }
+
+    /// Popover statt Untermenü: ein `Menu`/Untermenü schließt sich auf macOS
+    /// bei jedem Klick auf einen Eintrag – auch bei einem toggelnden mit
+    /// Häkchen –, was mehrere Auswahlen umständlich macht. Ein Popover mit
+    /// Checkbox-Togglen bleibt dagegen offen, bis man daneben klickt –
+    /// dasselbe Muster wie `cardVisibilityPopover`.
+    private var sectionVisibilityPopover: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Sichtbare Elemente")
+                .font(.headline)
+            ForEach(VehicleDetailSection.allCases) { section in
+                Toggle(section.title, isOn: sectionBinding(section))
+                    .toggleStyle(.checkbox)
+            }
+        }
+        .padding(16)
+        .frame(width: 220, alignment: .leading)
     }
 
     var body: some View {
@@ -479,11 +499,7 @@ struct VehicleDetailView: View {
                     Divider()
                     Button("PDF-Export") { exportPDF() }
                     Divider()
-                    Menu("Sichtbare Elemente") {
-                        ForEach(VehicleDetailSection.allCases) { section in
-                            Toggle(section.title, isOn: sectionBinding(section))
-                        }
-                    }
+                    Button("Sichtbare Elemente") { isPresentingSectionVisibility = true }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -492,6 +508,9 @@ struct VehicleDetailView: View {
                 .fixedSize()
                 .pointerStyle(.link)
                 .help("Weitere Aktionen")
+                .popover(isPresented: $isPresentingSectionVisibility) {
+                    sectionVisibilityPopover
+                }
             }
 
             Divider()
