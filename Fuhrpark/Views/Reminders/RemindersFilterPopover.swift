@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// Filtereinstellungen für die Erinnerungen-Ansicht, identisch aufgebaut wie
-/// `NotesFilterPopover`/`DocumentsFilterPopover` – auch der Fahrzeugfilter
-/// als einfacher `Picker` mit Einfachauswahl.
+/// `NotesFilterPopover`/`DocumentsFilterPopover` – auch derselbe
+/// `VehiclePicker` für den Fahrzeugfilter (Einfachauswahl, nach Aktiv/
+/// Stillgelegt gruppiert, mit Hersteller/Modell/km-Stand je Zeile).
 struct RemindersFilterPopover: View {
     @Binding var statusFilter: RemindersView.StatusFilter
     @Binding var selectedVehicleFilter: Vehicle?
@@ -32,14 +33,7 @@ struct RemindersFilterPopover: View {
             }
 
             LabeledContent("Fahrzeug") {
-                Picker("Fahrzeug", selection: $selectedVehicleFilter) {
-                    Text("Alle").tag(Vehicle?.none)
-                    ForEach(availableVehicles) { vehicle in
-                        Text(vehicle.licensePlate ?? "").tag(Vehicle?.some(vehicle))
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
+                VehiclePicker(vehicles: availableVehicles, selection: $selectedVehicleFilter, placeholder: "Alle")
             }
         }
         .padding(16)

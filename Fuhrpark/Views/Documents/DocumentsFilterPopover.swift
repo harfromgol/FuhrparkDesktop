@@ -16,10 +16,13 @@ enum FahrzeugStatusFilter: String, CaseIterable, Identifiable {
 }
 
 /// Filtereinstellungen für die Dokumente-Ansicht, geöffnet über das
-/// Filter-Symbol neben dem Zahnrad. Alle Auswahlfelder sind Dropdown-Boxen
-/// mit fester Größe, damit sich das Popover nicht verschiebt, wenn sich
-/// durch die Kaskade die Anzahl der wählbaren Fahrzeuge/Kategorien ändert
-/// (anders als die zuvor verwendeten Chip-Gitter).
+/// Filter-Symbol neben dem Zahnrad. Fahrzeug- und Kategorie-Auswahl sind
+/// Dropdowns mit fester Größe, damit sich das Popover nicht verschiebt, wenn
+/// sich durch die Kaskade die Anzahl der wählbaren Fahrzeuge/Kategorien
+/// ändert (anders als die zuvor verwendeten Chip-Gitter). Der Fahrzeugfilter
+/// nutzt denselben `VehiclePicker` wie die Formulare (Neue Notiz/Ausgabe/
+/// Erinnerung) – gruppiert nach Aktiv/Stillgelegt, mit Hersteller/Modell/
+/// km-Stand je Zeile.
 ///
 /// Die vier Filter verunden sich und kaskadieren in dieser Reihenfolge:
 /// Fahrzeugstatus schränkt die wählbaren Fahrzeuge ein, beide zusammen
@@ -64,14 +67,7 @@ struct DocumentsFilterPopover: View {
             }
 
             LabeledContent("Fahrzeug") {
-                Picker("Fahrzeug", selection: $selectedVehicleFilter) {
-                    Text("Alle").tag(Vehicle?.none)
-                    ForEach(availableVehicles) { vehicle in
-                        Text(vehicle.licensePlate ?? "").tag(Vehicle?.some(vehicle))
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
+                VehiclePicker(vehicles: availableVehicles, selection: $selectedVehicleFilter, placeholder: "Alle")
             }
 
             LabeledContent("Kategorie") {
