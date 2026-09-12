@@ -679,18 +679,27 @@ struct VehicleDetailView: View {
         return (noteSummaryWidth - 16 - 1) * Self.noteCountColumnRatio
     }
 
+    /// Erledigte Erinnerungen sind für `reminderSummary` uninteressant –
+    /// weder in „Fällige / Offen" noch als „nächste fällige" sollen sie
+    /// mitzählen.
+    private var openReminders: [Erinnerung] {
+        reminders.filter { !$0.isDone }
+    }
+
     /// Zwei Spalten im selben Verhältnis wie `noteSummary` (`noteCountColumnRatio`,
-    /// 20:80): links „Fällige / Gesamt" (`Erinnerung.isDue`), rechts die
-    /// nächste fällige – `reminders` ist nach Fälligkeitsdatum aufsteigend
-    /// sortiert, `first` also die nächste (nicht zwingend die zuletzt
-    /// angelegte). Wird nur gezeigt, wenn mindestens eine Erinnerung vorhanden
-    /// ist.
+    /// 20:80): links „Fällige / Offen" (`Erinnerung.isDue`, gegen
+    /// `openReminders` statt aller Erinnerungen), rechts die nächste fällige
+    /// unter den offenen – `reminders` ist nach Fälligkeitsdatum aufsteigend
+    /// sortiert, `openReminders` behält diese Reihenfolge bei, `first` also
+    /// die nächste (nicht zwingend die zuletzt angelegte). Wird nur gezeigt,
+    /// wenn mindestens eine Erinnerung vorhanden ist – auch wenn alle
+    /// erledigt sind (dann zeigt die Karte 0/0 und keine „nächste fällige").
     private var reminderSummary: some View {
         GlassCard {
             HStack(alignment: .top, spacing: 16) {
                 StatTile(
                     title: "Anzahl",
-                    value: "\(reminders.filter(\.isDue).count) / \(reminders.count)",
+                    value: "\(openReminders.filter(\.isDue).count) / \(openReminders.count)",
                     systemImage: "number"
                 )
                 .frame(width: reminderSummaryColumnWidth, alignment: .leading)
@@ -699,7 +708,7 @@ struct VehicleDetailView: View {
                     Label("Nächste fällige Erinnerung", systemImage: "bell")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    if let next = reminders.first {
+                    if let next = openReminders.first {
                         Text(next.title ?? "")
                             .font(.title3.bold())
                         if let due = next.dueDate {
