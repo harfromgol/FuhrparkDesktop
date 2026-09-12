@@ -205,16 +205,29 @@ struct VehiclePDFReportView: View {
         return (cardContentWidth - 16) * VehicleDetailView.noteCountColumnRatio
     }
 
+    /// Erledigte (und historische, bei wiederkehrenden Erinnerungen beim
+    /// Weiterschalten angelegte) Erinnerungen sind hier uninteressant –
+    /// exakt wie `VehicleDetailView.openReminders`.
+    private var openReminders: [Erinnerung] {
+        vehicle.sortedReminders.filter { !$0.isDone }
+    }
+
     /// Zwei Spalten wie `VehicleDetailView.reminderSummary`, im selben
-    /// `noteCountColumnRatio`-Verhältnis (20:80): links die Anzahl, rechts die
-    /// nächste fällige Erinnerung (`vehicle.sortedReminders` ist nach
-    /// Fälligkeitsdatum aufsteigend sortiert, `first` also die nächste).
+    /// `noteCountColumnRatio`-Verhältnis (20:80): links „Fällige / Offen"
+    /// (gegen `openReminders`, nicht alle Erinnerungen), rechts die nächste
+    /// fällige unter den offenen (`vehicle.sortedReminders` ist nach
+    /// Fälligkeitsdatum aufsteigend sortiert, `openReminders` behält diese
+    /// Reihenfolge, `first` also die nächste).
     private var remindersSection: some View {
         PDFReportCard(title: "Erinnerungen – Übersicht") {
             HStack(alignment: .top, spacing: 16) {
-                StatTile(title: "Anzahl", value: "\(vehicle.sortedReminders.count)", systemImage: "number")
+                StatTile(
+                    title: "Anzahl",
+                    value: "\(openReminders.filter(\.isDue).count) / \(openReminders.count)",
+                    systemImage: "number"
+                )
                     .frame(width: noteCountColumnWidth, alignment: .leading)
-                if let next = vehicle.sortedReminders.first {
+                if let next = openReminders.first {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Nächste Erinnerung")
                             .font(.caption)
