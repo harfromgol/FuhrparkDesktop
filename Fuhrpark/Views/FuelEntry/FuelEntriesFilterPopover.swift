@@ -65,6 +65,8 @@ struct FuelEntriesFilterPopover: View {
                     .fixedSize()
             }
 
+            Divider()
+
             LabeledContent("Sortierung") {
                 Picker("Sortierung", selection: $sortOrder) {
                     ForEach(FuelEntrySortOrder.allCases) { order in
