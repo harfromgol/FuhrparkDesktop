@@ -7,6 +7,13 @@ import CoreData
 /// „Neue …“-Button oben, darunter die gefilterte Liste), ergänzt um die
 /// Vor/Zurück-Blätterung aus `FuelEntryListWindow`, da die fahrzeug-
 /// übergreifende Liste schnell sehr lang werden kann.
+///
+/// Alle Filter- und Anzeigeeinstellungen werden in
+/// `FuelEntriesOverviewFilterStore` gespeichert und beim Erscheinen wieder
+/// eingelesen: die Ansicht wird bei jedem Wechsel in der Seitenleiste neu
+/// erzeugt (ihr `@State` ginge sonst beim Verlassen verloren), soll aber
+/// beim Zurückkehren zu „Allgemein → Betankungen“ wie auch nach einem
+/// Neustart genau dort weitermachen, wo man aufgehört hat.
 struct FuelEntriesView: View {
     @Environment(\.managedObjectContext) private var viewContext
 
@@ -21,12 +28,18 @@ struct FuelEntriesView: View {
     @State private var errorMessage: String?
 
     @State private var selectedVehicleFilter: Vehicle?
-    @State private var statusFilter: FahrzeugStatusFilter = .alle
-    @State private var showAllResults = FuelEntriesOverviewPageSizeStore.getShowAll()
-    @State private var pageSize = FuelEntriesOverviewPageSizeStore.get()
-    @State private var sortOrder: FuelEntrySortOrder = .descending
+    @State private var statusFilter = FuelEntriesOverviewFilterStore.getStatusFilter()
+    @State private var showAllResults = FuelEntriesOverviewFilterStore.getShowAll()
+    @State private var pageSize = FuelEntriesOverviewFilterStore.getPageSize()
+    @State private var sortOrder = FuelEntriesOverviewFilterStore.getSortOrder()
     @State private var currentPage = 0
     @State private var isPresentingFilterPopover = false
+    /// `selectedVehicleFilter` selbst kann erst nach dem ersten Erscheinen
+    /// aus der gespeicherten Fahrzeug-ID aufgelöst werden, da `vehicles`
+    /// (der `@FetchRequest`) zum Zeitpunkt der `@State`-Initialisierung noch
+    /// nicht befüllt ist – siehe `.onAppear` unten, analog zu
+    /// `FuelEntryListWindow.didSetDefaultYear`.
+    @State private var didRestoreVehicleFilter = false
 
     /// Fahrzeuge, die zum gewählten Fahrzeugstatus passen – Grundlage der
     /// Fahrzeugauswahl im Filter-Popover.
@@ -148,20 +161,34 @@ struct FuelEntriesView: View {
         } message: { message in
             Text(message)
         }
-        .onChange(of: statusFilter) { _, _ in
+        .onAppear {
+            guard !didRestoreVehicleFilter else { return }
+            didRestoreVehicleFilter = true
+            if let id = FuelEntriesOverviewFilterStore.getSelectedVehicleID() {
+                selectedVehicleFilter = vehicles.first { $0.id == id }
+            }
+        }
+        .onChange(of: statusFilter) { _, newValue in
+            FuelEntriesOverviewFilterStore.setStatusFilter(newValue)
             if let selectedVehicleFilter, !vehiclesMatchingStatus.contains(selectedVehicleFilter) {
                 self.selectedVehicleFilter = nil
             }
             currentPage = 0
         }
-        .onChange(of: selectedVehicleFilter) { _, _ in currentPage = 0 }
-        .onChange(of: sortOrder) { _, _ in currentPage = 0 }
+        .onChange(of: selectedVehicleFilter) { _, newValue in
+            FuelEntriesOverviewFilterStore.setSelectedVehicleID(newValue?.id)
+            currentPage = 0
+        }
+        .onChange(of: sortOrder) { _, newValue in
+            FuelEntriesOverviewFilterStore.setSortOrder(newValue)
+            currentPage = 0
+        }
         .onChange(of: showAllResults) { _, newValue in
-            FuelEntriesOverviewPageSizeStore.setShowAll(newValue)
+            FuelEntriesOverviewFilterStore.setShowAll(newValue)
             currentPage = 0
         }
         .onChange(of: pageSize) { _, newValue in
-            FuelEntriesOverviewPageSizeStore.set(newValue)
+            FuelEntriesOverviewFilterStore.setPageSize(newValue)
             currentPage = 0
         }
         .onChange(of: totalPages) { _, newValue in
