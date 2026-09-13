@@ -2,9 +2,11 @@ import SwiftUI
 import CoreData
 
 /// Ob die Liste als Karten (bisheriges Layout) oder als Tabelle dargestellt
-/// wird – umschaltbar über `FuelEntriesView.layoutModePicker`. Nur eine
-/// Anzeige-Präferenz für die laufende Sitzung, keine Filterung.
-private enum FuelEntriesLayoutMode {
+/// wird – umschaltbar über `FuelEntriesView.layoutModePicker`. Wird wie die
+/// übrigen Anzeigeeinstellungen in `FuelEntriesOverviewFilterStore`
+/// gespeichert, daher nicht `private` (der Store liegt in einer anderen
+/// Datei).
+enum FuelEntriesLayoutMode: String {
     case cards
     case table
 }
@@ -42,8 +44,8 @@ struct FuelEntriesView: View {
     @State private var sortOrder = FuelEntriesOverviewFilterStore.getSortOrder()
     @State private var currentPage = 0
     @State private var isPresentingFilterPopover = false
-    @State private var layoutMode: FuelEntriesLayoutMode = .cards
-    @State private var visibleColumns = Set(FuelEntryTableColumn.allCases)
+    @State private var layoutMode = FuelEntriesOverviewFilterStore.getLayoutMode()
+    @State private var visibleColumns = FuelEntriesOverviewFilterStore.getVisibleColumns()
     @State private var isPresentingColumnsPopover = false
     /// `selectedVehicleFilter` selbst kann erst nach dem ersten Erscheinen
     /// aus der gespeicherten Fahrzeug-ID aufgelöst werden, da `vehicles`
@@ -223,9 +225,13 @@ struct FuelEntriesView: View {
             currentPage = min(currentPage, newValue - 1)
         }
         .onChange(of: layoutMode) { _, newValue in
+            FuelEntriesOverviewFilterStore.setLayoutMode(newValue)
             if newValue == .table {
                 showAllResults = true
             }
+        }
+        .onChange(of: visibleColumns) { _, newValue in
+            FuelEntriesOverviewFilterStore.setVisibleColumns(newValue)
         }
     }
 
