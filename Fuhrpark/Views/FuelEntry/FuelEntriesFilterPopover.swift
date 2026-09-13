@@ -28,6 +28,10 @@ struct FuelEntriesFilterPopover: View {
 
     let availableVehicles: [Vehicle]
     let maxPageSize: Int
+    /// In der Tabellenansicht (`FuelEntriesTable`) werden immer alle
+    /// Treffer gezeigt – „Alle anzeigen“ ist dort fest angehakt und lässt
+    /// sich nicht abwählen (siehe `FuelEntriesView.layoutMode`).
+    let isShowAllLocked: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -70,6 +74,7 @@ struct FuelEntriesFilterPopover: View {
                     Toggle("Alle anzeigen", isOn: $showAllResults)
                         .labelsHidden()
                         .toggleStyle(.checkbox)
+                        .disabled(isShowAllLocked)
                 }
 
                 if !showAllResults {

@@ -17,6 +17,8 @@ enum FuelEntriesOverviewFilterStore {
     private static let sortOrderDefaultsKey = "fuelEntriesOverviewSortOrder"
     private static let pageSizeDefaultsKey = "fuelEntriesOverviewPageSize"
     private static let showAllDefaultsKey = "fuelEntriesOverviewShowAllResults"
+    private static let layoutModeDefaultsKey = "fuelEntriesOverviewLayoutMode"
+    private static let visibleColumnsDefaultsKey = "fuelEntriesOverviewVisibleColumns"
     private static let defaultPageSize = 10
 
     static func getStatusFilter() -> FahrzeugStatusFilter {
@@ -63,5 +65,29 @@ enum FuelEntriesOverviewFilterStore {
 
     static func setShowAll(_ showAll: Bool) {
         UserDefaults.standard.set(showAll, forKey: showAllDefaultsKey)
+    }
+
+    static func getLayoutMode() -> FuelEntriesLayoutMode {
+        UserDefaults.standard.string(forKey: layoutModeDefaultsKey)
+            .flatMap(FuelEntriesLayoutMode.init(rawValue:)) ?? .cards
+    }
+
+    static func setLayoutMode(_ layoutMode: FuelEntriesLayoutMode) {
+        UserDefaults.standard.set(layoutMode.rawValue, forKey: layoutModeDefaultsKey)
+    }
+
+    /// Wie `SidebarSectionVisibilityStore.enabledSections()`: unbekannte
+    /// (z. B. inzwischen entfernte) Spalten werden beim Einlesen stillschweigend
+    /// übersprungen. Ohne gespeicherten Wert – etwa beim allerersten Aufruf –
+    /// sind alle Spalten sichtbar.
+    static func getVisibleColumns() -> Set<FuelEntryTableColumn> {
+        guard let rawValues = UserDefaults.standard.array(forKey: visibleColumnsDefaultsKey) as? [String] else {
+            return Set(FuelEntryTableColumn.allCases)
+        }
+        return Set(rawValues.compactMap(FuelEntryTableColumn.init(rawValue:)))
+    }
+
+    static func setVisibleColumns(_ columns: Set<FuelEntryTableColumn>) {
+        UserDefaults.standard.set(columns.map(\.rawValue), forKey: visibleColumnsDefaultsKey)
     }
 }

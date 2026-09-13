@@ -1,6 +1,16 @@
 import SwiftUI
 import CoreData
 
+/// Ob die Liste als Karten (bisheriges Layout) oder als Tabelle dargestellt
+/// wird – umschaltbar über `FuelEntriesView.layoutModePicker`. Wird wie die
+/// übrigen Anzeigeeinstellungen in `FuelEntriesOverviewFilterStore`
+/// gespeichert, daher nicht `private` (der Store liegt in einer anderen
+/// Datei).
+enum FuelEntriesLayoutMode: String {
+    case cards
+    case table
+}
+
 /// Fahrzeugübergreifende Liste aller Betankungen, mit Filter nach
 /// Fahrzeugstatus und Kennzeichen sowie einstellbarer Seitengröße und
 /// Sortierung – aufgebaut wie `NotesView`/`RemindersView` (Filter-Icon +
@@ -34,6 +44,9 @@ struct FuelEntriesView: View {
     @State private var sortOrder = FuelEntriesOverviewFilterStore.getSortOrder()
     @State private var currentPage = 0
     @State private var isPresentingFilterPopover = false
+    @State private var layoutMode = FuelEntriesOverviewFilterStore.getLayoutMode()
+    @State private var visibleColumns = FuelEntriesOverviewFilterStore.getVisibleColumns()
+    @State private var isPresentingColumnsPopover = false
     /// `selectedVehicleFilter` selbst kann erst nach dem ersten Erscheinen
     /// aus der gespeicherten Fahrzeug-ID aufgelöst werden, da `vehicles`
     /// (der `@FetchRequest`) zum Zeitpunkt der `@State`-Initialisierung noch
@@ -116,15 +129,32 @@ struct FuelEntriesView: View {
                 }
                 .padding(20)
             } else {
-                ScrollView {
+                switch layoutMode {
+                case .cards:
+                    ScrollView {
+                        GlassEffectContainer {
+                            VStack(alignment: .leading, spacing: 20) {
+                                addButtonRow
+                                entryListSection
+
+                                if totalPages > 1 {
+                                    PaginationControls(currentPage: $currentPage, totalPages: totalPages)
+                                }
+                            }
+                            .padding(20)
+                        }
+                    }
+                case .table:
+                    // Kein umgebendes `ScrollView` wie im Karten-Layout: Die
+                    // Tabelle soll zunächst den verfügbaren Platz im Fenster
+                    // füllen (siehe `entryListSection`s `.frame(maxHeight:
+                    // .infinity)` im Tabellen-Fall) und erst darüber hinaus
+                    // selbst scrollen – „Alle anzeigen“ ist hier ohnehin fest
+                    // erzwungen, eine Seiten-Blätterung entfällt also.
                     GlassEffectContainer {
                         VStack(alignment: .leading, spacing: 20) {
                             addButtonRow
                             entryListSection
-
-                            if totalPages > 1 {
-                                PaginationControls(currentPage: $currentPage, totalPages: totalPages)
-                            }
                         }
                         .padding(20)
                     }
@@ -194,6 +224,15 @@ struct FuelEntriesView: View {
         .onChange(of: totalPages) { _, newValue in
             currentPage = min(currentPage, newValue - 1)
         }
+        .onChange(of: layoutMode) { _, newValue in
+            FuelEntriesOverviewFilterStore.setLayoutMode(newValue)
+            if newValue == .table {
+                showAllResults = true
+            }
+        }
+        .onChange(of: visibleColumns) { _, newValue in
+            FuelEntriesOverviewFilterStore.setVisibleColumns(newValue)
+        }
     }
 
     private var addButtonRow: some View {
@@ -216,9 +255,14 @@ struct FuelEntriesView: View {
                     pageSize: $pageSize,
                     sortOrder: $sortOrder,
                     availableVehicles: vehiclesMatchingStatus,
-                    maxPageSize: max(1, filteredEntries.count)
+                    maxPageSize: max(1, filteredEntries.count),
+                    isShowAllLocked: layoutMode == .table
                 )
             }
+
+            Spacer()
+
+            layoutModePicker
 
             Spacer()
 
@@ -232,6 +276,17 @@ struct FuelEntriesView: View {
         }
     }
 
+    private var layoutModePicker: some View {
+        Picker("Layout", selection: $layoutMode) {
+            Image(systemName: "rectangle.grid.1x2").tag(FuelEntriesLayoutMode.cards)
+            Image(systemName: "tablecells").tag(FuelEntriesLayoutMode.table)
+        }
+        .labelsHidden()
+        .pickerStyle(.segmented)
+        .frame(width: 90)
+        .help("Layout umschalten")
+    }
+
     private func addEntryTapped() {
         guard !vehicles.isEmpty else {
             errorMessage = "Bevor du fortfahren kannst, lege mindestens ein Fahrzeug an."
@@ -241,23 +296,59 @@ struct FuelEntriesView: View {
     }
 
     private var entryListSection: some View {
-        GlassCard(title: "Betankungen (\(sortedEntries.count))") {
+        GlassCard {
+            HStack {
+                Text("Betankungen (\(sortedEntries.count))")
+                    .font(.headline)
+                Spacer()
+                if layoutMode == .table {
+                    columnsMenuButton
+                }
+            }
+
             if sortedEntries.isEmpty {
                 Text("Keine Betankungen für die gewählten Filter.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                VStack(alignment: .leading, spacing: 12) {
-                    ForEach(pagedEntries) { entry in
-                        FuelEntryRow(entry: entry, showsVehicle: true)
-                            .contextMenu {
-                                Button("Löschen", role: .destructive) {
-                                    pendingDeletion = entry
+                switch layoutMode {
+                case .cards:
+                    VStack(alignment: .leading, spacing: 12) {
+                        ForEach(pagedEntries) { entry in
+                            FuelEntryRow(entry: entry, showsVehicle: true)
+                                .contextMenu {
+                                    Button("Löschen", role: .destructive) {
+                                        pendingDeletion = entry
+                                    }
                                 }
-                            }
+                        }
+                    }
+                case .table:
+                    FuelEntriesTable(entries: pagedEntries, visibleColumns: visibleColumns) { entry in
+                        pendingDeletion = entry
                     }
                 }
             }
+        }
+        // Nur im Tabellen-Fall darf die Karte über ihre Inhaltsgröße hinaus
+        // wachsen, damit `FuelEntriesTable` zunächst den verfügbaren
+        // Fensterplatz füllt, bevor sie selbst scrollt (siehe
+        // `FuelEntriesView.body`); im Karten-Layout bleibt die Karte wie
+        // gehabt so groß wie ihr Inhalt.
+        .frame(maxHeight: layoutMode == .table ? .infinity : nil)
+    }
+
+    private var columnsMenuButton: some View {
+        Button {
+            isPresentingColumnsPopover = true
+        } label: {
+            Image(systemName: "slider.horizontal.3")
+        }
+        .buttonStyle(.borderless)
+        .pointerStyle(.link)
+        .help("Spalten auswählen")
+        .popover(isPresented: $isPresentingColumnsPopover) {
+            FuelEntriesColumnsPopover(visibleColumns: $visibleColumns)
         }
     }
 }
