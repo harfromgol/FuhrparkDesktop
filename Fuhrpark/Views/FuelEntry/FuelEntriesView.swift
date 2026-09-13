@@ -22,6 +22,7 @@ struct FuelEntriesView: View {
 
     @State private var selectedVehicleFilter: Vehicle?
     @State private var statusFilter: FahrzeugStatusFilter = .alle
+    @State private var showAllResults = FuelEntriesOverviewPageSizeStore.getShowAll()
     @State private var pageSize = FuelEntriesOverviewPageSizeStore.get()
     @State private var sortOrder: FuelEntrySortOrder = .descending
     @State private var currentPage = 0
@@ -69,14 +70,22 @@ struct FuelEntriesView: View {
         }
     }
 
+    /// Bei „Alle anzeigen“ zählt die Seitengröße effektiv als „alle
+    /// gefilterten Treffer“ – so bleibt `totalPages` bei 1 und die
+    /// Vor/Zurück-Blätterung entfällt automatisch, ohne die Logik unten
+    /// doppelt pflegen zu müssen.
+    private var effectivePageSize: Int {
+        showAllResults ? max(1, sortedEntries.count) : pageSize
+    }
+
     private var totalPages: Int {
-        max(1, Int(ceil(Double(sortedEntries.count) / Double(pageSize))))
+        max(1, Int(ceil(Double(sortedEntries.count) / Double(effectivePageSize))))
     }
 
     private var pagedEntries: [FuelEntry] {
-        let start = currentPage * pageSize
+        let start = currentPage * effectivePageSize
         guard start < sortedEntries.count else { return [] }
-        return Array(sortedEntries[start..<min(start + pageSize, sortedEntries.count)])
+        return Array(sortedEntries[start..<min(start + effectivePageSize, sortedEntries.count)])
     }
 
     var body: some View {
@@ -147,6 +156,10 @@ struct FuelEntriesView: View {
         }
         .onChange(of: selectedVehicleFilter) { _, _ in currentPage = 0 }
         .onChange(of: sortOrder) { _, _ in currentPage = 0 }
+        .onChange(of: showAllResults) { _, newValue in
+            FuelEntriesOverviewPageSizeStore.setShowAll(newValue)
+            currentPage = 0
+        }
         .onChange(of: pageSize) { _, newValue in
             FuelEntriesOverviewPageSizeStore.set(newValue)
             currentPage = 0
@@ -172,6 +185,7 @@ struct FuelEntriesView: View {
                 FuelEntriesFilterPopover(
                     statusFilter: $statusFilter,
                     selectedVehicleFilter: $selectedVehicleFilter,
+                    showAllResults: $showAllResults,
                     pageSize: $pageSize,
                     sortOrder: $sortOrder,
                     availableVehicles: vehiclesMatchingStatus,

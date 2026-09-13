@@ -22,6 +22,7 @@ enum FuelEntrySortOrder: String, CaseIterable, Identifiable {
 struct FuelEntriesFilterPopover: View {
     @Binding var statusFilter: FahrzeugStatusFilter
     @Binding var selectedVehicleFilter: Vehicle?
+    @Binding var showAllResults: Bool
     @Binding var pageSize: Int
     @Binding var sortOrder: FuelEntrySortOrder
 
@@ -58,11 +59,27 @@ struct FuelEntriesFilterPopover: View {
 
             Divider()
 
-            HStack {
-                Text("Anzahl Resultate")
-                Spacer()
-                Stepper("\(pageSize)", value: $pageSize, in: 1...maxPageSize)
-                    .fixedSize()
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Resultate")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                HStack {
+                    Text("Alle anzeigen")
+                    Spacer()
+                    Toggle("Alle anzeigen", isOn: $showAllResults)
+                        .labelsHidden()
+                        .toggleStyle(.checkbox)
+                }
+
+                if !showAllResults {
+                    HStack {
+                        Text("Anzahl Resultate")
+                        Spacer()
+                        Stepper("\(pageSize)", value: $pageSize, in: 1...maxPageSize)
+                            .fixedSize()
+                    }
+                }
             }
 
             Divider()
