@@ -205,6 +205,11 @@ struct FuelEntriesView: View {
         .onChange(of: totalPages) { _, newValue in
             currentPage = min(currentPage, newValue - 1)
         }
+        .onChange(of: layoutMode) { _, newValue in
+            if newValue == .table {
+                showAllResults = true
+            }
+        }
     }
 
     private var addButtonRow: some View {
@@ -227,7 +232,8 @@ struct FuelEntriesView: View {
                     pageSize: $pageSize,
                     sortOrder: $sortOrder,
                     availableVehicles: vehiclesMatchingStatus,
-                    maxPageSize: max(1, filteredEntries.count)
+                    maxPageSize: max(1, filteredEntries.count),
+                    isShowAllLocked: layoutMode == .table
                 )
             }
 
