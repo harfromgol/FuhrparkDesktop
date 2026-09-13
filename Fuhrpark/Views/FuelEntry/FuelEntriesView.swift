@@ -260,6 +260,8 @@ struct FuelEntriesView: View {
                 )
             }
 
+            Spacer()
+
             layoutModePicker
 
             Spacer()
