@@ -67,7 +67,9 @@ struct FuelEntriesFilterPopover: View {
 
             Divider()
 
-            LabeledContent("Sortierung") {
+            HStack {
+                Text("Sortierung")
+                Spacer()
                 Picker("Sortierung", selection: $sortOrder) {
                     ForEach(FuelEntrySortOrder.allCases) { order in
                         Text(order.rawValue).tag(order)
@@ -75,6 +77,7 @@ struct FuelEntriesFilterPopover: View {
                 }
                 .labelsHidden()
                 .pickerStyle(.segmented)
+                .fixedSize()
             }
         }
         .padding(16)
