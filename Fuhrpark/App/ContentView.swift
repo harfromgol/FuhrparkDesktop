@@ -5,6 +5,7 @@ import AppKit
 /// Auswahl in der Seitenleiste: allgemeine Statistik oder ein Fahrzeug.
 enum SidebarSelection: Hashable {
     case statistics
+    case fuelEntries
     case fuelPrices
     case documents
     case notes
@@ -41,6 +42,8 @@ struct ContentView: View {
             switch selection {
             case .statistics:
                 StatisticsView()
+            case .fuelEntries:
+                FuelEntriesView()
             case .fuelPrices:
                 FuelPricesView()
             case .documents:
