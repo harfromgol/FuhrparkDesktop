@@ -1,12 +1,28 @@
 import SwiftUI
 
+/// Anlegen einer Betankung (kein Bearbeiten – `FuelEntryListWindow`s
+/// Kontextmenü bietet dafür nur „Löschen“ an). Meist mit fest vorgegebenem
+/// Fahrzeug aus der Fahrzeugdetail-Ansicht geöffnet; ohne Fahrzeug (Aufruf
+/// aus der fahrzeugübergreifenden `FuelEntriesView`) zeigt die
+/// „Fahrzeug“-Karte stattdessen einen `VehiclePicker“ – analog zu
+/// `NoteFormView`/`ReminderFormView`. Die übrigen Felder hängen über die
+/// Kraftstoffart von `selectedVehicle` ab (Beschriftungen, minimaler
+/// km-Stand, bekannte Tankstellen) und erscheinen deshalb erst, sobald ein
+/// Fahrzeug gewählt ist.
 struct FuelEntryFormView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
 
-    let vehicle: Vehicle
+    /// Wenn gesetzt (Aufruf aus der Fahrzeugdetail-Ansicht), ist das Fahrzeug
+    /// fest vorgegeben und wird statt der Auswahl nur noch angezeigt.
+    let fixedVehicle: Vehicle?
 
-    private var engineType: EngineType { vehicle.engineType }
+    @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Vehicle.licensePlate, ascending: true)])
+    private var vehicles: FetchedResults<Vehicle>
+
+    @State private var selectedVehicle: Vehicle?
+
+    private var engineType: EngineType { selectedVehicle?.engineType ?? .combustion }
 
     @State private var dateText = FieldValidator.string(from: Date())
     @State private var odometerText = ""
@@ -26,20 +42,28 @@ struct FuelEntryFormView: View {
     @State private var litersValid = false
     @State private var manualConsumptionValid = false
 
+    init(vehicle: Vehicle? = nil) {
+        self.fixedVehicle = vehicle
+        _selectedVehicle = State(initialValue: vehicle)
+    }
+
     private var previousEntry: FuelEntry? {
-        vehicle.previousFuelEntry(before: nil)
+        selectedVehicle?.previousFuelEntry(before: nil)
     }
 
     private var minimumOdometer: Int32 {
-        max(vehicle.odometer, vehicle.sortedFuelEntries.map(\.odometer).max() ?? 0)
+        guard let selectedVehicle else { return 0 }
+        return max(selectedVehicle.odometer, selectedVehicle.sortedFuelEntries.map(\.odometer).max() ?? 0)
     }
 
-    /// Bereits erfasste Tankstellen dieses Fahrzeugs (distinct, case-insensitiv,
-    /// alphabetisch) als Vorschläge für die Autovervollständigung.
+    /// Bereits erfasste Tankstellen des gewählten Fahrzeugs (distinct,
+    /// case-insensitiv, alphabetisch) als Vorschläge für die
+    /// Autovervollständigung.
     private var knownStations: [String] {
+        guard let selectedVehicle else { return [] }
         var seen = Set<String>()
         var result: [String] = []
-        for entry in vehicle.sortedFuelEntries {
+        for entry in selectedVehicle.sortedFuelEntries {
             let name = (entry.station ?? "").trimmingCharacters(in: .whitespaces)
             guard !name.isEmpty, seen.insert(name.lowercased()).inserted else { continue }
             result.append(name)
@@ -70,6 +94,7 @@ struct FuelEntryFormView: View {
     }
 
     private var isFormValid: Bool {
+        guard selectedVehicle != nil else { return false }
         let baseValid = dateValid && odometerValid && stationValid && priceValid && litersValid && computedAmount != nil
         guard baseValid else { return false }
         return manualConsumption ? manualConsumptionValid : true
@@ -81,13 +106,18 @@ struct FuelEntryFormView: View {
                 GlassEffectContainer {
                 VStack(alignment: .leading, spacing: 16) {
                     GlassCard(title: "Fahrzeug") {
-                        Text(vehicle.licensePlate ?? "")
-                            .font(.title3.bold())
-                        Text("\(vehicle.manufacturer ?? "") \(vehicle.model ?? "")")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        if let fixedVehicle {
+                            Text(fixedVehicle.licensePlate ?? "")
+                                .font(.title3.bold())
+                            Text("\(fixedVehicle.manufacturer ?? "") \(fixedVehicle.model ?? "")")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            VehiclePicker(vehicles: Array(vehicles), selection: $selectedVehicle)
+                        }
                     }
 
+                    if selectedVehicle != nil {
                     GlassCard(title: engineType.refuelNoun) {
                         DateValidatedField(title: "Datum", text: $dateText, isValidBinding: $dateValid)
                         ValidatedField(
@@ -167,6 +197,7 @@ struct FuelEntryFormView: View {
                             .font(.subheadline)
                         }
                     }
+                    }
                 }
                 .padding(20)
                 }
@@ -189,6 +220,7 @@ struct FuelEntryFormView: View {
     }
 
     private func save() {
+        guard let selectedVehicle else { return }
         let entry = FuelEntry(context: viewContext)
         entry.id = UUID()
         entry.date = FieldValidator.dateValue(dateText) ?? Date()
@@ -200,7 +232,7 @@ struct FuelEntryFormView: View {
         entry.manualConsumption = manualConsumption
         entry.previousEntryExists = previousEntryExists
         entry.fullTank = fullTank
-        entry.vehicle = vehicle
+        entry.vehicle = selectedVehicle
 
         if manualConsumption {
             if let value = FieldValidator.decimalValue(manualConsumptionText) {
@@ -210,7 +242,7 @@ struct FuelEntryFormView: View {
             entry.consumption = NSNumber(value: computedConsumption)
         }
 
-        vehicle.touch()
+        selectedVehicle.touch()
         PersistenceController.shared.save(context: viewContext)
         dismiss()
     }
