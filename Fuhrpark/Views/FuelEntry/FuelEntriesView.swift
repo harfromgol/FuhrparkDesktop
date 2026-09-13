@@ -127,15 +127,32 @@ struct FuelEntriesView: View {
                 }
                 .padding(20)
             } else {
-                ScrollView {
+                switch layoutMode {
+                case .cards:
+                    ScrollView {
+                        GlassEffectContainer {
+                            VStack(alignment: .leading, spacing: 20) {
+                                addButtonRow
+                                entryListSection
+
+                                if totalPages > 1 {
+                                    PaginationControls(currentPage: $currentPage, totalPages: totalPages)
+                                }
+                            }
+                            .padding(20)
+                        }
+                    }
+                case .table:
+                    // Kein umgebendes `ScrollView` wie im Karten-Layout: Die
+                    // Tabelle soll zunächst den verfügbaren Platz im Fenster
+                    // füllen (siehe `entryListSection`s `.frame(maxHeight:
+                    // .infinity)` im Tabellen-Fall) und erst darüber hinaus
+                    // selbst scrollen – „Alle anzeigen“ ist hier ohnehin fest
+                    // erzwungen, eine Seiten-Blätterung entfällt also.
                     GlassEffectContainer {
                         VStack(alignment: .leading, spacing: 20) {
                             addButtonRow
                             entryListSection
-
-                            if totalPages > 1 {
-                                PaginationControls(currentPage: $currentPage, totalPages: totalPages)
-                            }
                         }
                         .padding(20)
                     }
@@ -305,6 +322,12 @@ struct FuelEntriesView: View {
                 }
             }
         }
+        // Nur im Tabellen-Fall darf die Karte über ihre Inhaltsgröße hinaus
+        // wachsen, damit `FuelEntriesTable` zunächst den verfügbaren
+        // Fensterplatz füllt, bevor sie selbst scrollt (siehe
+        // `FuelEntriesView.body`); im Karten-Layout bleibt die Karte wie
+        // gehabt so groß wie ihr Inhalt.
+        .frame(maxHeight: layoutMode == .table ? .infinity : nil)
     }
 
     private var columnsMenuButton: some View {

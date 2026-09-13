@@ -28,18 +28,6 @@ struct FuelEntriesTable: View {
 
     @State private var selection = Set<FuelEntry.ID>()
 
-    /// `Table` bekommt als Kind der äußeren `ScrollView` in `FuelEntriesView`
-    /// sonst eine unbegrenzte Höhe vorgeschlagen und kollabiert dabei auf 0pt
-    /// (anders als ein `VStack`, das einfach mitwächst) – deshalb hier eine
-    /// an die Zeilenzahl angepasste feste Höhe, nach oben gedeckelt, ab der
-    /// die Tabelle dann selbst scrollt (etwa bei „Alle anzeigen“ mit vielen
-    /// Treffern).
-    private var tableHeight: CGFloat {
-        let rowHeight: CGFloat = 24
-        let headerHeight: CGFloat = 28
-        return min(headerHeight + CGFloat(entries.count) * rowHeight, 500)
-    }
-
     var body: some View {
         Table(entries, selection: $selection) {
             if visibleColumns.contains(.date) {
@@ -83,7 +71,7 @@ struct FuelEntriesTable: View {
                 }
             }
         }
-        .frame(height: tableHeight)
+        .frame(maxHeight: .infinity)
         .contextMenu(forSelectionType: FuelEntry.ID.self) { selectedIDs in
             if let id = selectedIDs.first, let entry = entries.first(where: { $0.id == id }) {
                 Button("Löschen", role: .destructive) {
