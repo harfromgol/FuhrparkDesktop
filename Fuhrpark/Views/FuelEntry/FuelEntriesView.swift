@@ -1,6 +1,14 @@
 import SwiftUI
 import CoreData
 
+/// Ob die Liste als Karten (bisheriges Layout) oder als Tabelle dargestellt
+/// wird – umschaltbar über `FuelEntriesView.layoutModePicker`. Nur eine
+/// Anzeige-Präferenz für die laufende Sitzung, keine Filterung.
+private enum FuelEntriesLayoutMode {
+    case cards
+    case table
+}
+
 /// Fahrzeugübergreifende Liste aller Betankungen, mit Filter nach
 /// Fahrzeugstatus und Kennzeichen sowie einstellbarer Seitengröße und
 /// Sortierung – aufgebaut wie `NotesView`/`RemindersView` (Filter-Icon +
@@ -34,6 +42,9 @@ struct FuelEntriesView: View {
     @State private var sortOrder = FuelEntriesOverviewFilterStore.getSortOrder()
     @State private var currentPage = 0
     @State private var isPresentingFilterPopover = false
+    @State private var layoutMode: FuelEntriesLayoutMode = .cards
+    @State private var visibleColumns = Set(FuelEntryTableColumn.allCases)
+    @State private var isPresentingColumnsPopover = false
     /// `selectedVehicleFilter` selbst kann erst nach dem ersten Erscheinen
     /// aus der gespeicherten Fahrzeug-ID aufgelöst werden, da `vehicles`
     /// (der `@FetchRequest`) zum Zeitpunkt der `@State`-Initialisierung noch
@@ -220,6 +231,8 @@ struct FuelEntriesView: View {
                 )
             }
 
+            layoutModePicker
+
             Spacer()
 
             Button {
@@ -232,6 +245,17 @@ struct FuelEntriesView: View {
         }
     }
 
+    private var layoutModePicker: some View {
+        Picker("Layout", selection: $layoutMode) {
+            Image(systemName: "rectangle.grid.1x2").tag(FuelEntriesLayoutMode.cards)
+            Image(systemName: "tablecells").tag(FuelEntriesLayoutMode.table)
+        }
+        .labelsHidden()
+        .pickerStyle(.segmented)
+        .frame(width: 90)
+        .help("Layout umschalten")
+    }
+
     private func addEntryTapped() {
         guard !vehicles.isEmpty else {
             errorMessage = "Bevor du fortfahren kannst, lege mindestens ein Fahrzeug an."
@@ -241,23 +265,53 @@ struct FuelEntriesView: View {
     }
 
     private var entryListSection: some View {
-        GlassCard(title: "Betankungen (\(sortedEntries.count))") {
+        GlassCard {
+            HStack {
+                Text("Betankungen (\(sortedEntries.count))")
+                    .font(.headline)
+                Spacer()
+                if layoutMode == .table {
+                    columnsMenuButton
+                }
+            }
+
             if sortedEntries.isEmpty {
                 Text("Keine Betankungen für die gewählten Filter.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                VStack(alignment: .leading, spacing: 12) {
-                    ForEach(pagedEntries) { entry in
-                        FuelEntryRow(entry: entry, showsVehicle: true)
-                            .contextMenu {
-                                Button("Löschen", role: .destructive) {
-                                    pendingDeletion = entry
+                switch layoutMode {
+                case .cards:
+                    VStack(alignment: .leading, spacing: 12) {
+                        ForEach(pagedEntries) { entry in
+                            FuelEntryRow(entry: entry, showsVehicle: true)
+                                .contextMenu {
+                                    Button("Löschen", role: .destructive) {
+                                        pendingDeletion = entry
+                                    }
                                 }
-                            }
+                        }
+                    }
+                case .table:
+                    FuelEntriesTable(entries: pagedEntries, visibleColumns: visibleColumns) { entry in
+                        pendingDeletion = entry
                     }
                 }
             }
+        }
+    }
+
+    private var columnsMenuButton: some View {
+        Button {
+            isPresentingColumnsPopover = true
+        } label: {
+            Image(systemName: "slider.horizontal.3")
+        }
+        .buttonStyle(.borderless)
+        .pointerStyle(.link)
+        .help("Spalten auswählen")
+        .popover(isPresented: $isPresentingColumnsPopover) {
+            FuelEntriesColumnsPopover(visibleColumns: $visibleColumns)
         }
     }
 }
