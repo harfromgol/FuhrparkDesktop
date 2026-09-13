@@ -34,41 +34,49 @@ struct FuelEntriesTable: View {
                 TableColumn("Datum") { entry in
                     Text(FieldValidator.string(from: entry.date ?? Date()))
                 }
+                .alignment(.center)
             }
             if visibleColumns.contains(.licensePlate) {
                 TableColumn("Kennzeichen") { entry in
                     Text(entry.vehicle?.licensePlate ?? "–")
                 }
+                .alignment(.center)
             }
             if visibleColumns.contains(.odometer) {
                 TableColumn("km-Stand") { entry in
-                    Text("\(entry.odometer) km")
+                    trailingCell("\(entry.odometer) km")
                 }
+                .alignment(.center)
             }
             if visibleColumns.contains(.pricePerLiter) {
                 TableColumn("Preis pro Liter") { entry in
-                    Text("\(DisplayFormatter.pricePerLiterString(entry.pricePerLiter?.decimalValue ?? 0))\(engineType(for: entry).pricePerUnitSuffix)")
+                    trailingCell("\(DisplayFormatter.pricePerLiterString(entry.pricePerLiter?.decimalValue ?? 0))\(engineType(for: entry).pricePerUnitSuffix)")
                 }
+                .alignment(.center)
             }
             if visibleColumns.contains(.liters) {
                 TableColumn("Getankt") { entry in
-                    Text("\(DisplayFormatter.string(from: entry.liters?.decimalValue ?? 0, formatter: DisplayFormatter.decimal2)) \(engineType(for: entry).energyUnit)")
+                    trailingCell("\(DisplayFormatter.string(from: entry.liters?.decimalValue ?? 0, formatter: DisplayFormatter.decimal2)) \(engineType(for: entry).energyUnit)")
                 }
+                .alignment(.center)
             }
             if visibleColumns.contains(.amount) {
                 TableColumn("Gesamt") { entry in
-                    Text(DisplayFormatter.currencyString(entry.amount?.decimalValue ?? 0))
+                    trailingCell(DisplayFormatter.currencyString(entry.amount?.decimalValue ?? 0))
                 }
+                .alignment(.center)
             }
             if visibleColumns.contains(.consumption) {
                 TableColumn("Verbrauch") { entry in
-                    Text(consumptionText(for: entry))
+                    trailingCell(consumptionText(for: entry))
                 }
+                .alignment(.center)
             }
             if visibleColumns.contains(.station) {
                 TableColumn("Tankstelle") { entry in
                     Text(entry.station ?? "")
                 }
+                .alignment(.center)
             }
         }
         .frame(maxHeight: .infinity)
@@ -79,6 +87,16 @@ struct FuelEntriesTable: View {
                 }
             }
         }
+    }
+
+    /// Rechtsbündige Ausrichtung der Werte in numerischen Spalten (km-Stand,
+    /// Preis pro Liter, Getankt, Gesamt, Verbrauch) – unabhängig von der
+    /// zentrierten Kopfzeile (`.alignment(.center)` oben), die nur den
+    /// Spaltentitel betrifft, nicht den vom `content`-Closure selbst
+    /// gerenderten Zellinhalt.
+    private func trailingCell(_ text: String) -> some View {
+        Text(text)
+            .frame(maxWidth: .infinity, alignment: .trailing)
     }
 
     private func engineType(for entry: FuelEntry) -> EngineType {
