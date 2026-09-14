@@ -191,17 +191,6 @@ struct SidebarView: View {
                     .listRowBackground(rowBackground(for: .fuelEntries))
                 }
 
-                if enabledSections.contains(.documents) {
-                    Button {
-                        selection = .documents
-                    } label: {
-                        sidebarLabel("Dokumente", systemImage: "folder.fill")
-                    }
-                    .buttonStyle(.plain)
-                    .pointerStyle(.link)
-                    .listRowBackground(rowBackground(for: .documents))
-                }
-
                 if enabledSections.contains(.notes) {
                     Button {
                         selection = .notes
@@ -228,6 +217,17 @@ struct SidebarView: View {
                     .buttonStyle(.plain)
                     .pointerStyle(.link)
                     .listRowBackground(rowBackground(for: .reminders))
+                }
+
+                if enabledSections.contains(.documents) {
+                    Button {
+                        selection = .documents
+                    } label: {
+                        sidebarLabel("Dokumente", systemImage: "folder.fill")
+                    }
+                    .buttonStyle(.plain)
+                    .pointerStyle(.link)
+                    .listRowBackground(rowBackground(for: .documents))
                 }
 
                 if enabledSections.contains(.fuelPrices) {
