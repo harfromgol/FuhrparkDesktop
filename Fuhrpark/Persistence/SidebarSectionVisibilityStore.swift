@@ -6,9 +6,9 @@ import Foundation
 /// immer sichtbar.
 enum SidebarSection: String, CaseIterable, Identifiable {
     case fuelEntries
-    case documents
     case notes
     case reminders
+    case documents
     case fuelPrices
     case mcp
 
