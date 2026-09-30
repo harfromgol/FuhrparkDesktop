@@ -9,7 +9,6 @@ import AppKit
 struct FuelPricesView: View {
     @Environment(FuelPricesViewModel.self) private var vm
     @Environment(AppCommands.self) private var appCommands
-    @Environment(\.openWindow) private var openWindow
     @State private var camera: MapCameraPosition = .automatic
 
     var body: some View {
@@ -116,13 +115,6 @@ struct FuelPricesView: View {
                 HStack {
                     FuelTypeFilterView(enabled: $vm.enabledFuelKinds)
                     Spacer()
-                    if !vm.stations.isEmpty {
-                        Button("Liste anzeigen", systemImage: "list.bullet") {
-                            openWindow(id: "gas-station-list")
-                        }
-                        .buttonStyle(.glass)
-                        .pointerStyle(.link)
-                    }
                     Button("Aktualisieren", systemImage: "arrow.clockwise") {
                         vm.refresh()
                     }

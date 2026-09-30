@@ -1,7 +1,7 @@
 import Foundation
 
 /// Speichert die Einstellungen der Update-Prüfung in den UserDefaults –
-/// einfache Skalare wie bei `FuelPriceRefreshIntervalStore`. Bewusst NICHT in
+/// einfache Skalare wie bei `AppearanceModeStore`. Bewusst NICHT in
 /// `DataTransfer` eingebunden: Das sind Einstellungen dieser Installation,
 /// keine Fuhrparkdaten, und nach einem Import auf einem anderen Rechner wären
 /// sie dort schlicht falsch.

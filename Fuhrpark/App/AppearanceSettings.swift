@@ -4,9 +4,8 @@ import Observation
 /// Steuert das Erscheinungsbild der gesamten App (Hell/Dunkel/System) über
 /// `NSApp.appearance` statt über SwiftUIs `.preferredColorScheme` an jeder
 /// einzelnen Szenen-Wurzel. Diese App hat mehrere unabhängige Fenster-Szenen
-/// (Haupt-, Listen-, Chart-Fenster), ein Sheet (`SettingsView`) und ein
-/// Menüleisten-Popover (`MenuBarExtra`) – jede davon bräuchte den Modifier
-/// einzeln, und native Elemente wie `NSOpenPanel`/`NSSavePanel` oder die
+/// (Haupt-, Listen-, Chart-Fenster) und ein Sheet (`SettingsView`) – jede
+/// davon bräuchte den Modifier einzeln, und native Elemente wie `NSOpenPanel`/`NSSavePanel` oder die
 /// Fenster-Titelleisten reagieren darauf ohnehin nicht. `NSApp.appearance`
 /// ist dagegen die App-weite Vorgabe, von der jedes Fenster (SwiftUI wie
 /// AppKit) erbt, solange es nicht selbst etwas anderes festlegt – deckt also

@@ -4,8 +4,8 @@ import Foundation
 /// Setzt die App vollständig zurück: löscht Core Data, die zugehörigen
 /// Belege/Fahrzeugbilder im Arbeitsverzeichnis und **alle** UserDefaults
 /// dieses Containers – Fenstergrößen, Filter, Sortierungen, API-Schlüssel,
-/// die Arbeitsverzeichnis-Zuordnung, angepinnte Spritpreise, Update-
-/// Einstellungen usw. Ausgelöst über „Tools → App zurücksetzen“.
+/// die Arbeitsverzeichnis-Zuordnung, Update-Einstellungen usw. Ausgelöst
+/// über „Tools → App zurücksetzen“.
 ///
 /// Statt die App danach neu zu starten, wird sie beendet: Aus der Sandbox
 /// heraus (`com.apple.security.app-sandbox`, siehe
