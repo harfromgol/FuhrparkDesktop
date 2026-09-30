@@ -2,7 +2,7 @@ import Foundation
 
 /// Merkt sich, ob der Einrichtungsassistent (`SetupWizardModifier`) bereits
 /// abgeschlossen oder abgebrochen wurde – einfacher Skalar wie bei
-/// `FuelPriceRefreshIntervalStore`.
+/// `AppearanceModeStore`.
 enum SetupWizardStore {
     private static let completedKey = "hasCompletedSetupWizard"
 

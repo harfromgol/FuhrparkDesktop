@@ -1,7 +1,7 @@
 import Foundation
 
 /// Speichert das gewählte Erscheinungsbild – einfacher Skalar wie bei
-/// `FuelPriceRefreshIntervalStore`.
+/// `FuelSearchRadiusStore`.
 enum AppearanceModeStore {
     private static let defaultsKey = "appearanceMode"
 

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Speichert den vom Nutzer gewählten Suchradius (km) der Tankerkönig-
-/// Umkreissuche – einfacher Skalar wie bei `FuelPriceRefreshIntervalStore`.
+/// Umkreissuche – einfacher Skalar wie bei `AppearanceModeStore`.
 enum FuelSearchRadiusStore {
     private static let defaultsKey = "fuelPricesSearchRadiusKm"
 

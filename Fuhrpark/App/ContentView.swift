@@ -17,7 +17,6 @@ enum SidebarSelection: Hashable {
 struct ContentView: View {
     @Environment(AppCommands.self) private var appCommands
     @Environment(FuelPricesViewModel.self) private var fuelPricesViewModel
-    @Environment(PinnedFuelPricesViewModel.self) private var pinnedFuelPricesViewModel
     @Environment(UpdateChecker.self) private var updateChecker
     @State private var selection: SidebarSelection = .statistics
 
@@ -89,7 +88,7 @@ struct ContentView: View {
             }
             Button("Abbrechen", role: .cancel) { }
         } message: {
-            Text("Alle Fahrzeuge, Betankungen, sonstigen Ausgaben, Kategorien, Erinnerungen, Notizen und die gespeicherten Belege/Fahrzeugbilder werden unwiderruflich gelöscht. Zusätzlich werden sämtliche Einstellungen zurückgesetzt: Tankerkönig-API-Schlüssel, angepinnte Spritpreise, das festgelegte Arbeitsverzeichnis, alle Filter, Sortierungen und Fenstergrößen. Die App beendet sich danach und startet beim nächsten Öffnen wie frisch installiert. Dieser Vorgang kann nicht rückgängig gemacht werden.")
+            Text("Alle Fahrzeuge, Betankungen, sonstigen Ausgaben, Kategorien, Erinnerungen, Notizen und die gespeicherten Belege/Fahrzeugbilder werden unwiderruflich gelöscht. Zusätzlich werden sämtliche Einstellungen zurückgesetzt: Tankerkönig-API-Schlüssel, das festgelegte Arbeitsverzeichnis, alle Filter, Sortierungen und Fenstergrößen. Die App beendet sich danach und startet beim nächsten Öffnen wie frisch installiert. Dieser Vorgang kann nicht rückgängig gemacht werden.")
         }
         .sheet(isPresented: $appCommands.showSettings) {
             SettingsView(initialSection: appCommands.settingsInitialSection)
@@ -304,7 +303,6 @@ struct ContentView: View {
         // `AppReset` noch läuft.
         selection = .statistics
         fuelPricesViewModel.resetAPIKey()
-        pinnedFuelPricesViewModel.resetPinnedSelections()
         // Core Data, Belege/Fahrzeugbilder und alle UserDefaults dieses
         // Containers löschen, dann die App beenden – siehe Doc-Kommentar an
         // `AppReset` für den Grund, warum kein automatischer Neustart folgt.
@@ -449,6 +447,5 @@ private struct BackupModifier: ViewModifier {
         .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
         .environment(AppCommands())
         .environment(FuelPricesViewModel())
-        .environment(PinnedFuelPricesViewModel())
         .environment(UpdateChecker())
 }

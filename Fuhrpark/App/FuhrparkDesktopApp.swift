@@ -12,7 +12,6 @@ struct FuhrparkDesktopApp: App {
     let persistenceController = PersistenceController.shared
     @State private var appCommands = AppCommands()
     @State private var fuelPricesViewModel = FuelPricesViewModel()
-    @State private var pinnedFuelPricesViewModel = PinnedFuelPricesViewModel()
     @State private var updateChecker = UpdateChecker()
     /// Wendet das gespeicherte Erscheinungsbild an, sobald der App-Start
     /// abgeschlossen ist (siehe dessen `init()` zum Grund für die Verzögerung).
@@ -27,7 +26,6 @@ struct FuhrparkDesktopApp: App {
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
                 .environment(appCommands)
                 .environment(fuelPricesViewModel)
-                .environment(pinnedFuelPricesViewModel)
                 .environment(updateChecker)
                 .environment(appearanceSettings)
                 .frame(minWidth: 800, idealWidth: 1000, minHeight: 500, idealHeight: 650)
@@ -40,38 +38,6 @@ struct FuhrparkDesktopApp: App {
         .commands {
             AppMenuCommands(appCommands: appCommands, updateChecker: updateChecker)
         }
-
-        // Singleton wie das Hauptfenster (kein Payload, keine
-        // Mehrfachinstanzen nötig) – deshalb `Window`, nicht `WindowGroup`
-        // wie bei den übrigen, VehicleRef-parametrisierten Fenstern unten.
-        Window("Tankstellenliste", id: "gas-station-list") {
-            GasStationListWindow()
-                .environment(fuelPricesViewModel)
-                .environment(pinnedFuelPricesViewModel)
-                .persistWindowFrame("gas-station-list")
-        }
-        .defaultSize(width: 480, height: 560)
-
-        // Menüleisten-Icon erscheint erst, sobald mindestens eine
-        // Tankstelle/Sorte angepinnt ist (`isMenuBarVisible`) – siehe
-        // Doc-Kommentar dort für den Grund, warum das ein echtes,
-        // schreibbares Binding auf dem View-Model ist statt eines rein aus
-        // `pinnedSelections` berechneten. Bewusst `@Bindable` statt eines von
-        // Hand gebauten `Binding(get:set:)`: Nur ein über `@Bindable`
-        // erzeugtes Binding liest/schreibt wirklich live auf die
-        // `@Observable`-Speicherung – ein händisches Binding wurde von
-        // SwiftUI bei dieser Szene nicht zuverlässig neu ausgewertet, sodass
-        // ein `isMenuBarVisible = false` (z. B. bei „App zurücksetzen")
-        // das Icon nicht entfernte.
-        @Bindable var pinnedFuelPricesBindable = pinnedFuelPricesViewModel
-        MenuBarExtra(isInserted: $pinnedFuelPricesBindable.isMenuBarVisible) {
-            PinnedFuelPricesMenuView()
-                .environment(pinnedFuelPricesViewModel)
-        } label: {
-            PinnedFuelPricesMenuBarLabel()
-                .environment(pinnedFuelPricesViewModel)
-        }
-        .menuBarExtraStyle(.window)
 
         WindowGroup("Betankungen", id: "fuel-list", for: VehicleRef.self) { $vehicleRef in
             if let vehicleRef {
