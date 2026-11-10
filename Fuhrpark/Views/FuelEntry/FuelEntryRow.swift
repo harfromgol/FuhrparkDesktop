@@ -1,13 +1,9 @@
 import SwiftUI
 
-/// Zeilendarstellung einer einzelnen Betankung.
+/// Zeilendarstellung einer einzelnen Betankung in der Betankungsliste eines
+/// Fahrzeugs (`FuelEntryListWindow`).
 struct FuelEntryRow: View {
     @ObservedObject var entry: FuelEntry
-    /// Zeigt zusätzlich das Kennzeichen an – für die fahrzeugübergreifende
-    /// `FuelEntriesView`, wo im Unterschied zur Betankungsliste eines
-    /// einzelnen Fahrzeugs (`FuelEntryListWindow`) nicht aus dem Kontext
-    /// hervorgeht, zu welchem Fahrzeug ein Eintrag gehört.
-    var showsVehicle = false
 
     private var engineType: EngineType {
         entry.vehicle?.engineType ?? .combustion
@@ -27,11 +23,6 @@ struct FuelEntryRow: View {
         GlassCard {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    if showsVehicle, let plate = entry.vehicle?.licensePlate {
-                        Text(plate)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                    }
                     Text(FieldValidator.string(from: entry.date ?? Date()))
                         .font(.subheadline.bold())
                     Text("\(entry.station ?? "") · \(entry.odometer) km")

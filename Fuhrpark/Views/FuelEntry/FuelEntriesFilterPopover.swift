@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Sortierrichtung für die fahrzeugübergreifende Betankungsübersicht: primär
 /// nach Datum, bei Gleichstand zusätzlich nach km-Stand (siehe
-/// `FuelEntriesView.sortedEntries`).
+/// `FuelEntriesOverviewWindow.sortedEntries`).
 enum FuelEntrySortOrder: String, CaseIterable, Identifiable {
     case ascending = "Aufsteigend"
     case descending = "Absteigend"
@@ -11,27 +11,20 @@ enum FuelEntrySortOrder: String, CaseIterable, Identifiable {
 }
 
 /// Filter- und Anzeigeoptionen für die fahrzeugübergreifende
-/// Betankungsübersicht (`FuelEntriesView`), aufgebaut wie
+/// Betankungsübersicht (`FuelEntriesOverviewWindow`), aufgebaut wie
 /// `NotesFilterPopover`/`DocumentsFilterPopover` (Status/Fahrzeug-Kaskade).
-/// Anders als dort stehen hier zusätzlich „Anzahl Resultate“ und
-/// „Sortierung“ im selben Popover – die fahrzeugübergreifende Liste hat kein
-/// einzelnes Fahrzeug, an dessen Detailkarte eine zweite Optionsleiste (wie
+/// Anders als dort steht hier zusätzlich die „Sortierung“ im selben Popover
+/// – die fahrzeugübergreifende Liste hat kein einzelnes Fahrzeug, an dessen
+/// Detailkarte eine zweite Optionsleiste (wie
 /// `ReminderListWindow.displayOptions`) angebracht werden könnte.
-/// „Zurücksetzen“ betrifft bewusst nur Status und Fahrzeug – Seitengröße und
-/// Sortierung sind Anzeige-Präferenzen, keine einschränkenden Filter.
+/// „Zurücksetzen“ betrifft bewusst nur Status und Fahrzeug – die Sortierung
+/// ist eine Anzeige-Präferenz, kein einschränkender Filter.
 struct FuelEntriesFilterPopover: View {
     @Binding var statusFilter: FahrzeugStatusFilter
     @Binding var selectedVehicleFilter: Vehicle?
-    @Binding var showAllResults: Bool
-    @Binding var pageSize: Int
     @Binding var sortOrder: FuelEntrySortOrder
 
     let availableVehicles: [Vehicle]
-    let maxPageSize: Int
-    /// In der Tabellenansicht (`FuelEntriesTable`) werden immer alle
-    /// Treffer gezeigt – „Alle anzeigen“ ist dort fest angehakt und lässt
-    /// sich nicht abwählen (siehe `FuelEntriesView.layoutMode`).
-    let isShowAllLocked: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -59,32 +52,6 @@ struct FuelEntriesFilterPopover: View {
 
             LabeledContent("Kennzeichen") {
                 VehiclePicker(vehicles: availableVehicles, selection: $selectedVehicleFilter, placeholder: "Alle")
-            }
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Resultate")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
-                HStack {
-                    Text("Alle anzeigen")
-                    Spacer()
-                    Toggle("Alle anzeigen", isOn: $showAllResults)
-                        .labelsHidden()
-                        .toggleStyle(.checkbox)
-                        .disabled(isShowAllLocked)
-                }
-
-                if !showAllResults {
-                    HStack {
-                        Text("Anzahl Resultate")
-                        Spacer()
-                        Stepper("\(pageSize)", value: $pageSize, in: 1...maxPageSize)
-                            .fixedSize()
-                    }
-                }
             }
 
             Divider()

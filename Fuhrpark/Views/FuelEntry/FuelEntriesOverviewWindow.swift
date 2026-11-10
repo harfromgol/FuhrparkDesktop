@@ -179,12 +179,8 @@ struct FuelEntriesOverviewWindow: View {
                 FuelEntriesFilterPopover(
                     statusFilter: $statusFilter,
                     selectedVehicleFilter: $selectedVehicleFilter,
-                    showAllResults: .constant(true),
-                    pageSize: .constant(1),
                     sortOrder: $sortOrder,
-                    availableVehicles: vehiclesMatchingStatus,
-                    maxPageSize: 1,
-                    isShowAllLocked: true
+                    availableVehicles: vehiclesMatchingStatus
                 )
             }
 

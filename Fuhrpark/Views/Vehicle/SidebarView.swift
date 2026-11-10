@@ -92,7 +92,6 @@ struct SidebarView: View {
     /// Konfiguration.
     private var sectionOfSelection: SidebarSection? {
         switch selection {
-        case .fuelEntries: return .fuelEntries
         case .documents: return .documents
         case .notes: return .notes
         case .reminders: return .reminders
@@ -179,17 +178,6 @@ struct SidebarView: View {
                 .buttonStyle(.plain)
                 .pointerStyle(.link)
                 .listRowBackground(rowBackground(for: .statistics))
-
-                if enabledSections.contains(.fuelEntries) {
-                    Button {
-                        selection = .fuelEntries
-                    } label: {
-                        sidebarLabel("Betankungen", systemImage: "fuelpump.fill")
-                    }
-                    .buttonStyle(.plain)
-                    .pointerStyle(.link)
-                    .listRowBackground(rowBackground(for: .fuelEntries))
-                }
 
                 if enabledSections.contains(.notes) {
                     Button {
