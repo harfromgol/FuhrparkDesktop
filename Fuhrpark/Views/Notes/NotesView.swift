@@ -5,6 +5,10 @@ import CoreData
 /// Fahrzeug und Zeitraum – aufgebaut wie `DocumentsView`s Filterkaskade, nur
 /// ohne die dortige Kategorie-Stufe (Notizen kennen keine Kategorien).
 struct NotesView: View {
+    /// Feste ID der `Window`-Szene – zugleich der Schlüssel, unter dem
+    /// Position und Größe des Fensters gespeichert werden.
+    static let windowID = "notes-overview"
+
     @Environment(\.managedObjectContext) private var viewContext
 
     @FetchRequest(
