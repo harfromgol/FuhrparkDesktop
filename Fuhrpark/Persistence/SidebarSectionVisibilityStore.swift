@@ -5,7 +5,6 @@ import Foundation
 /// ausblenden kann. „Statistik" ist bewusst nicht Teil davon und bleibt
 /// immer sichtbar.
 enum SidebarSection: String, CaseIterable, Identifiable {
-    case notes
     case reminders
     case documents
     case fuelPrices
@@ -16,7 +15,6 @@ enum SidebarSection: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .documents: return "Dokumente"
-        case .notes: return "Notizen"
         case .reminders: return "Erinnerungen"
         case .fuelPrices: return "Spritpreise"
         case .mcp: return "KI-Zugriff"
@@ -31,9 +29,10 @@ enum SidebarSectionVisibilityStore {
     private static let defaultsKey = "sidebarVisibleSections"
 
     /// Alle Zeilen sichtbar, wenn noch nichts gespeichert wurde (Standard).
-    /// Unbekannte Einträge – etwa das frühere „Betankungen“, das inzwischen
-    /// ein eigenes Fenster ist (`FuelEntriesOverviewWindow`) – werden beim
-    /// Einlesen stillschweigend übersprungen.
+    /// Unbekannte Einträge – etwa die früheren „Betankungen“ und „Notizen“,
+    /// die inzwischen eigene Fenster sind (`FuelEntriesOverviewWindow`,
+    /// `NotesOverviewWindow`) – werden beim Einlesen stillschweigend
+    /// übersprungen.
     static func enabledSections() -> Set<SidebarSection> {
         guard let rawValues = UserDefaults.standard.array(forKey: defaultsKey) as? [String] else {
             return Set(SidebarSection.allCases)

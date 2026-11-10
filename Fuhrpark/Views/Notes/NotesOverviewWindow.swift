@@ -1,10 +1,13 @@
 import SwiftUI
 import CoreData
 
-/// Fahrzeugübergreifende Liste aller Notizen, mit Filter nach Fahrzeugstatus,
-/// Fahrzeug und Zeitraum – aufgebaut wie `DocumentsView`s Filterkaskade, nur
-/// ohne die dortige Kategorie-Stufe (Notizen kennen keine Kategorien).
-struct NotesView: View {
+/// Eigenständiges Fenster mit der fahrzeugübergreifenden Liste aller
+/// Notizen, geöffnet über das Menü „Ansichten → Notizen“ (siehe
+/// `AppMenuCommands`). Filter nach Fahrzeugstatus, Fahrzeug und Zeitraum –
+/// aufgebaut wie `DocumentsView`s Filterkaskade, nur ohne die dortige
+/// Kategorie-Stufe (Notizen kennen keine Kategorien). Position und Größe des
+/// Fensters merkt sich `persistWindowFrame` an der Szene.
+struct NotesOverviewWindow: View {
     /// Feste ID der `Window`-Szene – zugleich der Schlüssel, unter dem
     /// Position und Größe des Fensters gespeichert werden.
     static let windowID = "notes-overview"
@@ -95,6 +98,7 @@ struct NotesView: View {
                 }
             }
         }
+        .frame(minWidth: 420, minHeight: 360)
         .navigationTitle("Notizen")
         .sheet(isPresented: $isPresentingNewNote) {
             NoteFormView()

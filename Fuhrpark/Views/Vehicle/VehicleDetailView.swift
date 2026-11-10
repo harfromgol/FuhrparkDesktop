@@ -495,8 +495,8 @@ struct VehicleDetailView: View {
     }
 
     /// Öffnet das Formular für eine neue Notiz zu diesem Fahrzeug – vorher
-    /// dieselbe Voraussetzungsprüfung wie beim „Neue Notiz"-Button unter
-    /// „Allgemein → Notizen" (siehe `NotesView.addNoteTapped`). `hasVehicles`
+    /// dieselbe Voraussetzungsprüfung wie beim „Neue Notiz"-Button im
+    /// Notizen-Fenster (siehe `NotesOverviewWindow.addNoteTapped`). `hasVehicles`
     /// ist hier immer erfüllt, in der Praxis prüft der Aufruf also nur das
     /// Arbeitsverzeichnis.
     private func addNoteTapped() {

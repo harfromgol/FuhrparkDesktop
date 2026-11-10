@@ -160,7 +160,7 @@ struct NoteFormView: View {
                 }
             }
 
-            // Kein Arbeitsverzeichnis-Check mehr nötig: `NotesView.addNoteTapped()`
+            // Kein Arbeitsverzeichnis-Check mehr nötig: `NotesOverviewWindow.addNoteTapped()`
             // lässt dieses Formular über `NewItemPrerequisite` erst gar nicht
             // öffnen, solange keins konfiguriert ist.
             Button("Dokument auswählen", systemImage: "doc.badge.plus") {

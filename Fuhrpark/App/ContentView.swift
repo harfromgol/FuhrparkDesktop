@@ -7,7 +7,6 @@ enum SidebarSelection: Hashable {
     case statistics
     case fuelPrices
     case documents
-    case notes
     case reminders
     case mcp
     case vehicle(Vehicle)
@@ -44,8 +43,6 @@ struct ContentView: View {
                 FuelPricesView()
             case .documents:
                 DocumentsView()
-            case .notes:
-                NotesView()
             case .reminders:
                 RemindersView()
             case .mcp:

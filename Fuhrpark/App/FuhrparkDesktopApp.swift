@@ -53,11 +53,10 @@ struct FuhrparkDesktopApp: App {
         // Fahrzeugübergreifende Notizenliste, geöffnet über „Ansichten →
         // Notizen“ – wie das Betankungen-Fenster darüber ein einzelnes
         // `Window`.
-        Window("Notizen", id: NotesView.windowID) {
-            NotesView()
+        Window("Notizen", id: NotesOverviewWindow.windowID) {
+            NotesOverviewWindow()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
-                .frame(minWidth: 420, minHeight: 360)
-                .persistWindowFrame(NotesView.windowID)
+                .persistWindowFrame(NotesOverviewWindow.windowID)
         }
         .defaultSize(width: 640, height: 600)
 
@@ -220,7 +219,7 @@ struct AppMenuCommands: Commands {
                     openWindow(id: FuelEntriesOverviewWindow.windowID)
                 }
                 Button("Notizen", systemImage: "note.text") {
-                    openWindow(id: NotesView.windowID)
+                    openWindow(id: NotesOverviewWindow.windowID)
                 }
             }
             .labelStyle(.titleAndIcon)
