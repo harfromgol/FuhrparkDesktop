@@ -5,8 +5,14 @@ import CoreData
 /// Notizen, geöffnet über das Menü „Ansichten → Notizen“ (siehe
 /// `AppMenuCommands`). Filter nach Fahrzeugstatus, Fahrzeug und Zeitraum –
 /// aufgebaut wie `DocumentsView`s Filterkaskade, nur ohne die dortige
-/// Kategorie-Stufe (Notizen kennen keine Kategorien). Position und Größe des
-/// Fensters merkt sich `persistWindowFrame` an der Szene.
+/// Kategorie-Stufe (Notizen kennen keine Kategorien).
+///
+/// Die Filter werden in `NotesOverviewFilterStore` gespeichert und beim
+/// Öffnen wieder eingelesen – das Fenster wird bei jedem Öffnen neu erzeugt
+/// (sein `@State` ginge sonst beim Schließen verloren), soll aber wie auch
+/// nach einem Neustart genau dort weitermachen, wo man aufgehört hat.
+/// Position und Größe des Fensters merkt sich `persistWindowFrame` an der
+/// Szene.
 struct NotesOverviewWindow: View {
     /// Feste ID der `Window`-Szene – zugleich der Schlüssel, unter dem
     /// Position und Größe des Fensters gespeichert werden.
@@ -29,11 +35,17 @@ struct NotesOverviewWindow: View {
     @State private var errorMessage: String?
 
     @State private var selectedVehicleFilter: Vehicle?
-    @State private var statusFilter: FahrzeugStatusFilter = .alle
-    @State private var isDateFilterActive = false
-    @State private var dateFrom = Date()
-    @State private var dateTo = Date()
+    @State private var statusFilter = NotesOverviewFilterStore.getStatusFilter()
+    @State private var isDateFilterActive = NotesOverviewFilterStore.getIsDateFilterActive()
+    @State private var dateFrom = NotesOverviewFilterStore.getDateRange()?.from ?? Date()
+    @State private var dateTo = NotesOverviewFilterStore.getDateRange()?.to ?? Date()
     @State private var isPresentingFilterPopover = false
+    /// `selectedVehicleFilter` selbst kann erst nach dem ersten Erscheinen
+    /// aus der gespeicherten Fahrzeug-ID aufgelöst werden, da `vehicles`
+    /// (der `@FetchRequest`) zum Zeitpunkt der `@State`-Initialisierung noch
+    /// nicht befüllt ist – siehe `.onAppear` unten, analog zu
+    /// `FuelEntriesOverviewWindow.didRestoreVehicleFilter`.
+    @State private var didRestoreVehicleFilter = false
 
     /// Fahrzeuge, die zum gewählten Fahrzeugstatus passen – Grundlage der
     /// Fahrzeugauswahl im Filter-Popover.
@@ -130,10 +142,36 @@ struct NotesOverviewWindow: View {
                  ? "Die Notiz wird gelöscht. \(anzahl) angehängte\(anzahl > 1 ? "" : "s") Dokument\(anzahl > 1 ? "e" : "") werden mit entfernt, sofern es an nichts anderem mehr hängt."
                  : "Die Notiz wird unwiderruflich gelöscht.")
         }
-        .onChange(of: statusFilter) { _, _ in
+        .onAppear {
+            guard !didRestoreVehicleFilter else { return }
+            didRestoreVehicleFilter = true
+            if let id = NotesOverviewFilterStore.getSelectedVehicleID() {
+                selectedVehicleFilter = vehicles.first { $0.id == id }
+            }
+        }
+        .onChange(of: statusFilter) { _, newValue in
+            NotesOverviewFilterStore.setStatusFilter(newValue)
             if let selectedVehicleFilter, !vehiclesMatchingStatus.contains(selectedVehicleFilter) {
                 self.selectedVehicleFilter = nil
             }
+        }
+        .onChange(of: selectedVehicleFilter) { _, newValue in
+            NotesOverviewFilterStore.setSelectedVehicleID(newValue?.id)
+        }
+        .onChange(of: isDateFilterActive) { _, newValue in
+            NotesOverviewFilterStore.setIsDateFilterActive(newValue)
+            // Auch der unverändert übernommene Vorgabezeitraum (heute) gehört
+            // zum gewählten Filter – sonst stünde nach dem erneuten Öffnen an
+            // einem anderen Tag ein anderer Zeitraum da.
+            if newValue {
+                NotesOverviewFilterStore.setDateRange(from: dateFrom, to: dateTo)
+            }
+        }
+        .onChange(of: dateFrom) { _, newValue in
+            NotesOverviewFilterStore.setDateRange(from: newValue, to: dateTo)
+        }
+        .onChange(of: dateTo) { _, newValue in
+            NotesOverviewFilterStore.setDateRange(from: dateFrom, to: newValue)
         }
         .alert(
             "Fehler",
