@@ -23,15 +23,8 @@ struct RemindersView: View {
     @State private var errorMessage: String?
 
     @State private var selectedVehicleFilter: Vehicle?
-    @State private var statusFilter: StatusFilter = .open
+    @State private var statusFilter: ReminderStatusFilter = .open
     @State private var isPresentingFilterPopover = false
-
-    enum StatusFilter: String, CaseIterable, Identifiable {
-        case all = "Alle"
-        case open = "Offen"
-        case done = "Erledigt"
-        var id: String { rawValue }
-    }
 
     private var isAnyFilterActive: Bool {
         statusFilter != .all || selectedVehicleFilter != nil
