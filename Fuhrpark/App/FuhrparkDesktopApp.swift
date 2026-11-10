@@ -202,6 +202,10 @@ struct AppMenuCommands: Commands {
             Button("Betankungen", systemImage: "fuelpump.fill") {
                 openWindow(id: FuelEntriesOverviewWindow.windowID)
             }
+            // Ohne das zeigt die Menüleiste nur den Titel: Einträge eines
+            // `CommandMenu` blenden ihr Symbol standardmäßig aus, auch wenn
+            // der Button eines mitbringt (live geprüft).
+            .labelStyle(.titleAndIcon)
         }
 
         CommandMenu("Tools") {
