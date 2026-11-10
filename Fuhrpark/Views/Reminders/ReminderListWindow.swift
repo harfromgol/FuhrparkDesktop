@@ -20,7 +20,7 @@ struct ReminderListWindow: View {
     @State private var pendingDeletion: Erinnerung?
     @State private var pdfExportErrorMessage: String?
 
-    @State private var statusFilter: RemindersView.StatusFilter = .open
+    @State private var statusFilter: ReminderStatusFilter = .open
     @State private var pageSize = ReminderPageSizeStore.get()
     @State private var currentPage = 0
 
@@ -173,7 +173,7 @@ struct ReminderListWindow: View {
                     Text("Status")
                     Spacer()
                     Picker("Status", selection: $statusFilter) {
-                        ForEach(RemindersView.StatusFilter.allCases) { Text($0.rawValue).tag($0) }
+                        ForEach(ReminderStatusFilter.allCases) { Text($0.displayName).tag($0) }
                     }
                     .labelsHidden()
                     .pickerStyle(.segmented)

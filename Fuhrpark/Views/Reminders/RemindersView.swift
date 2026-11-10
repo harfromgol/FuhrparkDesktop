@@ -1,18 +1,28 @@
 import SwiftUI
 import CoreData
 
-/// Fahrzeugübergreifende Liste aller Erinnerungen, mit Filter nach Kennzeichen
-/// und Status. Die Filter liegen hinter einem Filter-Icon-Button mit Popover
-/// – analog zu `NotesOverviewWindow`/`DocumentsView`, inklusive derselben
-/// Einfachauswahl-Picker für das Fahrzeug (siehe `RemindersFilterPopover`).
+/// Die fälligen Erinnerungen aller Fahrzeuge – der Inhalt von „Allgemein →
+/// Erinnerungen“ im Hauptfenster. „Fällig“ bedeutet dasselbe wie beim roten
+/// Zähler am Seitenleisten-Eintrag (`SidebarView.dueReminderCount`): offen
+/// und das Fälligkeitsdatum abzüglich Vorlaufzeit ist erreicht (siehe
+/// `Erinnerung.isDue`). Liste und Zähler zeigen damit immer dieselbe Menge.
+///
+/// Bewusst ohne Filter: Die vollständige Liste samt Status- und
+/// Fahrzeugfilter liegt im eigenen Fenster `RemindersOverviewWindow`
+/// („Ansichten → Erinnerungen“).
 struct RemindersView: View {
     @Environment(\.managedObjectContext) private var viewContext
+    @Environment(AppCommands.self) private var appCommands
 
+    /// Nur offene Erinnerungen, die dringendste zuerst. Ob eine davon schon
+    /// fällig ist, hängt vom heutigen Datum ab und lässt sich deshalb nicht
+    /// im Prädikat ausdrücken – das erledigt `dueReminders`.
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Erinnerung.dueDate, ascending: true)],
+        predicate: NSPredicate(format: "isDone == NO"),
         animation: .default
     )
-    private var reminders: FetchedResults<Erinnerung>
+    private var openReminders: FetchedResults<Erinnerung>
 
     @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \Vehicle.licensePlate, ascending: true)])
     private var vehicles: FetchedResults<Vehicle>
@@ -22,44 +32,24 @@ struct RemindersView: View {
     @State private var pendingDeletion: Erinnerung?
     @State private var errorMessage: String?
 
-    @State private var selectedVehicleFilter: Vehicle?
-    @State private var statusFilter: StatusFilter = .open
-    @State private var isPresentingFilterPopover = false
-
-    enum StatusFilter: String, CaseIterable, Identifiable {
-        case all = "Alle"
-        case open = "Offen"
-        case done = "Erledigt"
-        var id: String { rawValue }
-    }
-
-    private var isAnyFilterActive: Bool {
-        statusFilter != .all || selectedVehicleFilter != nil
-    }
-
-    private var filteredReminders: [Erinnerung] {
-        reminders.filter { reminder in
-            let vehicleMatch = selectedVehicleFilter == nil || reminder.vehicle == selectedVehicleFilter
-            let statusMatch: Bool
-            switch statusFilter {
-            case .all: statusMatch = true
-            case .open: statusMatch = !reminder.isDone
-            case .done: statusMatch = reminder.isDone
-            }
-            return vehicleMatch && statusMatch
-        }
+    /// Liest `dailyDueCheckTick` mit, damit die Liste – wie der Zähler in der
+    /// Seitenleiste – auch ohne Klick oder Datenänderung einmal täglich neu
+    /// berechnet wird (siehe dort).
+    private var dueReminders: [Erinnerung] {
+        _ = appCommands.dailyDueCheckTick
+        return openReminders.filter(\.isDue)
     }
 
     var body: some View {
         Group {
-            if reminders.isEmpty {
+            if dueReminders.isEmpty {
                 VStack(spacing: 20) {
                     addButtonRow
                     Spacer()
                     ContentUnavailableView(
-                        "Keine Erinnerungen",
+                        "Keine fälligen Erinnerungen",
                         systemImage: "bell",
-                        description: Text("Lege über „Neue Erinnerung“ z. B. eine TÜV- oder Versicherungs-Erinnerung an.")
+                        description: Text("Alle Erinnerungen findest du im Menü unter „Ansichten → Erinnerungen“.")
                     )
                     Spacer()
                 }
@@ -120,24 +110,6 @@ struct RemindersView: View {
 
     private var addButtonRow: some View {
         HStack {
-            Button {
-                isPresentingFilterPopover = true
-            } label: {
-                Image(systemName: isAnyFilterActive
-                    ? "line.3.horizontal.decrease.circle.fill"
-                    : "line.3.horizontal.decrease.circle")
-            }
-            .buttonStyle(.borderless)
-            .pointerStyle(.link)
-            .help("Erinnerungen filtern")
-            .popover(isPresented: $isPresentingFilterPopover) {
-                RemindersFilterPopover(
-                    statusFilter: $statusFilter,
-                    selectedVehicleFilter: $selectedVehicleFilter,
-                    availableVehicles: Array(vehicles)
-                )
-            }
-
             Spacer()
 
             Button {
@@ -159,21 +131,15 @@ struct RemindersView: View {
     }
 
     private var reminderListSection: some View {
-        GlassCard(title: "Erinnerungen (\(filteredReminders.count))") {
-            if filteredReminders.isEmpty {
-                Text("Keine Erinnerungen für die gewählten Filter.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(filteredReminders) { reminder in
-                        ReminderRow(
-                            reminder: reminder,
-                            onEdit: { reminderToEdit = reminder },
-                            onDelete: { pendingDeletion = reminder }
-                        )
-                        Divider()
-                    }
+        GlassCard(title: "Fällige Erinnerungen (\(dueReminders.count))") {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(dueReminders) { reminder in
+                    ReminderRow(
+                        reminder: reminder,
+                        onEdit: { reminderToEdit = reminder },
+                        onDelete: { pendingDeletion = reminder }
+                    )
+                    Divider()
                 }
             }
         }

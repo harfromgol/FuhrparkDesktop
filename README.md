@@ -25,7 +25,10 @@ Fahrzeuge, Betankungen, sonstige Ausgaben, Belege und Spritpreise an einem Ort.
 - **Dokumente** – Belege (PDF, Fotos, …) einer oder mehreren sonstigen Ausgaben
   desselben Fahrzeugs zuordnen, auch nachträglich; zentrale Dokumenten-Übersicht
   mit Filter nach Fahrzeug/Kategorie. Die Datei wird dabei nur einmal abgelegt.
-- **Erinnerungen** - laß Dich an den nächsten TÜV Termin oder an die fällige Versicherung/Steuer erinnern
+- **Erinnerungen** - laß Dich an den nächsten TÜV Termin oder an die fällige Versicherung/Steuer erinnern.
+  Die Seitenleiste zeigt unter „Erinnerungen“ die fälligen; die vollständige,
+  fahrzeugübergreifende Liste mit Filter nach Status und Fahrzeug öffnet sich
+  als eigenes Fenster über `Ansichten → Erinnerungen`.
 - **Notizen** – fahrzeugbezogene Notizen mit Datum, Text und optional
   angehängten Dokumenten. Die fahrzeugübergreifende Liste mit Filter nach
   Fahrzeug und Zeitraum öffnet sich als eigenes Fenster über

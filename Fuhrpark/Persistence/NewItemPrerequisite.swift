@@ -3,8 +3,9 @@ import Foundation
 /// Prüft, ob „Neues Dokument“/„Neue Notiz“/„Neue Erinnerung“ überhaupt
 /// geöffnet werden dürfen: alle drei brauchen ein Arbeitsverzeichnis (für
 /// Belege/Dokumente) und mindestens ein angelegtes Fahrzeug (zum Zuordnen).
-/// Geteilt von `DocumentsView`, `NotesOverviewWindow` und `RemindersView`, damit alle
-/// drei „Neu …“-Buttons exakt dieselbe Meldung zeigen, was genau fehlt.
+/// Geteilt von `DocumentsView`, `NotesOverviewWindow`, `RemindersOverviewWindow`
+/// und `RemindersView`, damit alle „Neu …“-Buttons exakt dieselbe Meldung
+/// zeigen, was genau fehlt.
 ///
 /// Läuft diese Prüfung vor dem Öffnen des jeweiligen Erstellungsfensters
 /// durch, ist das Arbeitsverzeichnis dort garantiert konfiguriert – die

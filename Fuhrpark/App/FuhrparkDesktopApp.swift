@@ -60,6 +60,19 @@ struct FuhrparkDesktopApp: App {
         }
         .defaultSize(width: 640, height: 600)
 
+        // Fahrzeugübergreifende Erinnerungsliste, geöffnet über „Ansichten →
+        // Erinnerungen“ – wie die beiden Fenster darüber ein einzelnes
+        // `Window`.
+        Window("Erinnerungen", id: RemindersOverviewWindow.windowID) {
+            RemindersOverviewWindow()
+                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                // ReminderRow braucht AppCommands – siehe den Kommentar am
+                // Fenster „reminders-list“ weiter unten.
+                .environment(appCommands)
+                .persistWindowFrame(RemindersOverviewWindow.windowID)
+        }
+        .defaultSize(width: 640, height: 600)
+
         WindowGroup("Betankungen", id: "fuel-list", for: VehicleRef.self) { $vehicleRef in
             if let vehicleRef {
                 FuelEntryListWindow(vehicleRef: vehicleRef)
@@ -220,6 +233,9 @@ struct AppMenuCommands: Commands {
                 }
                 Button("Notizen", systemImage: "note.text") {
                     openWindow(id: NotesOverviewWindow.windowID)
+                }
+                Button("Erinnerungen", systemImage: "bell.fill") {
+                    openWindow(id: RemindersOverviewWindow.windowID)
                 }
             }
             .labelStyle(.titleAndIcon)

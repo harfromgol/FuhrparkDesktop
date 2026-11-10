@@ -1,11 +1,33 @@
 import SwiftUI
 
-/// Filtereinstellungen für die Erinnerungen-Ansicht, identisch aufgebaut wie
+/// Status-Filter der Erinnerungslisten (`RemindersOverviewWindow`,
+/// `ReminderListWindow`). Die Rohwerte sind bewusst von der Beschriftung
+/// getrennt: `RemindersOverviewFilterStore` speichert sie in den
+/// UserDefaults, eine geänderte Beschriftung darf den gespeicherten Filter
+/// nicht verwerfen.
+enum ReminderStatusFilter: String, CaseIterable, Identifiable {
+    case all
+    case open
+    case done
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .all: "Alle"
+        case .open: "Offen"
+        case .done: "Erledigt"
+        }
+    }
+}
+
+/// Filtereinstellungen für das Erinnerungen-Fenster
+/// (`RemindersOverviewWindow`), identisch aufgebaut wie
 /// `NotesFilterPopover`/`DocumentsFilterPopover` – auch derselbe
 /// `VehiclePicker` für den Fahrzeugfilter (Einfachauswahl, nach Aktiv/
 /// Stillgelegt gruppiert, mit Hersteller/Modell/km-Stand je Zeile).
 struct RemindersFilterPopover: View {
-    @Binding var statusFilter: RemindersView.StatusFilter
+    @Binding var statusFilter: ReminderStatusFilter
     @Binding var selectedVehicleFilter: Vehicle?
 
     let availableVehicles: [Vehicle]
@@ -26,7 +48,7 @@ struct RemindersFilterPopover: View {
 
             LabeledContent("Status") {
                 Picker("Status", selection: $statusFilter) {
-                    ForEach(RemindersView.StatusFilter.allCases) { Text($0.rawValue).tag($0) }
+                    ForEach(ReminderStatusFilter.allCases) { Text($0.displayName).tag($0) }
                 }
                 .labelsHidden()
                 .pickerStyle(.segmented)
