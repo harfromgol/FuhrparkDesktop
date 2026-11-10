@@ -17,7 +17,7 @@ struct SettingsView: View {
 
     /// `initialSection` legt fest, welcher Abschnitt beim Öffnen bereits
     /// ausgewählt ist – z. B. „Dokumente“, wenn das Zahnrad-Symbol in
-    /// `DocumentsView` dieses Fenster direkt öffnet (siehe
+    /// `DocumentsOverviewWindow` dieses Fenster direkt öffnet (siehe
     /// `AppCommands.settingsInitialSection`). Ohne konkreten Anlass (App-Menü)
     /// startet das Fenster beim ersten Abschnitt „Erscheinungsbild“.
     init(initialSection: SettingsSection = .appearance) {
@@ -127,21 +127,21 @@ private struct AppearanceSettingsSection: View {
 
 /// Inhalt der Sektion „Dokumente“: zeigt und ändert das Arbeitsverzeichnis
 /// für Belege/Dokumente – dieselbe Funktion wie im Zahnrad-Popover in
-/// `DocumentsView`, hier aber direkt sichtbar statt hinter einem
+/// `DocumentsOverviewWindow`, hier aber direkt sichtbar statt hinter einem
 /// zusätzlichen Klick versteckt. Die eigentliche Logik (Migration
 /// vorhandener Dokumente, Warnung vor fremden Belegordnern) steckt in
 /// `WorkingDirectoryChange`, damit beide Stellen exakt gleich verhalten.
 /// Eigener, lokaler Sheet-/Alert-Zustand statt geteiltem: `SettingsView`
 /// hat sonst keine weiteren Sheets/Alerts, ein Konflikt mit dem
 /// „nur ein Präsentations-Modifier gleichzeitig“-Verhalten aus
-/// `DocumentsView.activeSheet` besteht hier also nicht.
+/// `DocumentsOverviewWindow.activeSheet` besteht hier also nicht.
 private struct DocumentsSettingsSection: View {
     @Environment(\.managedObjectContext) private var viewContext
 
     @State private var isConfigured = WorkingDirectoryStore.isConfigured
     /// Erzwingt eine Neuberechnung des Pfad-Texts nach einem Wechsel –
     /// `WorkingDirectoryStore` ist reines UserDefaults ohne SwiftUI-
-    /// Reaktivität (siehe gleichlautender Kommentar in `DocumentsView`).
+    /// Reaktivität (siehe gleichlautender Kommentar in `DocumentsOverviewWindow`).
     @State private var revision = 0
     @State private var migrationFailures: [DocumentMigration.Failure] = []
     @State private var isPresentingMigrationFailures = false

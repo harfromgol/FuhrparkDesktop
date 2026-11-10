@@ -3,14 +3,14 @@ import Foundation
 
 /// Bündelt, was beim Setzen/Ändern des Arbeitsverzeichnisses passieren muss:
 /// speichern, vorhandene Dokumente migrieren, vor fremden Belegordnern
-/// warnen. Gemeinsam genutzt vom Zahnrad-Popover in `DocumentsView` und der
+/// warnen. Gemeinsam genutzt vom Zahnrad-Popover in `DocumentsOverviewWindow` und der
 /// Sektion „Dokumente“ im Einstellungsfenster (`SettingsView`), damit beide
 /// Stellen exakt dasselbe Verhalten zeigen und nicht auseinanderlaufen
 /// können.
 ///
 /// Bewusst nur die reine Logik – keine `.sheet`/`.alert`-Präsentation: Jede
 /// aufrufende View bringt dafür ihren eigenen Zustand mit (siehe
-/// Doc-Kommentar an `DocumentsView.activeSheet` zum SDK-Quirk, dass von
+/// Doc-Kommentar an `DocumentsOverviewWindow.activeSheet` zum SDK-Quirk, dass von
 /// mehreren gleichzeitig deklarierten Präsentations-Modifiern nur der
 /// zuletzt deklarierte zuverlässig funktioniert – ein gemeinsames `.sheet`
 /// in dieser Hilfsfunktion würde das für Aufrufer mit eigenen Sheets
@@ -21,7 +21,7 @@ enum WorkingDirectoryChange {
         /// Hinweistext, falls im neu gewählten Verzeichnis bereits fremde
         /// Belegordner liegen – `nil`, wenn keine gefunden wurden. Wird nur
         /// geprüft, wenn die Migration ohne Fehlschläge durchlief (siehe
-        /// `DocumentsView.warnAboutForeignFolders`, dessen Verhalten hier
+        /// `DocumentsOverviewWindow.warnAboutForeignFolders`, dessen Verhalten hier
         /// identisch nachgebildet ist).
         let foreignFolderWarning: String?
     }

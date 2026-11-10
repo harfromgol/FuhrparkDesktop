@@ -3,14 +3,28 @@ import CoreData
 import UniformTypeIdentifiers
 import AppKit
 
-/// Fahrzeugübergreifende Liste aller referenzierten Dokumente (Rechnungen,
-/// Belege etc.), mit Filter nach Fahrzeug und/oder Kategorie. Dateien werden
-/// beim Hinzufügen als Kopie in ein vom Nutzer gewähltes Arbeitsverzeichnis
+/// Eigenständiges Fenster mit der fahrzeugübergreifenden Liste aller
+/// referenzierten Dokumente (Rechnungen, Belege etc.), geöffnet über das Menü
+/// „Ansichten → Dokumente“ (siehe `AppMenuCommands`), mit Filter nach
+/// Fahrzeugstatus, Fahrzeug, Kategorie und Zeitraum. Dateien werden beim
+/// Hinzufügen als Kopie in ein vom Nutzer gewähltes Arbeitsverzeichnis
 /// abgelegt (siehe `WorkingDirectoryStore`/`DocumentStorage`), damit sie auch
 /// dann auffindbar bleiben, wenn sich der Speicherort der Originaldatei
 /// später ändert.
-struct DocumentsView: View {
+///
+/// Die Filter werden in `DocumentsOverviewFilterStore` gespeichert und beim
+/// Öffnen wieder eingelesen – das Fenster wird bei jedem Öffnen neu erzeugt
+/// (sein `@State` ginge sonst beim Schließen verloren), soll aber wie auch
+/// nach einem Neustart genau dort weitermachen, wo man aufgehört hat.
+/// Position und Größe des Fensters merkt sich `persistWindowFrame` an der
+/// Szene.
+struct DocumentsOverviewWindow: View {
+    /// Feste ID der `Window`-Szene – zugleich der Schlüssel, unter dem
+    /// Position und Größe des Fensters gespeichert werden.
+    static let windowID = "documents-overview"
+
     @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.openWindow) private var openWindow
     @Environment(AppCommands.self) private var appCommands
 
     @FetchRequest(
@@ -81,11 +95,16 @@ struct DocumentsView: View {
 
     @State private var selectedVehicleFilter: Vehicle?
     @State private var selectedCategoryFilter: String?
-    @State private var statusFilter: FahrzeugStatusFilter = .alle
-    @State private var isDateFilterActive = false
-    @State private var dateFrom = Date()
-    @State private var dateTo = Date()
+    @State private var statusFilter = DocumentsOverviewFilterStore.getStatusFilter()
+    @State private var isDateFilterActive = DocumentsOverviewFilterStore.getIsDateFilterActive()
+    @State private var dateFrom = DocumentsOverviewFilterStore.getDateRange()?.from ?? Date()
+    @State private var dateTo = DocumentsOverviewFilterStore.getDateRange()?.to ?? Date()
     @State private var isPresentingFilterPopover = false
+    /// Fahrzeug und Kategorie können erst nach dem ersten Erscheinen
+    /// wiederhergestellt werden, da `vehicles` und `documents` (die
+    /// `@FetchRequest`s) zum Zeitpunkt der `@State`-Initialisierung noch
+    /// nicht befüllt sind – siehe `restoreFiltersIfNeeded()`.
+    @State private var didRestoreFilters = false
 
     /// Fahrzeuge, die zum gewählten Fahrzeugstatus passen – Grundlage der
     /// Fahrzeugauswahl im Filter-Popover (erste Stufe der Kaskade).
@@ -150,7 +169,63 @@ struct DocumentsView: View {
             || selectedCategoryFilter != nil || isDateFilterActive
     }
 
+    /// Wiederherstellen und Speichern der Filter liegen hier, die
+    /// Präsentationen in `presentedContent` – zusammen in einem `body` wäre
+    /// die Modifier-Kette für den Type-Checker zu lang.
     var body: some View {
+        presentedContent
+            .onAppear { restoreFiltersIfNeeded() }
+            .onChange(of: statusFilter) { _, newValue in
+                DocumentsOverviewFilterStore.setStatusFilter(newValue)
+                if let selectedVehicleFilter, !vehiclesMatchingStatus.contains(selectedVehicleFilter) {
+                    self.selectedVehicleFilter = nil
+                }
+                if let selectedCategoryFilter, !allCategoryNames.contains(selectedCategoryFilter) {
+                    self.selectedCategoryFilter = nil
+                }
+            }
+            .onChange(of: selectedVehicleFilter) { _, newValue in
+                DocumentsOverviewFilterStore.setSelectedVehicleID(newValue?.id)
+                if let selectedCategoryFilter, !allCategoryNames.contains(selectedCategoryFilter) {
+                    self.selectedCategoryFilter = nil
+                }
+            }
+            .onChange(of: selectedCategoryFilter) { _, newValue in
+                DocumentsOverviewFilterStore.setSelectedCategoryName(newValue)
+            }
+            .onChange(of: isDateFilterActive) { _, newValue in
+                DocumentsOverviewFilterStore.setIsDateFilterActive(newValue)
+                // Auch der unverändert übernommene Vorgabezeitraum (heute)
+                // gehört zum gewählten Filter – sonst stünde nach dem
+                // erneuten Öffnen an einem anderen Tag ein anderer Zeitraum da.
+                if newValue {
+                    DocumentsOverviewFilterStore.setDateRange(from: dateFrom, to: dateTo)
+                }
+            }
+            .onChange(of: dateFrom) { _, newValue in
+                DocumentsOverviewFilterStore.setDateRange(from: newValue, to: dateTo)
+            }
+            .onChange(of: dateTo) { _, newValue in
+                DocumentsOverviewFilterStore.setDateRange(from: dateFrom, to: newValue)
+            }
+    }
+
+    /// Stellt Fahrzeug- und Kategoriefilter aus dem Store wieder her. Die
+    /// Kategorie nur, wenn es sie unter den wiederhergestellten Status- und
+    /// Fahrzeugfiltern noch gibt – sonst zeigte das Fenster eine leere Liste
+    /// zu einer Kategorie, die das Popover gar nicht mehr anbietet.
+    private func restoreFiltersIfNeeded() {
+        guard !didRestoreFilters else { return }
+        didRestoreFilters = true
+        if let id = DocumentsOverviewFilterStore.getSelectedVehicleID() {
+            selectedVehicleFilter = vehicles.first { $0.id == id }
+        }
+        if let name = DocumentsOverviewFilterStore.getSelectedCategoryName(), allCategoryNames.contains(name) {
+            selectedCategoryFilter = name
+        }
+    }
+
+    private var presentedContent: some View {
         Group {
             if documents.isEmpty {
                 VStack(spacing: 20) {
@@ -180,6 +255,7 @@ struct DocumentsView: View {
                 }
             }
         }
+        .frame(minWidth: 480, minHeight: 360)
         .navigationTitle("Dokumente")
         .sheet(item: $activeSheet) { kind in
             switch kind {
@@ -232,26 +308,12 @@ struct DocumentsView: View {
                  ? "„\(document.filename)“ wird von allen \(anzahl) zugeordneten Ausgaben entfernt, zusammen mit der Kopie im Arbeitsverzeichnis. Ein eventuell noch vorhandenes Original bleibt unberührt."
                  : "„\(document.filename)“ und die zugehörige Kopie im Arbeitsverzeichnis werden entfernt. Ein eventuell noch vorhandenes Original bleibt unberührt.")
         }
-        .onChange(of: statusFilter) { _, _ in
-            if let selectedVehicleFilter, !vehiclesMatchingStatus.contains(selectedVehicleFilter) {
-                self.selectedVehicleFilter = nil
-            }
-            if let selectedCategoryFilter, !allCategoryNames.contains(selectedCategoryFilter) {
-                self.selectedCategoryFilter = nil
-            }
-        }
-        .onChange(of: selectedVehicleFilter) { _, _ in
-            if let selectedCategoryFilter, !allCategoryNames.contains(selectedCategoryFilter) {
-                self.selectedCategoryFilter = nil
-            }
-        }
-        // Das Zahnrad-Symbol öffnet das Arbeitsverzeichnis jetzt direkt im
-        // Einstellungsfenster (siehe `addButtonRow`) statt im früheren
-        // Popover dieser Ansicht – dort kann es sich ändern, während diese
-        // Ansicht selbst weiter im Hintergrund besteht. Nach dem Schließen
-        // die eigenen Spiegel auffrischen, aus demselben Grund wie bei
-        // `isWorkingDirectoryConfigured` oben: UserDefaults ist für SwiftUI
-        // unsichtbar.
+        // Das Zahnrad-Symbol öffnet das Arbeitsverzeichnis im
+        // Einstellungsfenster des Hauptfensters (siehe `addButtonRow`) –
+        // dort kann es sich ändern, während dieses Fenster weiter besteht.
+        // Nach dem Schließen die eigenen Spiegel auffrischen, aus demselben
+        // Grund wie bei `isWorkingDirectoryConfigured` oben: UserDefaults ist
+        // für SwiftUI unsichtbar.
         .onChange(of: appCommands.showSettings) { _, isShown in
             guard !isShown else { return }
             isWorkingDirectoryConfigured = WorkingDirectoryStore.isConfigured
@@ -262,6 +324,12 @@ struct DocumentsView: View {
     private var addButtonRow: some View {
         HStack {
             Button {
+                // Die Einstellungen sind ein Sheet des Hauptfensters (siehe
+                // `SettingsView`). Das Hauptfenster deshalb erst nach vorn
+                // holen bzw. wieder öffnen – sonst erschiene das Sheet hinter
+                // diesem Fenster oder, bei geschlossenem Hauptfenster, gar
+                // nicht.
+                openWindow(id: FuhrparkDesktopApp.mainWindowID)
                 appCommands.settingsInitialSection = .documents
                 appCommands.showSettings = true
             } label: {

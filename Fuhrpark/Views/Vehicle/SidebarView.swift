@@ -92,7 +92,6 @@ struct SidebarView: View {
     /// Konfiguration.
     private var sectionOfSelection: SidebarSection? {
         switch selection {
-        case .documents: return .documents
         case .reminders: return .reminders
         case .fuelPrices: return .fuelPrices
         case .mcp: return .mcp
@@ -193,17 +192,6 @@ struct SidebarView: View {
                     .buttonStyle(.plain)
                     .pointerStyle(.link)
                     .listRowBackground(rowBackground(for: .reminders))
-                }
-
-                if enabledSections.contains(.documents) {
-                    Button {
-                        selection = .documents
-                    } label: {
-                        sidebarLabel("Dokumente", systemImage: "folder.fill")
-                    }
-                    .buttonStyle(.plain)
-                    .pointerStyle(.link)
-                    .listRowBackground(rowBackground(for: .documents))
                 }
 
                 if enabledSections.contains(.fuelPrices) {

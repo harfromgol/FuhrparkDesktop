@@ -23,8 +23,10 @@ Fahrzeuge, Betankungen, sonstige Ausgaben, Belege und Spritpreise an einem Ort.
 - **Sonstige Ausgaben/Einnahmen** – mit frei definierbaren Kategorien und
   Empfänger-Autovervollständigung.
 - **Dokumente** – Belege (PDF, Fotos, …) einer oder mehreren sonstigen Ausgaben
-  desselben Fahrzeugs zuordnen, auch nachträglich; zentrale Dokumenten-Übersicht
-  mit Filter nach Fahrzeug/Kategorie. Die Datei wird dabei nur einmal abgelegt.
+  desselben Fahrzeugs zuordnen, auch nachträglich; die zentrale
+  Dokumenten-Übersicht mit Filter nach Fahrzeug/Kategorie öffnet sich als
+  eigenes Fenster über `Ansichten → Dokumente`. Die Datei wird dabei nur einmal
+  abgelegt.
 - **Erinnerungen** - laß Dich an den nächsten TÜV Termin oder an die fällige Versicherung/Steuer erinnern.
   Die Seitenleiste zeigt unter „Erinnerungen“ die fälligen; die vollständige,
   fahrzeugübergreifende Liste mit Filter nach Status und Fahrzeug öffnet sich
@@ -39,8 +41,8 @@ Fahrzeuge, Betankungen, sonstige Ausgaben, Belege und Spritpreise an einem Ort.
   jeweiligen Aktionsmenü.
 - **Spritpreise** – Umkreissuche über die Tankerkönig-API (eigener API-Key
   erforderlich, wird lokal gespeichert und nicht mit exportiert).
-- **Konfigurierbare Seitenleiste** – Dokumente, Erinnerungen, Spritpreise und
-  KI-Zugriff lassen sich einzeln aus der Seitenleiste ausblenden.
+- **Konfigurierbare Seitenleiste** – Erinnerungen, Spritpreise und KI-Zugriff
+  lassen sich einzeln aus der Seitenleiste ausblenden.
 - **Datenexport/-import** – vollständiges JSON-Backup aller Fahrzeuge,
   Betankungen, Ausgaben, Kategorien und Dokumente (`Tools → Daten exportieren
   / importieren`).

@@ -51,7 +51,7 @@ enum DocumentCleanup {
     /// Löschvorgang entfernt.
     ///
     /// Dieselbe Quelle für Hinweis und Löschung: Beim Festlegen des
-    /// Arbeitsverzeichnisses zeigt `DocumentsView` das Ergebnis an, damit
+    /// Arbeitsverzeichnisses zeigt `DocumentsOverviewWindow` das Ergebnis an, damit
     /// niemand versehentlich das Belegverzeichnis eines anderen Datenbestands
     /// wählt (Debug- und Release-Ausgabe haben getrennte Datenbanken, siehe
     /// `AppVariant`). Eine eigene Zählung für die Anzeige könnte beruhigen, wo
