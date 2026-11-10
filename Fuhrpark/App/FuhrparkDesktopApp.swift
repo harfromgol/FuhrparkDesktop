@@ -73,6 +73,18 @@ struct FuhrparkDesktopApp: App {
         }
         .defaultSize(width: 640, height: 600)
 
+        // Fahrzeugübergreifende Dokumentenliste, geöffnet über „Ansichten →
+        // Dokumente“ – wie die drei Fenster darüber ein einzelnes `Window`.
+        Window("Dokumente", id: DocumentsOverviewWindow.windowID) {
+            DocumentsOverviewWindow()
+                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                // Das Zahnrad-Symbol öffnet über AppCommands die
+                // Einstellungen im Hauptfenster.
+                .environment(appCommands)
+                .persistWindowFrame(DocumentsOverviewWindow.windowID)
+        }
+        .defaultSize(width: 720, height: 600)
+
         WindowGroup("Betankungen", id: "fuel-list", for: VehicleRef.self) { $vehicleRef in
             if let vehicleRef {
                 FuelEntryListWindow(vehicleRef: vehicleRef)
@@ -236,6 +248,9 @@ struct AppMenuCommands: Commands {
                 }
                 Button("Erinnerungen", systemImage: "bell.fill") {
                     openWindow(id: RemindersOverviewWindow.windowID)
+                }
+                Button("Dokumente", systemImage: "folder.fill") {
+                    openWindow(id: DocumentsOverviewWindow.windowID)
                 }
             }
             .labelStyle(.titleAndIcon)

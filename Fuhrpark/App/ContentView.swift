@@ -42,7 +42,7 @@ struct ContentView: View {
             case .fuelPrices:
                 FuelPricesView()
             case .documents:
-                DocumentsView()
+                DocumentsOverviewWindow()
             case .reminders:
                 RemindersView()
             case .mcp:
