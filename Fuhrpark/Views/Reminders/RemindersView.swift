@@ -3,7 +3,7 @@ import CoreData
 
 /// Fahrzeugübergreifende Liste aller Erinnerungen, mit Filter nach Kennzeichen
 /// und Status. Die Filter liegen hinter einem Filter-Icon-Button mit Popover
-/// – analog zu `NotesView`/`DocumentsView`, inklusive derselben
+/// – analog zu `NotesOverviewWindow`/`DocumentsView`, inklusive derselben
 /// Einfachauswahl-Picker für das Fahrzeug (siehe `RemindersFilterPopover`).
 struct RemindersView: View {
     @Environment(\.managedObjectContext) private var viewContext

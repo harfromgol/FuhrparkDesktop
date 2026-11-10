@@ -50,6 +50,16 @@ struct FuhrparkDesktopApp: App {
         }
         .defaultSize(width: 960, height: 600)
 
+        // Fahrzeugübergreifende Notizenliste, geöffnet über „Ansichten →
+        // Notizen“ – wie das Betankungen-Fenster darüber ein einzelnes
+        // `Window`.
+        Window("Notizen", id: NotesOverviewWindow.windowID) {
+            NotesOverviewWindow()
+                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .persistWindowFrame(NotesOverviewWindow.windowID)
+        }
+        .defaultSize(width: 640, height: 600)
+
         WindowGroup("Betankungen", id: "fuel-list", for: VehicleRef.self) { $vehicleRef in
             if let vehicleRef {
                 FuelEntryListWindow(vehicleRef: vehicleRef)
@@ -204,8 +214,13 @@ struct AppMenuCommands: Commands {
         // `CommandMenu` blenden ihr Symbol standardmäßig aus, auch wenn der
         // Button eines mitbringt (live geprüft).
         CommandMenu("Ansichten") {
-            Button("Betankungen", systemImage: "fuelpump.fill") {
-                openWindow(id: FuelEntriesOverviewWindow.windowID)
+            Group {
+                Button("Betankungen", systemImage: "fuelpump.fill") {
+                    openWindow(id: FuelEntriesOverviewWindow.windowID)
+                }
+                Button("Notizen", systemImage: "note.text") {
+                    openWindow(id: NotesOverviewWindow.windowID)
+                }
             }
             .labelStyle(.titleAndIcon)
         }

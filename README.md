@@ -26,6 +26,10 @@ Fahrzeuge, Betankungen, sonstige Ausgaben, Belege und Spritpreise an einem Ort.
   desselben Fahrzeugs zuordnen, auch nachträglich; zentrale Dokumenten-Übersicht
   mit Filter nach Fahrzeug/Kategorie. Die Datei wird dabei nur einmal abgelegt.
 - **Erinnerungen** - laß Dich an den nächsten TÜV Termin oder an die fällige Versicherung/Steuer erinnern
+- **Notizen** – fahrzeugbezogene Notizen mit Datum, Text und optional
+  angehängten Dokumenten. Die fahrzeugübergreifende Liste mit Filter nach
+  Fahrzeug und Zeitraum öffnet sich als eigenes Fenster über
+  `Ansichten → Notizen`.
 - **Statistik** – Kosten pro Kategorie, pro Jahr, pro Fahrzeug.
 - **PDF-Export** – Fahrzeugbericht und Statistikübersicht als mehrseitiges
   PDF mit Kopf-/Fußzeile und sauberen Seitenumbrüchen, direkt aus dem

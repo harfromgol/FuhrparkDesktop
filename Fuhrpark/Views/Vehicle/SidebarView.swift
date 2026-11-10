@@ -93,7 +93,6 @@ struct SidebarView: View {
     private var sectionOfSelection: SidebarSection? {
         switch selection {
         case .documents: return .documents
-        case .notes: return .notes
         case .reminders: return .reminders
         case .fuelPrices: return .fuelPrices
         case .mcp: return .mcp
@@ -178,17 +177,6 @@ struct SidebarView: View {
                 .buttonStyle(.plain)
                 .pointerStyle(.link)
                 .listRowBackground(rowBackground(for: .statistics))
-
-                if enabledSections.contains(.notes) {
-                    Button {
-                        selection = .notes
-                    } label: {
-                        sidebarLabel("Notizen", systemImage: "note.text")
-                    }
-                    .buttonStyle(.plain)
-                    .pointerStyle(.link)
-                    .listRowBackground(rowBackground(for: .notes))
-                }
 
                 if enabledSections.contains(.reminders) {
                     Button {
