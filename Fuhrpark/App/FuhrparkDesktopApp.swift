@@ -39,6 +39,17 @@ struct FuhrparkDesktopApp: App {
             AppMenuCommands(appCommands: appCommands, updateChecker: updateChecker)
         }
 
+        // Fahrzeugübergreifende Betankungstabelle, geöffnet über „Ansichten →
+        // Betankungen“. `Window` statt `WindowGroup`: Es gibt genau ein
+        // solches Fenster – ein erneuter Menüaufruf holt das bereits offene
+        // nach vorn, statt ein zweites zu öffnen.
+        Window("Betankungen", id: FuelEntriesOverviewWindow.windowID) {
+            FuelEntriesOverviewWindow()
+                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .persistWindowFrame(FuelEntriesOverviewWindow.windowID)
+        }
+        .defaultSize(width: 960, height: 600)
+
         WindowGroup("Betankungen", id: "fuel-list", for: VehicleRef.self) { $vehicleRef in
             if let vehicleRef {
                 FuelEntryListWindow(vehicleRef: vehicleRef)
@@ -130,7 +141,7 @@ struct FuhrparkDesktopApp: App {
 }
 
 /// Menübefehle: App-Menü (Update-Prüfung), „Ablage“ (Neues Fenster / Fenster
-/// schließen) und „Tools“.
+/// schließen), „Ansichten“ und „Tools“.
 struct AppMenuCommands: Commands {
     @Environment(\.openWindow) private var openWindow
 
@@ -182,6 +193,15 @@ struct AppMenuCommands: Commands {
                 NSApp.keyWindow?.performClose(nil)
             }
             .keyboardShortcut("w", modifiers: .command)
+        }
+
+        // Eigenständige Fenster mit fahrzeugübergreifenden Ansichten. Steht
+        // bewusst vor „Tools“ – `CommandMenu`s erscheinen in der Reihenfolge
+        // ihrer Deklaration.
+        CommandMenu("Ansichten") {
+            Button("Betankungen", systemImage: "fuelpump.fill") {
+                openWindow(id: FuelEntriesOverviewWindow.windowID)
+            }
         }
 
         CommandMenu("Tools") {
