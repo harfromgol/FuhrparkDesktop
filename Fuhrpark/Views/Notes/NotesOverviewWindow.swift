@@ -4,7 +4,7 @@ import CoreData
 /// Eigenständiges Fenster mit der fahrzeugübergreifenden Liste aller
 /// Notizen, geöffnet über das Menü „Ansichten → Notizen“ (siehe
 /// `AppMenuCommands`). Filter nach Fahrzeugstatus, Fahrzeug und Zeitraum –
-/// aufgebaut wie `DocumentsView`s Filterkaskade, nur ohne die dortige
+/// aufgebaut wie `DocumentsOverviewWindow`s Filterkaskade, nur ohne die dortige
 /// Kategorie-Stufe (Notizen kennen keine Kategorien).
 ///
 /// Die Filter werden in `NotesOverviewFilterStore` gespeichert und beim

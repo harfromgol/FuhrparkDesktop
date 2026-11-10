@@ -6,7 +6,6 @@ import AppKit
 enum SidebarSelection: Hashable {
     case statistics
     case fuelPrices
-    case documents
     case reminders
     case mcp
     case vehicle(Vehicle)
@@ -41,8 +40,6 @@ struct ContentView: View {
                 StatisticsView()
             case .fuelPrices:
                 FuelPricesView()
-            case .documents:
-                DocumentsOverviewWindow()
             case .reminders:
                 RemindersView()
             case .mcp:
@@ -98,7 +95,7 @@ struct ContentView: View {
         // sondern über direkte `NSSavePanel`/`NSOpenPanel` (siehe
         // `presentExportPanel`/`presentImportPanel`): Beide SwiftUI-Modifier
         // zeigen den Dialog als Sheet, das am Fenster verankert und nicht frei
-        // verschiebbar ist (siehe auch `DocumentsView.presentFolderPicker`).
+        // verschiebbar ist (siehe auch `DocumentsOverviewWindow.presentFolderPicker`).
         .onChange(of: appCommands.showExportDialog) { _, isShown in
             guard isShown else { return }
             appCommands.showExportDialog = false

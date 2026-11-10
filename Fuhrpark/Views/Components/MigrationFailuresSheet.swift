@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Listet Dokumente auf, die beim Wechsel des Arbeitsverzeichnisses nicht
 /// automatisch übernommen werden konnten. Gemeinsam genutzt von
-/// `DocumentsView` und der Sektion „Dokumente“ im Einstellungsfenster
+/// `DocumentsOverviewWindow` und der Sektion „Dokumente“ im Einstellungsfenster
 /// (`SettingsView`) – beide lösen den Wechsel über `WorkingDirectoryChange`
 /// aus und zeigen bei Fehlschlägen dieselbe Liste.
 struct MigrationFailuresSheet: View {

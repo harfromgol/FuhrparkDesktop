@@ -28,7 +28,7 @@ enum FahrzeugStatusFilter: String, CaseIterable, Identifiable {
 /// Fahrzeugstatus schränkt die wählbaren Fahrzeuge ein, beide zusammen
 /// schränken die wählbaren Kategorien ein. `availableVehicles`/
 /// `availableCategoryNames` kommen dafür bereits vorgefiltert von
-/// `DocumentsView` herein – diese Ansicht rechnet selbst nichts nach.
+/// `DocumentsOverviewWindow` herein – diese Ansicht rechnet selbst nichts nach.
 struct DocumentsFilterPopover: View {
     @Binding var statusFilter: FahrzeugStatusFilter
     @Binding var selectedVehicleFilter: Vehicle?

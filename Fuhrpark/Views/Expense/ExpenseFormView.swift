@@ -234,7 +234,7 @@ struct ExpenseFormView: View {
 
     /// Direktes `NSOpenPanel` statt `.fileImporter`: Letzteres zeigt den
     /// Dialog als Sheet an, das am Fenster verankert und nicht frei
-    /// verschiebbar ist (siehe auch `DocumentsView.presentFolderPicker`).
+    /// verschiebbar ist (siehe auch `DocumentsOverviewWindow.presentFolderPicker`).
     private func presentDocumentFilePicker() {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = false

@@ -172,7 +172,7 @@ struct NoteFormView: View {
     }
 
     /// Direktes `NSOpenPanel` statt `.fileImporter`, aus demselben Grund wie
-    /// bei `ExpenseFormView`/`DocumentsView`: frei verschiebbares Fenster
+    /// bei `ExpenseFormView`/`DocumentsOverviewWindow`: frei verschiebbares Fenster
     /// statt eines am Hauptfenster verankerten Sheets.
     private func presentDocumentFilePicker() {
         let panel = NSOpenPanel()
