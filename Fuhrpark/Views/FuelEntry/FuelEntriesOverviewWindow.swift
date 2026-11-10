@@ -1,30 +1,24 @@
 import SwiftUI
 import CoreData
 
-/// Ob die Liste als Karten (bisheriges Layout) oder als Tabelle dargestellt
-/// wird – umschaltbar über `FuelEntriesView.layoutModePicker`. Wird wie die
-/// übrigen Anzeigeeinstellungen in `FuelEntriesOverviewFilterStore`
-/// gespeichert, daher nicht `private` (der Store liegt in einer anderen
-/// Datei).
-enum FuelEntriesLayoutMode: String {
-    case cards
-    case table
-}
-
-/// Fahrzeugübergreifende Liste aller Betankungen, mit Filter nach
-/// Fahrzeugstatus und Kennzeichen sowie einstellbarer Seitengröße und
-/// Sortierung – aufgebaut wie `NotesView`/`RemindersView` (Filter-Icon +
-/// „Neue …“-Button oben, darunter die gefilterte Liste), ergänzt um die
-/// Vor/Zurück-Blätterung aus `FuelEntryListWindow`, da die fahrzeug-
-/// übergreifende Liste schnell sehr lang werden kann.
+/// Eigenständiges Fenster mit der fahrzeugübergreifenden Liste aller
+/// Betankungen als Tabelle (`FuelEntriesTable`), geöffnet über das Menü
+/// „Ansichten → Betankungen“ (siehe `AppMenuCommands`). Oben das Filter-Icon
+/// (Fahrzeugstatus, Kennzeichen, Sortierung) und „Neue Betankung“, darunter
+/// die gefilterte Tabelle, die den verfügbaren Platz im Fenster füllt und
+/// erst darüber hinaus selbst scrollt.
 ///
-/// Alle Filter- und Anzeigeeinstellungen werden in
-/// `FuelEntriesOverviewFilterStore` gespeichert und beim Erscheinen wieder
-/// eingelesen: die Ansicht wird bei jedem Wechsel in der Seitenleiste neu
-/// erzeugt (ihr `@State` ginge sonst beim Verlassen verloren), soll aber
-/// beim Zurückkehren zu „Allgemein → Betankungen“ wie auch nach einem
-/// Neustart genau dort weitermachen, wo man aufgehört hat.
-struct FuelEntriesView: View {
+/// Filter, Sortierung und Spaltenauswahl werden in
+/// `FuelEntriesOverviewFilterStore` gespeichert und beim Öffnen wieder
+/// eingelesen – das Fenster wird bei jedem Öffnen neu erzeugt (sein `@State`
+/// ginge sonst beim Schließen verloren), soll aber wie auch nach einem
+/// Neustart genau dort weitermachen, wo man aufgehört hat. Position und
+/// Größe des Fensters merkt sich `persistWindowFrame` an der Szene.
+struct FuelEntriesOverviewWindow: View {
+    /// Feste ID der `Window`-Szene – zugleich der Schlüssel, unter dem
+    /// Position und Größe des Fensters gespeichert werden.
+    static let windowID = "fuel-entries-overview"
+
     @Environment(\.managedObjectContext) private var viewContext
 
     @FetchRequest(sortDescriptors: [NSSortDescriptor(keyPath: \FuelEntry.date, ascending: false)])
@@ -39,12 +33,8 @@ struct FuelEntriesView: View {
 
     @State private var selectedVehicleFilter: Vehicle?
     @State private var statusFilter = FuelEntriesOverviewFilterStore.getStatusFilter()
-    @State private var showAllResults = FuelEntriesOverviewFilterStore.getShowAll()
-    @State private var pageSize = FuelEntriesOverviewFilterStore.getPageSize()
     @State private var sortOrder = FuelEntriesOverviewFilterStore.getSortOrder()
-    @State private var currentPage = 0
     @State private var isPresentingFilterPopover = false
-    @State private var layoutMode = FuelEntriesOverviewFilterStore.getLayoutMode()
     @State private var visibleColumns = FuelEntriesOverviewFilterStore.getVisibleColumns()
     @State private var isPresentingColumnsPopover = false
     /// `selectedVehicleFilter` selbst kann erst nach dem ersten Erscheinen
@@ -96,71 +86,29 @@ struct FuelEntriesView: View {
         }
     }
 
-    /// Bei „Alle anzeigen“ zählt die Seitengröße effektiv als „alle
-    /// gefilterten Treffer“ – so bleibt `totalPages` bei 1 und die
-    /// Vor/Zurück-Blätterung entfällt automatisch, ohne die Logik unten
-    /// doppelt pflegen zu müssen.
-    private var effectivePageSize: Int {
-        showAllResults ? max(1, sortedEntries.count) : pageSize
-    }
-
-    private var totalPages: Int {
-        max(1, Int(ceil(Double(sortedEntries.count) / Double(effectivePageSize))))
-    }
-
-    private var pagedEntries: [FuelEntry] {
-        let start = currentPage * effectivePageSize
-        guard start < sortedEntries.count else { return [] }
-        return Array(sortedEntries[start..<min(start + effectivePageSize, sortedEntries.count)])
-    }
-
     var body: some View {
-        Group {
-            if entries.isEmpty {
-                VStack(spacing: 20) {
-                    addButtonRow
-                    Spacer()
+        // Kein umgebendes `ScrollView`: Eine SwiftUI-`Table` fällt darin auf
+        // 0 pt Höhe zusammen. Stattdessen füllt die Tabelle den verfügbaren
+        // Platz im Fenster (siehe `entryListSection`s `.frame(maxHeight:
+        // .infinity)`) und scrollt erst darüber hinaus selbst.
+        GlassEffectContainer {
+            VStack(alignment: .leading, spacing: 20) {
+                buttonRow
+
+                if entries.isEmpty {
                     ContentUnavailableView(
                         "Keine Betankungen",
                         systemImage: "fuelpump",
                         description: Text("Lege über „Neue Betankung“ die erste Betankung an.")
                     )
-                    Spacer()
-                }
-                .padding(20)
-            } else {
-                switch layoutMode {
-                case .cards:
-                    ScrollView {
-                        GlassEffectContainer {
-                            VStack(alignment: .leading, spacing: 20) {
-                                addButtonRow
-                                entryListSection
-
-                                if totalPages > 1 {
-                                    PaginationControls(currentPage: $currentPage, totalPages: totalPages)
-                                }
-                            }
-                            .padding(20)
-                        }
-                    }
-                case .table:
-                    // Kein umgebendes `ScrollView` wie im Karten-Layout: Die
-                    // Tabelle soll zunächst den verfügbaren Platz im Fenster
-                    // füllen (siehe `entryListSection`s `.frame(maxHeight:
-                    // .infinity)` im Tabellen-Fall) und erst darüber hinaus
-                    // selbst scrollen – „Alle anzeigen“ ist hier ohnehin fest
-                    // erzwungen, eine Seiten-Blätterung entfällt also.
-                    GlassEffectContainer {
-                        VStack(alignment: .leading, spacing: 20) {
-                            addButtonRow
-                            entryListSection
-                        }
-                        .padding(20)
-                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    entryListSection
                 }
             }
+            .padding(20)
         }
+        .frame(minWidth: 620, minHeight: 360)
         .navigationTitle("Betankungen")
         .sheet(isPresented: $isPresentingNewEntry) {
             FuelEntryFormView()
@@ -203,39 +151,19 @@ struct FuelEntriesView: View {
             if let selectedVehicleFilter, !vehiclesMatchingStatus.contains(selectedVehicleFilter) {
                 self.selectedVehicleFilter = nil
             }
-            currentPage = 0
         }
         .onChange(of: selectedVehicleFilter) { _, newValue in
             FuelEntriesOverviewFilterStore.setSelectedVehicleID(newValue?.id)
-            currentPage = 0
         }
         .onChange(of: sortOrder) { _, newValue in
             FuelEntriesOverviewFilterStore.setSortOrder(newValue)
-            currentPage = 0
-        }
-        .onChange(of: showAllResults) { _, newValue in
-            FuelEntriesOverviewFilterStore.setShowAll(newValue)
-            currentPage = 0
-        }
-        .onChange(of: pageSize) { _, newValue in
-            FuelEntriesOverviewFilterStore.setPageSize(newValue)
-            currentPage = 0
-        }
-        .onChange(of: totalPages) { _, newValue in
-            currentPage = min(currentPage, newValue - 1)
-        }
-        .onChange(of: layoutMode) { _, newValue in
-            FuelEntriesOverviewFilterStore.setLayoutMode(newValue)
-            if newValue == .table {
-                showAllResults = true
-            }
         }
         .onChange(of: visibleColumns) { _, newValue in
             FuelEntriesOverviewFilterStore.setVisibleColumns(newValue)
         }
     }
 
-    private var addButtonRow: some View {
+    private var buttonRow: some View {
         HStack {
             Button {
                 isPresentingFilterPopover = true
@@ -251,18 +179,10 @@ struct FuelEntriesView: View {
                 FuelEntriesFilterPopover(
                     statusFilter: $statusFilter,
                     selectedVehicleFilter: $selectedVehicleFilter,
-                    showAllResults: $showAllResults,
-                    pageSize: $pageSize,
                     sortOrder: $sortOrder,
-                    availableVehicles: vehiclesMatchingStatus,
-                    maxPageSize: max(1, filteredEntries.count),
-                    isShowAllLocked: layoutMode == .table
+                    availableVehicles: vehiclesMatchingStatus
                 )
             }
-
-            Spacer()
-
-            layoutModePicker
 
             Spacer()
 
@@ -274,17 +194,6 @@ struct FuelEntriesView: View {
             .buttonStyle(.glassProminent)
             .pointerStyle(.link)
         }
-    }
-
-    private var layoutModePicker: some View {
-        Picker("Layout", selection: $layoutMode) {
-            Image(systemName: "rectangle.grid.1x2").tag(FuelEntriesLayoutMode.cards)
-            Image(systemName: "tablecells").tag(FuelEntriesLayoutMode.table)
-        }
-        .labelsHidden()
-        .pickerStyle(.segmented)
-        .frame(width: 90)
-        .help("Layout umschalten")
     }
 
     private func addEntryTapped() {
@@ -301,9 +210,7 @@ struct FuelEntriesView: View {
                 Text("Betankungen (\(sortedEntries.count))")
                     .font(.headline)
                 Spacer()
-                if layoutMode == .table {
-                    columnsMenuButton
-                }
+                columnsMenuButton
             }
 
             if sortedEntries.isEmpty {
@@ -311,31 +218,15 @@ struct FuelEntriesView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                switch layoutMode {
-                case .cards:
-                    VStack(alignment: .leading, spacing: 12) {
-                        ForEach(pagedEntries) { entry in
-                            FuelEntryRow(entry: entry, showsVehicle: true)
-                                .contextMenu {
-                                    Button("Löschen", role: .destructive) {
-                                        pendingDeletion = entry
-                                    }
-                                }
-                        }
-                    }
-                case .table:
-                    FuelEntriesTable(entries: pagedEntries, visibleColumns: visibleColumns) { entry in
-                        pendingDeletion = entry
-                    }
+                FuelEntriesTable(entries: sortedEntries, visibleColumns: visibleColumns) { entry in
+                    pendingDeletion = entry
                 }
             }
         }
-        // Nur im Tabellen-Fall darf die Karte über ihre Inhaltsgröße hinaus
-        // wachsen, damit `FuelEntriesTable` zunächst den verfügbaren
-        // Fensterplatz füllt, bevor sie selbst scrollt (siehe
-        // `FuelEntriesView.body`); im Karten-Layout bleibt die Karte wie
-        // gehabt so groß wie ihr Inhalt.
-        .frame(maxHeight: layoutMode == .table ? .infinity : nil)
+        // Die Karte darf über ihre Inhaltsgröße hinaus wachsen, damit
+        // `FuelEntriesTable` zunächst den verfügbaren Fensterplatz füllt,
+        // bevor sie selbst scrollt.
+        .frame(maxHeight: .infinity, alignment: .top)
     }
 
     private var columnsMenuButton: some View {

@@ -39,6 +39,17 @@ struct FuhrparkDesktopApp: App {
             AppMenuCommands(appCommands: appCommands, updateChecker: updateChecker)
         }
 
+        // Fahrzeugübergreifende Betankungstabelle, geöffnet über „Ansichten →
+        // Betankungen“. `Window` statt `WindowGroup`: Es gibt genau ein
+        // solches Fenster – ein erneuter Menüaufruf holt das bereits offene
+        // nach vorn, statt ein zweites zu öffnen.
+        Window("Betankungen", id: FuelEntriesOverviewWindow.windowID) {
+            FuelEntriesOverviewWindow()
+                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .persistWindowFrame(FuelEntriesOverviewWindow.windowID)
+        }
+        .defaultSize(width: 960, height: 600)
+
         WindowGroup("Betankungen", id: "fuel-list", for: VehicleRef.self) { $vehicleRef in
             if let vehicleRef {
                 FuelEntryListWindow(vehicleRef: vehicleRef)
@@ -130,7 +141,7 @@ struct FuhrparkDesktopApp: App {
 }
 
 /// Menübefehle: App-Menü (Update-Prüfung), „Ablage“ (Neues Fenster / Fenster
-/// schließen) und „Tools“.
+/// schließen), „Ansichten“ und „Tools“.
 struct AppMenuCommands: Commands {
     @Environment(\.openWindow) private var openWindow
 
@@ -184,35 +195,59 @@ struct AppMenuCommands: Commands {
             .keyboardShortcut("w", modifiers: .command)
         }
 
+        // Eigenständige Fenster mit fahrzeugübergreifenden Ansichten. Steht
+        // bewusst vor „Tools“ – `CommandMenu`s erscheinen in der Reihenfolge
+        // ihrer Deklaration.
+        //
+        // `.labelStyle(.titleAndIcon)` hier und im Tools-Menü darunter: Ohne
+        // das zeigt die Menüleiste nur die Titel – Einträge eines
+        // `CommandMenu` blenden ihr Symbol standardmäßig aus, auch wenn der
+        // Button eines mitbringt (live geprüft).
+        CommandMenu("Ansichten") {
+            Button("Betankungen", systemImage: "fuelpump.fill") {
+                openWindow(id: FuelEntriesOverviewWindow.windowID)
+            }
+            .labelStyle(.titleAndIcon)
+        }
+
         CommandMenu("Tools") {
-            Button("Backup erstellen …", systemImage: "externaldrive.badge.plus") {
-                appCommands.showBackupFolderPicker = true
-            }
-            .disabled(appCommands.isBackupRunning)
-
-            Button("Backup einspielen …", systemImage: "externaldrive.badge.checkmark") {
-                appCommands.showRestoreFilePicker = true
-            }
-            .disabled(appCommands.isBackupRunning)
-
-            Divider()
-
-            // JSON-Export/Import zur Datenübergabe an die FuhrparkWeb-App
-            // (separat vom Backup, siehe dessen Doc-Kommentare zur Abgrenzung).
-            Menu("Fuhrpark Web") {
-                Button("JSON exportieren", systemImage: "square.and.arrow.up") {
-                    appCommands.showExportDialog = true
+            Group {
+                Button("Backup erstellen …", systemImage: "externaldrive.badge.plus") {
+                    appCommands.showBackupFolderPicker = true
                 }
-                Button("JSON importieren", systemImage: "square.and.arrow.down") {
-                    appCommands.showImportDialog = true
+                .disabled(appCommands.isBackupRunning)
+
+                Button("Backup einspielen …", systemImage: "externaldrive.badge.checkmark") {
+                    appCommands.showRestoreFilePicker = true
+                }
+                .disabled(appCommands.isBackupRunning)
+
+                Divider()
+
+                // JSON-Export/Import zur Datenübergabe an die FuhrparkWeb-App
+                // (separat vom Backup, siehe dessen Doc-Kommentare zur Abgrenzung).
+                Menu("Fuhrpark Web", systemImage: "globe") {
+                    // Eigener `.labelStyle`: Der vom umgebenden `Group`
+                    // reicht nicht bis in die Einträge eines Untermenüs
+                    // (live geprüft).
+                    Group {
+                        Button("JSON exportieren", systemImage: "square.and.arrow.up") {
+                            appCommands.showExportDialog = true
+                        }
+                        Button("JSON importieren", systemImage: "square.and.arrow.down") {
+                            appCommands.showImportDialog = true
+                        }
+                    }
+                    .labelStyle(.titleAndIcon)
+                }
+
+                Divider()
+
+                Button("App zurücksetzen", systemImage: "arrow.counterclockwise") {
+                    appCommands.showResetAppConfirmation = true
                 }
             }
-
-            Divider()
-
-            Button("App zurücksetzen", systemImage: "arrow.counterclockwise") {
-                appCommands.showResetAppConfirmation = true
-            }
+            .labelStyle(.titleAndIcon)
         }
     }
 }

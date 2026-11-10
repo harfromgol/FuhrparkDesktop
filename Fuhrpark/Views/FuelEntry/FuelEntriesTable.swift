@@ -1,9 +1,8 @@
 import SwiftUI
 
-/// Welche Spalten der Tabellenansicht (`FuelEntriesTable`) sichtbar sind –
-/// einstellbar über `FuelEntriesColumnsPopover`. Nur eine Anzeige-Präferenz
-/// für die laufende Sitzung, keine Filterung, deshalb bewusst nicht in
-/// `FuelEntriesOverviewFilterStore` persistiert.
+/// Welche Spalten der Tabelle (`FuelEntriesTable`) sichtbar sind –
+/// einstellbar über `FuelEntriesColumnsPopover`, gespeichert in
+/// `FuelEntriesOverviewFilterStore`.
 enum FuelEntryTableColumn: String, CaseIterable, Identifiable {
     case date = "Datum"
     case licensePlate = "Kennzeichen"
@@ -17,10 +16,9 @@ enum FuelEntryTableColumn: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
-/// Tabellarische Alternative zur Karten-Liste (`FuelEntryRow`) in
-/// `FuelEntriesView`, umschaltbar über deren Layout-Switch. Zeigt dieselben
-/// (bereits gefilterten, sortierten und paginierten) Einträge wie die
-/// Karten-Liste – nur die Darstellung unterscheidet sich.
+/// Tabelle der fahrzeugübergreifenden Betankungsübersicht
+/// (`FuelEntriesOverviewWindow`). Bekommt die bereits gefilterten und
+/// sortierten Einträge übergeben und stellt sie nur dar.
 struct FuelEntriesTable: View {
     let entries: [FuelEntry]
     let visibleColumns: Set<FuelEntryTableColumn>

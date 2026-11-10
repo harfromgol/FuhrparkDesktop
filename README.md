@@ -17,7 +17,9 @@ Fahrzeuge, Betankungen, sonstige Ausgaben, Belege und Spritpreise an einem Ort.
   Sidebar-Sektion, können keine Betankungen mehr erfassen (sonstige Ausgaben
   weiterhin) und lassen sich nicht reaktivieren.
 - **Betankungen** – Menge, Preis, Verbrauch (automatisch oder manuell), Historie
-  mit Verlaufs-Charts.
+  mit Verlaufs-Charts. Eine fahrzeugübergreifende Tabelle aller Betankungen
+  mit Filter, Sortierung und wählbaren Spalten öffnet sich als eigenes
+  Fenster über `Ansichten → Betankungen`.
 - **Sonstige Ausgaben/Einnahmen** – mit frei definierbaren Kategorien und
   Empfänger-Autovervollständigung.
 - **Dokumente** – Belege (PDF, Fotos, …) einer oder mehreren sonstigen Ausgaben
@@ -29,8 +31,7 @@ Fahrzeuge, Betankungen, sonstige Ausgaben, Belege und Spritpreise an einem Ort.
   PDF mit Kopf-/Fußzeile und sauberen Seitenumbrüchen, direkt aus dem
   jeweiligen Aktionsmenü.
 - **Spritpreise** – Umkreissuche über die Tankerkönig-API (eigener API-Key
-  erforderlich, wird lokal gespeichert und nicht mit exportiert). Angepinnte
-  Tankstellen/Sorten lassen sich zusätzlich per Menüleisten-Icon verfolgen.
+  erforderlich, wird lokal gespeichert und nicht mit exportiert).
 - **Konfigurierbare Seitenleiste** – Dokumente, Erinnerungen, Spritpreise und
   KI-Zugriff lassen sich einzeln aus der Seitenleiste ausblenden.
 - **Datenexport/-import** – vollständiges JSON-Backup aller Fahrzeuge,

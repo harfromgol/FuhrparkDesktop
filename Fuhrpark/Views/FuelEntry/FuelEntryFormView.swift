@@ -3,7 +3,7 @@ import SwiftUI
 /// Anlegen einer Betankung (kein Bearbeiten – `FuelEntryListWindow`s
 /// Kontextmenü bietet dafür nur „Löschen“ an). Meist mit fest vorgegebenem
 /// Fahrzeug aus der Fahrzeugdetail-Ansicht geöffnet; ohne Fahrzeug (Aufruf
-/// aus der fahrzeugübergreifenden `FuelEntriesView`) zeigt die
+/// aus dem fahrzeugübergreifenden `FuelEntriesOverviewWindow`) zeigt die
 /// „Fahrzeug“-Karte stattdessen einen `VehiclePicker“ – analog zu
 /// `NoteFormView`/`ReminderFormView`. Die übrigen Felder hängen über die
 /// Kraftstoffart von `selectedVehicle` ab (Beschriftungen, minimaler

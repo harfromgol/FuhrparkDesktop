@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// Popover zum Ein-/Ausblenden einzelner Spalten der Tabellenansicht
-/// (`FuelEntriesTable`) in `FuelEntriesView` – aufgerufen über den Button
-/// neben der Überschrift „Betankungen (…)“, nur in der Tabellenansicht
-/// sichtbar. Die letzte verbleibende sichtbare Spalte lässt sich nicht
-/// abwählen, sonst bliebe die Tabelle spaltenlos zurück.
+/// Popover zum Ein-/Ausblenden einzelner Spalten der Tabelle
+/// (`FuelEntriesTable`) in `FuelEntriesOverviewWindow` – aufgerufen über den
+/// Button neben der Überschrift „Betankungen (…)“. Die letzte verbleibende
+/// sichtbare Spalte lässt sich nicht abwählen, sonst bliebe die Tabelle
+/// spaltenlos zurück.
 struct FuelEntriesColumnsPopover: View {
     @Binding var visibleColumns: Set<FuelEntryTableColumn>
 
