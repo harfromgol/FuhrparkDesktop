@@ -248,23 +248,31 @@ struct AppMenuCommands: Commands {
         // das zeigt die Menüleiste nur die Titel – Einträge eines
         // `CommandMenu` blenden ihr Symbol standardmäßig aus, auch wenn der
         // Button eines mitbringt (live geprüft).
+        //
+        // Die Kürzel ⌘2 bis ⌘6 folgen der Reihenfolge der Einträge; ⌘1 ist
+        // nicht vergeben.
         CommandMenu("Ansichten") {
             Group {
                 Button("Betankungen", systemImage: "fuelpump.fill") {
                     openWindow(id: FuelEntriesOverviewWindow.windowID)
                 }
+                .keyboardShortcut("2", modifiers: .command)
                 Button("Sonstige Buchungen", systemImage: "eurosign.circle.fill") {
                     openWindow(id: ExpensesOverviewWindow.windowID)
                 }
+                .keyboardShortcut("3", modifiers: .command)
                 Button("Notizen", systemImage: "note.text") {
                     openWindow(id: NotesOverviewWindow.windowID)
                 }
+                .keyboardShortcut("4", modifiers: .command)
                 Button("Erinnerungen", systemImage: "bell.fill") {
                     openWindow(id: RemindersOverviewWindow.windowID)
                 }
+                .keyboardShortcut("5", modifiers: .command)
                 Button("Dokumente", systemImage: "folder.fill") {
                     openWindow(id: DocumentsOverviewWindow.windowID)
                 }
+                .keyboardShortcut("6", modifiers: .command)
             }
             .labelStyle(.titleAndIcon)
         }
