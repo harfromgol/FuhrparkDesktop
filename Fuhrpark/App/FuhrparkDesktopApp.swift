@@ -50,6 +50,16 @@ struct FuhrparkDesktopApp: App {
         }
         .defaultSize(width: 960, height: 600)
 
+        // Fahrzeugübergreifende Tabelle der sonstigen Ausgaben und Einnahmen,
+        // geöffnet über „Ansichten → Sonstige Buchungen“ – wie das
+        // Betankungen-Fenster darüber ein einzelnes `Window`.
+        Window("Sonstige Buchungen", id: ExpensesOverviewWindow.windowID) {
+            ExpensesOverviewWindow()
+                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .persistWindowFrame(ExpensesOverviewWindow.windowID)
+        }
+        .defaultSize(width: 1040, height: 600)
+
         // Fahrzeugübergreifende Notizenliste, geöffnet über „Ansichten →
         // Notizen“ – wie das Betankungen-Fenster darüber ein einzelnes
         // `Window`.
@@ -242,6 +252,9 @@ struct AppMenuCommands: Commands {
             Group {
                 Button("Betankungen", systemImage: "fuelpump.fill") {
                     openWindow(id: FuelEntriesOverviewWindow.windowID)
+                }
+                Button("Sonstige Buchungen", systemImage: "eurosign.circle.fill") {
+                    openWindow(id: ExpensesOverviewWindow.windowID)
                 }
                 Button("Notizen", systemImage: "note.text") {
                     openWindow(id: NotesOverviewWindow.windowID)

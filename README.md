@@ -21,7 +21,9 @@ Fahrzeuge, Betankungen, sonstige Ausgaben, Belege und Spritpreise an einem Ort.
   mit Filter, Sortierung und wählbaren Spalten öffnet sich als eigenes
   Fenster über `Ansichten → Betankungen`.
 - **Sonstige Ausgaben/Einnahmen** – mit frei definierbaren Kategorien und
-  Empfänger-Autovervollständigung.
+  Empfänger-Autovervollständigung. Eine fahrzeugübergreifende Tabelle aller
+  Buchungen mit Filter, Sortierung, wählbaren Spalten und anklickbaren Belegen
+  öffnet sich als eigenes Fenster über `Ansichten → Sonstige Buchungen`.
 - **Dokumente** – Belege (PDF, Fotos, …) einer oder mehreren sonstigen Ausgaben
   desselben Fahrzeugs zuordnen, auch nachträglich; die zentrale
   Dokumenten-Übersicht mit Filter nach Fahrzeug/Kategorie öffnet sich als

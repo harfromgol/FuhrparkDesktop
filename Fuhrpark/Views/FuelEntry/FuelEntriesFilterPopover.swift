@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// Sortierrichtung für die fahrzeugübergreifende Betankungsübersicht: primär
-/// nach Datum, bei Gleichstand zusätzlich nach km-Stand (siehe
-/// `FuelEntriesOverviewWindow.sortedEntries`).
+/// Sortierrichtung für die fahrzeugübergreifenden Tabellenfenster: primär
+/// nach Datum, bei Gleichstand zusätzlich nach km-Stand
+/// (`FuelEntriesOverviewWindow.sortedEntries`) bzw. nach Empfänger
+/// (`ExpensesOverviewWindow.sortedExpenses`).
 enum FuelEntrySortOrder: String, CaseIterable, Identifiable {
     case ascending = "Aufsteigend"
     case descending = "Absteigend"
@@ -11,7 +12,10 @@ enum FuelEntrySortOrder: String, CaseIterable, Identifiable {
 }
 
 /// Filter- und Anzeigeoptionen für die fahrzeugübergreifende
-/// Betankungsübersicht (`FuelEntriesOverviewWindow`), aufgebaut wie
+/// Betankungsübersicht (`FuelEntriesOverviewWindow`) – unverändert
+/// mitgenutzt von der Übersicht der sonstigen Buchungen
+/// (`ExpensesOverviewWindow`), die dieselben drei Einstellungen braucht.
+/// Aufgebaut wie
 /// `NotesFilterPopover`/`DocumentsFilterPopover` (Status/Fahrzeug-Kaskade).
 /// Anders als dort steht hier zusätzlich die „Sortierung“ im selben Popover
 /// – die fahrzeugübergreifende Liste hat kein einzelnes Fahrzeug, an dessen
