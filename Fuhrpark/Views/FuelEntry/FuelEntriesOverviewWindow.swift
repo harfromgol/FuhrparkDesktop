@@ -239,7 +239,7 @@ struct FuelEntriesOverviewWindow: View {
         .pointerStyle(.link)
         .help("Spalten auswählen")
         .popover(isPresented: $isPresentingColumnsPopover) {
-            FuelEntriesColumnsPopover(visibleColumns: $visibleColumns)
+            TableColumnsPopover(visibleColumns: $visibleColumns)
         }
     }
 }
