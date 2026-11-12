@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Welche Spalten der Tabelle (`FuelEntriesTable`) sichtbar sind –
-/// einstellbar über `FuelEntriesColumnsPopover`, gespeichert in
+/// einstellbar über `TableColumnsPopover`, gespeichert in
 /// `FuelEntriesOverviewFilterStore`.
 enum FuelEntryTableColumn: String, CaseIterable, Identifiable {
     case date = "Datum"
