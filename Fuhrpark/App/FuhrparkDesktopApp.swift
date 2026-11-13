@@ -240,19 +240,25 @@ struct AppMenuCommands: Commands {
             .keyboardShortcut("w", modifiers: .command)
         }
 
-        // Eigenständige Fenster mit fahrzeugübergreifenden Ansichten. Steht
-        // bewusst vor „Tools“ – `CommandMenu`s erscheinen in der Reihenfolge
-        // ihrer Deklaration.
+        // Das Hauptfenster und die eigenständigen Fenster mit
+        // fahrzeugübergreifenden Ansichten. Steht bewusst vor „Tools“ –
+        // `CommandMenu`s erscheinen in der Reihenfolge ihrer Deklaration.
         //
         // `.labelStyle(.titleAndIcon)` hier und im Tools-Menü darunter: Ohne
         // das zeigt die Menüleiste nur die Titel – Einträge eines
         // `CommandMenu` blenden ihr Symbol standardmäßig aus, auch wenn der
         // Button eines mitbringt (live geprüft).
         //
-        // Die Kürzel ⌘2 bis ⌘6 folgen der Reihenfolge der Einträge; ⌘1 ist
-        // nicht vergeben.
+        // Die Kürzel ⌘1 bis ⌘6 folgen der Reihenfolge der Einträge.
         CommandMenu("Ansichten") {
             Group {
+                // Holt das Hauptfenster nach vorn und gibt ihm den Fokus;
+                // ist es geschlossen, öffnet `openWindow` es wieder. Anders
+                // als „Ablage → Neues Fenster“ deshalb immer aktiv.
+                Button("Hauptfenster", systemImage: "macwindow") {
+                    openWindow(id: FuhrparkDesktopApp.mainWindowID)
+                }
+                .keyboardShortcut("1", modifiers: .command)
                 Button("Betankungen", systemImage: "fuelpump.fill") {
                     openWindow(id: FuelEntriesOverviewWindow.windowID)
                 }
