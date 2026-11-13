@@ -27,7 +27,9 @@ struct NotesFilterPopover: View {
                 .pointerStyle(.link)
             }
 
-            LabeledContent("Status") {
+            // Die Beschriftung darf nicht nachgeben, siehe den gleichlautenden
+            // Hinweis in `FuelEntriesFilterPopover`.
+            LabeledContent {
                 Picker("Status", selection: $statusFilter) {
                     ForEach(FahrzeugStatusFilter.allCases) { status in
                         Text(status.displayName).tag(status)
@@ -35,6 +37,9 @@ struct NotesFilterPopover: View {
                 }
                 .labelsHidden()
                 .pickerStyle(.segmented)
+            } label: {
+                Text("Status")
+                    .fixedSize()
             }
 
             LabeledContent("Fahrzeug") {
@@ -63,6 +68,6 @@ struct NotesFilterPopover: View {
             }
         }
         .padding(16)
-        .frame(width: 320, alignment: .leading)
+        .frame(width: 340, alignment: .leading)
     }
 }
