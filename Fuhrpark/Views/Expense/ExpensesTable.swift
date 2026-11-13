@@ -83,6 +83,12 @@ struct ExpensesTable: View {
                 }
             }
         }
+        // Gleicher Schlüssel wie für Position und Größe des Fensters – die
+        // Spaltenbreiten liegen aber in ihrem eigenen Store.
+        .persistColumnWidths(
+            ExpensesOverviewWindow.windowID,
+            visibleColumns: visibleColumns.map(\.rawValue).sorted()
+        )
     }
 
     /// Linksbündige Ausrichtung der Textspalten – unabhängig von der
