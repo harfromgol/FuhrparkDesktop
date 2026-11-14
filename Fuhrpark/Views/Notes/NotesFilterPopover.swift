@@ -27,23 +27,25 @@ struct NotesFilterPopover: View {
                 .pointerStyle(.link)
             }
 
-            // Die Beschriftung darf nicht nachgeben, siehe den gleichlautenden
-            // Hinweis in `FuelEntriesFilterPopover`.
-            LabeledContent {
-                Picker("Status", selection: $statusFilter) {
-                    ForEach(FahrzeugStatusFilter.allCases) { status in
-                        Text(status.displayName).tag(status)
-                    }
+            // Beschriftungen und Auswahlen stehen in zwei Spalten und
+            // schließen links wie rechts bündig ab – Aufbau und Begründung
+            // wie in `FuelEntriesFilterPopover`.
+            Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 16) {
+                GridRow {
+                    Text("Status")
+                        .fixedSize()
+                    StretchingSegmentedPicker(
+                        title: "Status",
+                        selection: $statusFilter,
+                        options: FahrzeugStatusFilter.allCases.map { ($0, $0.displayName) }
+                    )
                 }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-            } label: {
-                Text("Status")
-                    .fixedSize()
-            }
 
-            LabeledContent("Fahrzeug") {
-                VehiclePicker(vehicles: availableVehicles, selection: $selectedVehicleFilter, placeholder: "Alle")
+                GridRow {
+                    Text("Fahrzeug")
+                        .fixedSize()
+                    VehiclePicker(vehicles: availableVehicles, selection: $selectedVehicleFilter, placeholder: "Alle")
+                }
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -68,6 +70,6 @@ struct NotesFilterPopover: View {
             }
         }
         .padding(16)
-        .frame(width: 340, alignment: .leading)
+        .frame(width: 376, alignment: .leading)
     }
 }
