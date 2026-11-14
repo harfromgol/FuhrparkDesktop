@@ -155,6 +155,7 @@ struct RemindersOverviewWindow: View {
                 Image(systemName: isAnyFilterActive
                     ? "line.3.horizontal.decrease.circle.fill"
                     : "line.3.horizontal.decrease.circle")
+                    .buttonRowIcon()
             }
             .buttonStyle(.borderless)
             .pointerStyle(.link)
