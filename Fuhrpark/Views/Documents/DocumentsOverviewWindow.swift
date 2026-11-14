@@ -343,10 +343,7 @@ struct DocumentsOverviewWindow: View {
             Button {
                 isPresentingFilterPopover = true
             } label: {
-                Image(systemName: isAnyFilterActive
-                    ? "line.3.horizontal.decrease.circle.fill"
-                    : "line.3.horizontal.decrease.circle")
-                    .buttonRowIcon()
+                FilterButtonIcon(isActive: isAnyFilterActive)
             }
             .buttonStyle(.borderless)
             .pointerStyle(.link)
