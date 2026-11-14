@@ -171,6 +171,10 @@ struct FuelEntriesOverviewWindow: View {
                 Image(systemName: isAnyFilterActive
                     ? "line.3.horizontal.decrease.circle.fill"
                     : "line.3.horizontal.decrease.circle")
+                    // Das Symbol ist so hoch wie „Neue Betankung“ daneben
+                    // (25 pt, live gemessen); in Standardgröße war es mit
+                    // 13 pt nur halb so hoch und wirkte verloren.
+                    .font(.system(size: 25))
             }
             .buttonStyle(.borderless)
             .pointerStyle(.link)
