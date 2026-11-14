@@ -68,28 +68,20 @@ struct FuelEntriesFilterPopover: View {
 
             Divider()
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Sortierung")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
-                // `.frame(maxWidth: .infinity)` allein reicht bei einem
-                // segmentierten Picker nicht – der Rahmen wird zwar breiter,
-                // der Picker selbst bleibt bei seiner Idealbreite und wirkt
-                // darin nur zentriert. `LabeledContent` mit ausgeblendetem
-                // Label (wie bei „Status" oben) gibt dem Inhalt dagegen die
-                // volle Zeilenbreite als feste statt „bis zu"-Vorgabe, das
-                // zwingt den Picker zum tatsächlichen Strecken.
-                LabeledContent("") {
-                    Picker("Sortierung", selection: $sortOrder) {
-                        ForEach(FuelEntrySortOrder.allCases) { order in
-                            Text(order.rawValue).tag(order)
-                        }
+            // Gleiche Zeilenform wie „Status“ und „Kennzeichen“ darüber:
+            // Beschriftung links, Auswahl rechts daneben. Die Beschriftung
+            // gibt aus demselben Grund nicht nach wie bei „Status“.
+            LabeledContent {
+                Picker("Sortierung", selection: $sortOrder) {
+                    ForEach(FuelEntrySortOrder.allCases) { order in
+                        Text(order.rawValue).tag(order)
                     }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
                 }
                 .labelsHidden()
+                .pickerStyle(.segmented)
+            } label: {
+                Text("Sortierung")
+                    .fixedSize()
             }
         }
         .padding(16)
