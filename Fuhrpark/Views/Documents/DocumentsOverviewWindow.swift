@@ -334,6 +334,7 @@ struct DocumentsOverviewWindow: View {
                 appCommands.showSettings = true
             } label: {
                 Image(systemName: "gearshape")
+                    .buttonRowIcon()
             }
             .buttonStyle(.borderless)
             .pointerStyle(.link)
@@ -345,6 +346,7 @@ struct DocumentsOverviewWindow: View {
                 Image(systemName: isAnyFilterActive
                     ? "line.3.horizontal.decrease.circle.fill"
                     : "line.3.horizontal.decrease.circle")
+                    .buttonRowIcon()
             }
             .buttonStyle(.borderless)
             .pointerStyle(.link)
