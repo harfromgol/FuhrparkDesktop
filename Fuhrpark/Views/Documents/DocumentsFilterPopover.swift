@@ -56,34 +56,35 @@ struct DocumentsFilterPopover: View {
                 .pointerStyle(.link)
             }
 
-            // Die Beschriftung darf nicht nachgeben, siehe den gleichlautenden
-            // Hinweis in `FuelEntriesFilterPopover`.
-            LabeledContent {
-                Picker("Status", selection: $statusFilter) {
-                    ForEach(FahrzeugStatusFilter.allCases) { status in
-                        Text(status.displayName).tag(status)
-                    }
+            // Beschriftungen und Auswahlen stehen in zwei Spalten und
+            // schließen links wie rechts bündig ab – Aufbau und Begründung
+            // wie in `FuelEntriesFilterPopover`.
+            Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 16) {
+                GridRow {
+                    Text("Status")
+                        .fixedSize()
+                    StretchingSegmentedPicker(
+                        title: "Status",
+                        selection: $statusFilter,
+                        options: FahrzeugStatusFilter.allCases.map { ($0, $0.displayName) }
+                    )
                 }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-            } label: {
-                Text("Status")
-                    .fixedSize()
-            }
 
-            LabeledContent("Fahrzeug") {
-                VehiclePicker(vehicles: availableVehicles, selection: $selectedVehicleFilter, placeholder: "Alle")
-            }
-
-            LabeledContent("Kategorie") {
-                Picker("Kategorie", selection: $selectedCategoryFilter) {
-                    Text("Alle").tag(String?.none)
-                    ForEach(availableCategoryNames, id: \.self) { name in
-                        Text(name).tag(String?.some(name))
-                    }
+                GridRow {
+                    Text("Fahrzeug")
+                        .fixedSize()
+                    VehiclePicker(vehicles: availableVehicles, selection: $selectedVehicleFilter, placeholder: "Alle")
                 }
-                .labelsHidden()
-                .pickerStyle(.menu)
+
+                GridRow {
+                    Text("Kategorie")
+                        .fixedSize()
+                    StretchingMenuPicker(
+                        title: "Kategorie",
+                        selection: $selectedCategoryFilter,
+                        options: [(String?.none, "Alle")] + availableCategoryNames.map { (String?.some($0), $0) }
+                    )
+                }
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -108,6 +109,6 @@ struct DocumentsFilterPopover: View {
             }
         }
         .padding(16)
-        .frame(width: 340, alignment: .leading)
+        .frame(width: 376, alignment: .leading)
     }
 }

@@ -44,55 +44,51 @@ struct FuelEntriesFilterPopover: View {
                 .pointerStyle(.link)
             }
 
-            // Die Beschriftung darf nicht nachgeben: Nach dem ersten Klick
-            // macht die Segmentleiste alle Segmente so breit wie das
-            // breiteste („Stillgelegt“) und drückte „Status“ sonst auf „St…“
-            // zusammen oder in zwei Zeilen. Die Popover-Breite unten ist so
-            // gewählt, dass Beschriftung und Leiste nebeneinander passen.
-            LabeledContent {
-                Picker("Status", selection: $statusFilter) {
-                    ForEach(FahrzeugStatusFilter.allCases) { status in
-                        Text(status.displayName).tag(status)
-                    }
+            // Beschriftungen und Auswahlen stehen in zwei Spalten, damit alle
+            // drei Zeilen links wie rechts bündig abschließen: Die erste
+            // Spalte ist so breit wie die längste Beschriftung, die zweite
+            // füllt den Rest. Die Segmentleisten sind dafür
+            // `StretchingSegmentedPicker` statt des SwiftUI-`Picker`, der sich
+            // nicht auf die Spaltenbreite strecken lässt.
+            //
+            // Die Beschriftungen dürfen nicht nachgeben (`fixedSize`): Eine
+            // Segmentleiste beansprucht ihre volle Breite und drückte
+            // „Status“ sonst auf „St…“ zusammen oder in zwei Zeilen – so
+            // geschehen mit der SwiftUI-Leiste, die nach dem ersten Klick
+            // alle Segmente so breit macht wie das breiteste. Die
+            // Popover-Breite unten ist so gewählt, dass die längste
+            // Beschriftung und die breiteste Leiste nebeneinander passen.
+            Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 16) {
+                GridRow {
+                    Text("Status")
+                        .fixedSize()
+                    StretchingSegmentedPicker(
+                        title: "Status",
+                        selection: $statusFilter,
+                        options: FahrzeugStatusFilter.allCases.map { ($0, $0.displayName) }
+                    )
                 }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-            } label: {
-                Text("Status")
-                    .fixedSize()
-            }
 
-            LabeledContent("Kennzeichen") {
-                VehiclePicker(vehicles: availableVehicles, selection: $selectedVehicleFilter, placeholder: "Alle")
-            }
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Sortierung")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
-                // `.frame(maxWidth: .infinity)` allein reicht bei einem
-                // segmentierten Picker nicht – der Rahmen wird zwar breiter,
-                // der Picker selbst bleibt bei seiner Idealbreite und wirkt
-                // darin nur zentriert. `LabeledContent` mit ausgeblendetem
-                // Label (wie bei „Status" oben) gibt dem Inhalt dagegen die
-                // volle Zeilenbreite als feste statt „bis zu"-Vorgabe, das
-                // zwingt den Picker zum tatsächlichen Strecken.
-                LabeledContent("") {
-                    Picker("Sortierung", selection: $sortOrder) {
-                        ForEach(FuelEntrySortOrder.allCases) { order in
-                            Text(order.rawValue).tag(order)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
+                GridRow {
+                    Text("Kennzeichen")
+                        .fixedSize()
+                    VehiclePicker(vehicles: availableVehicles, selection: $selectedVehicleFilter, placeholder: "Alle")
                 }
-                .labelsHidden()
+
+                Divider()
+
+                GridRow {
+                    Text("Sortierung")
+                        .fixedSize()
+                    StretchingSegmentedPicker(
+                        title: "Sortierung",
+                        selection: $sortOrder,
+                        options: FuelEntrySortOrder.allCases.map { ($0, $0.rawValue) }
+                    )
+                }
             }
         }
         .padding(16)
-        .frame(width: 340, alignment: .leading)
+        .frame(width: 376, alignment: .leading)
     }
 }
