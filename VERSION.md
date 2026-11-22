@@ -1,7 +1,69 @@
 # Versionshistorie
 
 Alle nennenswerten Änderungen an FuhrparkDesktop, gruppiert nach Release.
-Die Versionen sind als Git-Tags (`v1.1` … `v1.10`) markiert.
+Die Versionen sind als Git-Tags (`v1.1` … `v1.11`) markiert.
+
+## [v1.11](https://github.com/harfromgol/FuhrparkDesktop/releases/tag/v1.11) – 2026-11-22
+
+### Neu
+- **Eigene Fenster im Menü „Ansichten“**: Betankungen, Sonstige
+  Buchungen, Notizen, Erinnerungen und Dokumente öffnen sich als
+  fahrzeugübergreifende Übersichten in je einem eigenen Fenster – mit den
+  Kürzeln ⌘2 bis ⌘6; ⌘1 holt das Hauptfenster in den Vordergrund. Jedes
+  Fenster merkt sich Position, Größe und seine Filter, auch über einen
+  Neustart hinweg. Die gleichnamigen Einträge „Allgemein → Betankungen/
+  Notizen/Dokumente“ der Seitenleiste entfallen dafür; „Allgemein →
+  Erinnerungen“ zeigt dort nur noch die fälligen.
+  - **Betankungen**: Tabelle mit Datum, Kennzeichen, km-Stand, Preis pro
+    Liter, Getankt, Gesamt, Verbrauch und Tankstelle; Spalten einzeln
+    ein- und ausblendbar, Filter nach Fahrzeugstatus und Kennzeichen,
+    Sortierung nach Datum, „Neue Betankung“ direkt im Fenster.
+  - **Sonstige Buchungen** (neu): Tabelle aller sonstigen Ausgaben und
+    Einnahmen mit Datum, Kennzeichen, Empfänger, Verwendungszweck, Betrag,
+    Kategorien und Dokumenten. Mehrere Dokumente stehen mehrzeilig in der
+    Zelle und lassen sich per Klick öffnen. Wie bei den Betankungen:
+    Spalten ein-/ausblendbar, Filter, umschaltbare Sortierung; zusätzlich
+    „Neue Buchung“ und Löschen per Rechtsklick.
+  - **Spaltenbreiten** der beiden Tabellen werden gespeichert und bleiben
+    bei Filter-, Sortier- und Fensteränderungen sowie nach einem Neustart
+    erhalten.
+- **Dokumente als Kacheln**: Jedes Dokument erscheint als Kachel nach dem
+  Vorbild von paperless-ngx – oben eine Vorschau des Inhalts (von
+  QuickLook, wie im Finder: PDF, Fotos, Text, Office-Dateien), darunter
+  Dateiname, Kennzeichen, Kategorien und Datum. Hochformat zeigt den
+  oberen Teil der Seite, Querformat das ganze Bild, andere Dateitypen ihr
+  Symbol. Klick öffnet die Datei.
+- **Fahrzeugdetails**: neue Abschnitte „Notizen“ und „Erinnerungen“ vor
+  „Statistik“. Welche Abschnitte sichtbar sind, steuert ein Popover
+  „Sichtbare Elemente“ im Kopfzeilen-Menü – global für alle Fahrzeuge,
+  auf Wunsch mit eigener Einstellung je Fahrzeug.
+- **Notizen**: Liste im Fahrzeug mit Jahresfilter, einstellbarer
+  Seitengröße und PDF-Export; der Fahrzeugbericht enthält eine
+  Notizen-Übersicht.
+- **Erinnerungen**: Liste im Fahrzeug mit Status-Filter, Seitengröße und
+  PDF-Export; der Fahrzeugbericht enthält eine Erinnerungen-Übersicht. Wird
+  eine wiederkehrende Erinnerung erledigt, bleibt der erledigte Termin als
+  Verlaufseintrag stehen, statt kommentarlos auf den nächsten zu springen.
+
+### Geändert
+- **Filter vereinheitlicht**: Alle Übersichten filtern über ein
+  Filter-Symbol mit Popover; dessen Zeilen (Status, Kennzeichen/Fahrzeug,
+  Kategorie, Sortierung) schließen links wie rechts bündig ab. Das Symbol
+  ist so groß wie der Button „Neue …“ daneben und wird bei gesetztem
+  Filter ausgefüllt und violett. Die Fahrzeugauswahl der Filter nutzt
+  überall denselben Fahrzeug-Picker wie die Formulare.
+- **Menüleisten-Spritpreise entfernt**: Die angepinnte Preisanzeige in der
+  Menüleiste übernimmt die eigenständige App Spritty. Die Umkreissuche auf
+  der Karte unter „Spritpreise“ bleibt unverändert.
+- Die Menüs „Ansichten“ und „Tools“ zeigen Symbole vor den Einträgen.
+
+### Behoben
+- Die Erinnerungen-Karte aktualisierte sich nicht, wenn sich nur ein
+  Attribut einer Erinnerung änderte; sie berücksichtigt jetzt außerdem nur
+  offene Erinnerungen und zeigt „Fällige / Gesamt“.
+- Der PDF-Export der Erinnerungen-Übersicht zeigt wie die Oberfläche nur
+  offene Erinnerungen; im PDF-Export der Notizen wird der Text mehrzeilig
+  statt mit „…“ abgeschnitten.
 
 ## [v1.10](https://github.com/harfromgol/FuhrparkDesktop/releases/tag/v1.10) – 2026-09-07
 
