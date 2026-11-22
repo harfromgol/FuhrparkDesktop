@@ -74,4 +74,22 @@ enum WorkingDirectoryStore {
         defer { url.stopAccessingSecurityScopedResource() }
         return try body(url)
     }
+
+    /// Wie `withAccess`, aber für Arbeiten, die `await` enthalten – etwa die
+    /// Vorschau-Erzeugung durch QuickLook. Der Security-Scope bleibt dabei bis
+    /// zum Ende von `body` offen, auch über Unterbrechungen hinweg.
+    ///
+    /// `body` läuft auf dem Aufrufer (`isolation`), so dass es auch
+    /// `@MainActor`-Zustand verwenden darf. Eigener Name statt einer
+    /// Überladung von `withAccess`, damit bestehende Aufrufe mit
+    /// synchronem `body` eindeutig bleiben.
+    static func withAccessAsync<T>(
+        isolation: isolated (any Actor)? = #isolation,
+        _ body: (URL) async throws -> T
+    ) async throws -> T {
+        guard let url = resolveURL() else { throw WorkingDirectoryError.notConfigured }
+        guard url.startAccessingSecurityScopedResource() else { throw WorkingDirectoryError.accessDenied }
+        defer { url.stopAccessingSecurityScopedResource() }
+        return try await body(url)
+    }
 }

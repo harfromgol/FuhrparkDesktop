@@ -373,16 +373,28 @@ struct DocumentsOverviewWindow: View {
         }
     }
 
+    /// Kachelgitter: so viele Spalten, wie in die Fensterbreite passen, jede
+    /// Kachel 200 bis 240 pt breit. Bewusst ohne umgebende `GlassCard` – jede
+    /// Kachel ist selbst eine Glasfläche, und Glas in Glas sähe unruhig aus.
+    /// `LazyVGrid`, damit die Vorschaubilder erst beim Hereinscrollen
+    /// erzeugt werden.
     private var documentListSection: some View {
-        GlassCard(title: "Alle Dokumente (\(filteredDocuments.count))") {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Alle Dokumente (\(filteredDocuments.count))")
+                .font(.headline)
+
             if filteredDocuments.isEmpty {
                 Text("Keine Dokumente für die gewählten Filter.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                VStack(alignment: .leading, spacing: 12) {
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 200, maximum: 240), spacing: 16, alignment: .top)],
+                    alignment: .leading,
+                    spacing: 16
+                ) {
                     ForEach(filteredDocuments) { document in
-                        DocumentRow(
+                        DocumentCard(
                             document: document,
                             workingDirectoryRevision: workingDirectoryRevision,
                             onDelete: { pendingDeletion = document },
