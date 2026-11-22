@@ -29,8 +29,10 @@ Fahrzeuge, Betankungen, sonstige Ausgaben, Belege und Spritpreise an einem Ort.
 - **Dokumente** – Belege (PDF, Fotos, …) einer oder mehreren sonstigen Ausgaben
   desselben Fahrzeugs zuordnen, auch nachträglich; die zentrale
   Dokumenten-Übersicht mit Filter nach Fahrzeug/Kategorie öffnet sich als
-  eigenes Fenster über `Ansichten → Dokumente`. Die Datei wird dabei nur einmal
-  abgelegt.
+  eigenes Fenster über `Ansichten → Dokumente`. Jedes Dokument erscheint dort
+  als Kachel mit Vorschau des Inhalts (erzeugt von QuickLook, wie im Finder)
+  und darunter Dateiname, Kennzeichen, Kategorien und Datum; ein Klick öffnet
+  die Datei. Die Datei wird dabei nur einmal abgelegt.
 - **Erinnerungen** - laß Dich an den nächsten TÜV Termin oder an die fällige Versicherung/Steuer erinnern.
   Die Seitenleiste zeigt unter „Erinnerungen“ die fälligen; die vollständige,
   fahrzeugübergreifende Liste mit Filter nach Status und Fahrzeug öffnet sich
